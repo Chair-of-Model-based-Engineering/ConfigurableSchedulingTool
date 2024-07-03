@@ -1,0 +1,86 @@
+<featureModel>
+	<properties>
+		<graphics key="autolayoutconstraints" value="false"/>
+		<graphics key="legendautolayout" value="true"/>
+		<graphics key="showconstraints" value="true"/>
+		<graphics key="showshortnames" value="false"/>
+		<graphics key="layout" value="horizontal"/>
+		<graphics key="showcollapsedconstraints" value="true"/>
+		<graphics key="legendhidden" value="false"/>
+		<graphics key="layoutalgorithm" value="1"/>
+	</properties>
+	<struct>
+		<and abstract="true" mandatory="true" name="TestFM">
+			<and mandatory="true" name="P">
+				<and mandatory="true" name="p1">
+					<feature mandatory="true" name="dp1 = 3"/>
+				</and>
+				<and name="p2">
+					<feature mandatory="true" name="dp2 = 1"/>
+				</and>
+				<alt mandatory="true" name="p3">
+					<feature name="dp3 = 1"/>
+					<feature name="dp3 = 2"/>
+					<feature name="dp3 = 3"/>
+				</alt>
+				<alt mandatory="true" name="p4">
+					<feature name="dp4 = 2"/>
+					<feature name="dp4 = 3"/>
+				</alt>
+				<alt mandatory="true" name="p5">
+					<feature name="dp5 = 4"/>
+					<feature name="dp5 = 5"/>
+					<feature name="dp5 = 6"/>
+				</alt>
+			</and>
+			<and mandatory="true" name="M">
+				<feature mandatory="true" name="m1"/>
+				<feature mandatory="true" name="m2"/>
+			</and>
+		</and>
+	</struct>
+	<constraints>
+		<rule>
+			<imp>
+				<var>p5</var>
+				<var>p4</var>
+			</imp>
+		</rule>
+		<rule>
+			<imp>
+				<var>p3</var>
+				<var>p1</var>
+			</imp>
+		</rule>
+		<rule>
+			<imp>
+				<var>p1</var>
+				<var>m1</var>
+			</imp>
+		</rule>
+		<rule>
+			<imp>
+				<var>p2</var>
+				<var>m2</var>
+			</imp>
+		</rule>
+		<rule>
+			<imp>
+				<var>p3</var>
+				<var>m2</var>
+			</imp>
+		</rule>
+		<rule>
+			<imp>
+				<var>p4</var>
+				<var>m1</var>
+			</imp>
+		</rule>
+		<rule>
+			<imp>
+				<var>p5</var>
+				<var>m1</var>
+			</imp>
+		</rule>
+	</constraints>
+</featureModel>

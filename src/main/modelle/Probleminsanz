@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<configuration>
+	<feature automatic="selected" name="TestFM"/>
+	<feature automatic="selected" name="P"/>
+	<feature automatic="selected" name="p1"/>
+	<feature automatic="selected" name="dp1 = 3"/>
+	<feature name="p2"/>
+	<feature name="dp2 = 1"/>
+	<feature automatic="selected" name="p3"/>
+	<feature automatic="unselected" name="dp3 = 1"/>
+	<feature manual="selected" name="dp3 = 2"/>
+	<feature automatic="unselected" name="dp3 = 3"/>
+	<feature automatic="selected" name="p4"/>
+	<feature manual="selected" name="dp4 = 2"/>
+	<feature automatic="unselected" name="dp4 = 3"/>
+	<feature automatic="selected" name="p5"/>
+	<feature automatic="unselected" name="dp5 = 4"/>
+	<feature automatic="unselected" name="dp5 = 5"/>
+	<feature manual="selected" name="dp5 = 6"/>
+	<feature automatic="selected" name="M"/>
+	<feature automatic="selected" name="m1"/>
+	<feature automatic="selected" name="m2"/>
+</configuration>

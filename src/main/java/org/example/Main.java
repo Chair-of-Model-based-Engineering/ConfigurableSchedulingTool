@@ -60,15 +60,18 @@ public class Main {
         final List<List<Task>> alleJobs =
                 Arrays.asList(Arrays.asList(new Task(0, new int[]{2,2}, "p1", false),
                         new Task(0, new int[]{2,4}, "p2", false),
-                        new Task(0, new int[]{2,3}, "p3", false),
-                        new Task(0, new int[]{1,1}, "p4", true)));
+                        new Task(1, new int[]{2,3}, "p3", false),
+                        new Task(0, new int[]{1,1}, "p4", false)),
+                        Arrays.asList(new Task(1, new int[]{1,3}, "p6", false),
+                                new Task(0, new int[]{3,3}, "p7", false)),
+                        Arrays.asList(new Task(1, new int[]{2,2}, "p8", true)));
 
 
         // ==========================================================================
         // ==========================================================================
 
         // Setzt fest wie viele Maschinen es gibt
-        int numMachines = 1;
+        int numMachines = 2;
 
         // Und packt sie in ein Array
         final int[] allMachines = IntStream.range(0, numMachines).toArray();
@@ -105,18 +108,19 @@ public class Main {
                 taskType.end = model.newIntVar(0, maxDuration, "end" + suffix);
 
                 if(task.optional) {
-                    taskType.active = model.newBoolVar(task.name + "_status");
+                    taskType.interval = model.newOptionalIntervalVar(taskType.start,
+                            model.newIntVar(task.duration[0], task.duration[1], task.name + "_duration"),
+                            taskType.end,
+                            taskType.active = model.newBoolVar(task.name + "_active"),
+                            "interval_" + suffix);
+                } else {
+                    // Erstellt ein neues Interval mit (start, size, end, name)
+                    taskType.interval = model.newIntervalVar(
+                            taskType.start,
+                            model.newIntVar(task.duration[0], task.duration[1], task.name + "_duration"),
+                            taskType.end,
+                            "interval" + suffix);
                 }
-
-                // Erstellt ein neues Interval mit (start, size, end, name)
-                taskType.interval = model.newIntervalVar(
-                        taskType.start,
-                        model.newIntVar(task.duration[0], task.duration[1], task.name + "_duration"),
-                        taskType.end,
-                        "interval" + suffix);
-
-                //model.addImplication(taskType.status.not(), );
-
 
                 // Packt die Task mit (jobID, taskID) in die AlleTasks Map
                 List<Integer> key = Arrays.asList(jobID, taskID);
@@ -157,6 +161,7 @@ public class Main {
         List<IntVar> ends = new ArrayList<>();
         // Über alle Jobs
         for (int jobID = 0; jobID < alleJobs.size(); ++jobID) {
+            // Liste mit Tasks des aktuellen Jobs
             List<Task> job = alleJobs.get(jobID);
             // Liste key mit Einträgen aus JobID und der Jobsize - 1 (Wenn Jobsize = 5, dann ist in Index 4 die letzte Task)
             List<Integer> key = Arrays.asList(jobID, job.size() - 1);
@@ -164,10 +169,55 @@ public class Main {
             // Am Ende hat man also eine Liste mit allen Endzeiten der letzten Tasks der Jobs
             ends.add(alleTasks.get(key).end);
         }
+
+        Map<TaskType, IntVar> endTimes = new HashMap<>();
+        for (int jobID = 0; jobID < alleJobs.size(); jobID++) {
+            List<Task> job = alleJobs.get(jobID);
+            for (int taskID = 0; taskID < job.size(); taskID++) {
+                List<Integer> key = Arrays.asList(jobID, taskID);
+                endTimes.put(alleTasks.get(key), alleTasks.get(key).end);
+                System.out.println(endTimes.size());
+            }
+
+        }
+
+        System.out.println(alleTasks);
+        System.out.println(endTimes.size());
+        for(TaskType key : endTimes.keySet()) {
+            System.out.println(endTimes.get(key).getName());
+        }
         // Es wird die größte Endzeit in ends (allerletzte Task die beendet wird) gesucht, die mit einer Zahl in objVar
         // (Spanne von 0 bis maxDuration) übereinstimmt
-        model.addMaxEquality(objVar, ends);
+        //model.addMaxEquality(objVar, ends);
         // Diese Zahl, soll minimiert werden
+
+
+        IntVar maxFullDuration = model.newIntVar(0, maxDuration, "maximal full duration");
+
+        TaskType[] activeBools = endTimes.keySet().toArray(new TaskType[endTimes.size()]);
+        IntVar[] endtimeInts = endTimes.values().toArray(new IntVar[endTimes.size()]);
+
+        IntVar[] possibleMaxEndtimes = new IntVar[activeBools.length];
+
+        for(int i = 0; i < activeBools.length; i++) {
+            possibleMaxEndtimes[i] = model.newIntVar(0, maxDuration, "possibleMaxEndtime_" + i);
+            System.out.println("Task " + i + "  " + activeBools[i].active);
+            //Falls es eine optionale Task ist (wenn es keine optionale ist, dann ist active = null)
+            if(activeBools[i].active != null) {
+                model.addEquality(possibleMaxEndtimes[i], endtimeInts[i]).onlyEnforceIf(activeBools[i].active);
+                model.addEquality(possibleMaxEndtimes[i], 0).onlyEnforceIf(activeBools[i].active.not());
+            } else {
+                model.addEquality(possibleMaxEndtimes[i], endtimeInts[i]);
+            }
+
+        }
+
+        System.out.println("Die möglichen Zeiten die ausgewählt werden können wehe es steht 0 drinne :");
+        for(IntVar time : possibleMaxEndtimes) {
+            System.out.println(time);
+        }
+
+        model.addMaxEquality(objVar, possibleMaxEndtimes);
         model.minimize(objVar);
 
 
@@ -186,7 +236,7 @@ public class Main {
                 int duration;
                 boolean isActive;
 
-                // Ctor
+                // Constructor
                 AssignedTask(int jobID, int taskID, int start, int duration) {
                     this.jobID = jobID;
                     this.taskID = taskID;
@@ -194,6 +244,7 @@ public class Main {
                     this.duration = duration;
                 }
             }
+
             class SortTasks implements Comparator<AssignedTask> {
                 @Override
                 public int compare(AssignedTask a, AssignedTask b) {
@@ -248,13 +299,15 @@ public class Main {
                 String solLine = "           ";
 
                 for (AssignedTask assignedTask : assignedJobs.get(machine)) {
-                    String name = "job_" + assignedTask.jobID + "_task_" + assignedTask.taskID;
-                    // Add spaces to output to align columns.
-                    solLineTasks += String.format("%-15s", name);
+                    if(assignedTask.isActive) {
+                        String name = "job_" + assignedTask.jobID + "_task_" + assignedTask.taskID;
+                        // Add spaces to output to align columns.
+                        solLineTasks += String.format("%-15s", name);
 
-                    String solTmp = "[" + assignedTask.start + "," + (assignedTask.start + assignedTask.duration) + "]";
-                    // Add spaces to output to align columns.
-                    solLine += String.format("%-15s", solTmp);
+                        String solTmp = "[" + assignedTask.start + "," + (assignedTask.start + assignedTask.duration) + "]";
+                        // Add spaces to output to align columns.
+                        solLine += String.format("%-15s", solTmp);
+                    }
 
                 }
                 output += solLineTasks + "%n";
@@ -262,6 +315,13 @@ public class Main {
             }
             System.out.printf("Optimal Schedule Length: %f%n", solver.objectiveValue());
             System.out.printf(output);
+
+            for(int machine : allMachines) {
+                for(AssignedTask assignedTask : assignedJobs.get(machine)) {
+                    System.out.println("Task " + assignedTask.taskID + " ist aktiv? " + assignedTask.isActive);
+                    System.out.println("Task " + assignedTask.taskID + " startet bei " + assignedTask.start + " und dauert " + assignedTask.duration);
+                }
+            }
         } else {
             System.out.println("No solution found.");
         }

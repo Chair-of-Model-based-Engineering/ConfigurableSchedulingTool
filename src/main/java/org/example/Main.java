@@ -57,6 +57,8 @@ public class Main {
             }
         } */
 
+
+        /*
         final List<List<Task>> alleJobs =
                 Arrays.asList(Arrays.asList(new Task(0, new int[]{2,2}, "p1", false),
                         new Task(0, new int[]{2,4}, "p2", false),
@@ -66,15 +68,37 @@ public class Main {
                                 new Task(0, new int[]{3,3}, "p7", false)),
                         Arrays.asList(new Task(1, new int[]{2,2}, "p8", true)));
 
+        final List<Machine> machines = Arrays.asList(new Machine(0, false), new Machine(1, true));
+        */
+
+        final List<List<Task>> alleJobs =
+                Arrays.asList(Arrays.asList(new Task(0, new int[]{2,2}, "p1", true),
+                        new Task(0, new int[]{5,5}, "p2", true)));
+
+        final List<Machine> machines = Arrays.asList(new Machine(0, true),
+                new Machine(1, true));
+
+
+
 
         // ==========================================================================
         // ==========================================================================
+
+        // Model
+        CpModel  model = new CpModel();
+
+        // Für jede optionale Maschine wird eine neue BoolVar
+        for(Machine machine : machines) {
+            if(machine.optional) {
+                machine.active = model.newBoolVar("Machine" + machine.id + "_active");
+            }
+        }
 
         // Setzt fest wie viele Maschinen es gibt
-        int numMachines = 2;
+        int numMachines = machines.size();
 
         // Und packt sie in ein Array
-        final int[] allMachines = IntStream.range(0, numMachines).toArray();
+        // final int[] allMachines = IntStream.range(0, numMachines).toArray();
 
         // Berechnet wie lange es dauern würde, wenn alle Tasks einzeln nacheinander laufen würden
         int maxDuration = 0;
@@ -83,15 +107,24 @@ public class Main {
                 maxDuration += task.duration[1];
             }
         }
-
-        // Model
-        CpModel  model = new CpModel();
+        System.out.println("Maximale Duration: " + maxDuration);
 
         // List<Integer> ist später {JobID, TaskID}, Map ist also <{JobID, TaskID}, TaskType-Objekt>
         Map<List<Integer>, TaskType> alleTasks = new HashMap<>();
 
         // Jede Maschine hat eine Liste mit Intervallen (Tasks) die sich nicht überlappen dürfen (kommt später)
-        Map<Integer, List<IntervalVar>> machineToIntervals = new HashMap<>();
+        Map<Machine, List<IntervalVar>> machineToIntervals = new HashMap<>();
+
+        // Jede optionale Maschine hat eine Liste mit BoolVars, die dafür stehen,
+        // ob die Tasks die auf ihr ausgeführt werden, auch ausgeführt werden
+        // Wenn alle false sind, kann die Maschine "deaktiviert" werden
+        Map<Machine, List<BoolVar>> optionalMachineTaskActives = new HashMap<>();
+        for(Machine machine : machines) {
+            if(machine.optional) {
+                optionalMachineTaskActives.put(machine, new ArrayList<>());
+            }
+        }
+        System.out.println("Anzahl Maschinen: " + numMachines + ", davon sind " + optionalMachineTaskActives.size() + " optional");
 
         // Iteriert durch Jobs
         for(int jobID = 0; jobID < alleJobs.size(); ++jobID) {
@@ -113,6 +146,15 @@ public class Main {
                             taskType.end,
                             taskType.active = model.newBoolVar(task.name + "_active"),
                             "interval_" + suffix);
+
+                    // Wenn die optionale Task auf einer optionalen Maschine ausgeführt wird,
+                    // Wird ein BoolVar für die Maschine zu optionalMachineTaskActives
+                    for(Machine machine : machines) {
+                        if(task.machine == machine.id && machine.optional) {
+                            optionalMachineTaskActives.get(machine).add(taskType.active);
+                        }
+                    }
+
                 } else {
                     // Erstellt ein neues Interval mit (start, size, end, name)
                     taskType.interval = model.newIntervalVar(
@@ -120,29 +162,61 @@ public class Main {
                             model.newIntVar(task.duration[0], task.duration[1], task.name + "_duration"),
                             taskType.end,
                             "interval" + suffix);
+
+                    BoolVar active = model.newBoolVar(task.name + "_active");
+                    // Wenn die Task mandatory ist und auf einer optionalen Maschine ausgeführt wird,
+                    // wird optionalMachineTaskActives der Maschine ein BoolVar hinzugefügt der immer true ist
+                    // Dadurch kann die Maschine nicht mehr deaktiviert werden
+                    model.addEquality(active, 1);
+                    for(Machine machine : machines) {
+                        if(task.machine == machine.id && machine.optional) {
+                            optionalMachineTaskActives.get(machine).add(active);
+                        }
+                    }
                 }
 
                 // Packt die Task mit (jobID, taskID) in die AlleTasks Map
                 List<Integer> key = Arrays.asList(jobID, taskID);
                 alleTasks.put(key, taskType);
 
-
-
-                // Falls für den key task.machine in machineToIntervals noch kein Wert vorhanden ist,
-                // wird für task.machine eine neue Integer ArrayList erstellt (glaube ich)
-                machineToIntervals.computeIfAbsent(task.machine, (Integer k) -> new ArrayList<>());
-                // Der Maschine wird dann das Intervall der aktuellen Task hinzugefügt
-                machineToIntervals.get(task.machine).add(taskType.interval);
+                // Die Maschine finden auf der die Task ausgeführt wird und ihr in
+                // machineToIntervals das Interval der Task hinzufügen
+                Machine machine = null;
+                for(Machine machine1 : machines) {
+                    if(machine1.id == task.machine) {
+                        machine = machine1;
+                    }
+                }
+                // Falls noch keine ArrayList für die Maschine vorhanden ist, wird eine neue erstellt
+                machineToIntervals.computeIfAbsent(machine, (Machine m) -> new ArrayList<>());
+                machineToIntervals.get(machine).add(taskType.interval);
             }
         }
 
+
+        // Neue BoolVar erstellen, die am Ende gleich dem Aktivstatus der Maschine sein soll
+        // Wenn mindestens eine Task in optionalMachineTaskActives für die Maschine true ist,
+        // dann soll die Maschine auch aktiv sein
+        for(Machine machine : optionalMachineTaskActives.keySet()) {
+            if(optionalMachineTaskActives.get(machine).size() > 0) {
+                BoolVar atLeastOneActive = model.newBoolVar(machine.id + "_atLeastOneActiveTask");
+                model.addMaxEquality(atLeastOneActive, optionalMachineTaskActives.get(machine));
+                model.addEquality(machine.active, atLeastOneActive);
+            } else {
+                model.addEquality(machine.active, 0);
+            }
+        }
+
+
+        System.out.println("\n" + "Die folgenden Maschineen bekommen addNoOverlap");
         // Intervalle (Tasks) auf einer Maschine dürfen sich nicht überlappen
-        for (int machine : allMachines) {
+        for (Machine machine : machineToIntervals.keySet()) {
+            System.out.println("Machine_" + machine.id + " mit der Intervalsize " + machineToIntervals.get(machine).size());
             List<IntervalVar> list = machineToIntervals.get(machine);
             model.addNoOverlap(list);
         }
 
-        // Damit eine Task erst nach beenden der vorherigen Task im Job startet
+        // Tasks innerhalb eines Jobs dürfen nur nacheinander starten
         // Über alle Jobs
         for (int jobID = 0; jobID < alleJobs.size(); ++jobID) {
             List<Task> job = alleJobs.get(jobID);
@@ -155,11 +229,15 @@ public class Main {
             }
         }
 
-        // Ziel des Solvers festlegen
+
+        // Zielvariable, nimmt am Ende die komplette Duration an und soll minimiert werden
         IntVar objVar = model.newIntVar(0, maxDuration, "makespan");
+
         // Liste mit Endzeiten
         List<IntVar> ends = new ArrayList<>();
+
         // Über alle Jobs
+        /*
         for (int jobID = 0; jobID < alleJobs.size(); ++jobID) {
             // Liste mit Tasks des aktuellen Jobs
             List<Task> job = alleJobs.get(jobID);
@@ -170,6 +248,9 @@ public class Main {
             ends.add(alleTasks.get(key).end);
         }
 
+         */
+
+        // Map die für jede Task (TaskType) die Endzeit der Task beinhaltet
         Map<TaskType, IntVar> endTimes = new HashMap<>();
         for (int jobID = 0; jobID < alleJobs.size(); jobID++) {
             List<Task> job = alleJobs.get(jobID);
@@ -191,9 +272,20 @@ public class Main {
         //model.addMaxEquality(objVar, ends);
         // Diese Zahl, soll minimiert werden
 
+        // IntVar maxFullDuration = model.newIntVar(0, maxDuration, "maximal full duration");
 
-        IntVar maxFullDuration = model.newIntVar(0, maxDuration, "maximal full duration");
 
+        // IntervalVars von optionalen Tasks, die nicht ausgeführt werden, werden nicht "performed",
+        // sie exisitieren aber immernoch. Ihre lower und upper bounds, sowie noOverlaps werden ignoriert,
+        // sodass sie eine duration von 0 haben und ganz am Anfang gestartet werden.
+        // Da sie aber immernoch die letzte Task in einem Job sein können, und der Solver nicht denken soll,
+        // dass das Ende des Jobs schon nach 0 Sekunden erreicht wird, erstellen wir (anders als vorher)
+        // die Constraint, dass objVar == max(possibleMaxEndtimes).
+        // Daher werden alle Endzeiten jeder Task possibleMaxEndtimes hinzugefügt
+        // Falls eine Task inaktiv ist, ist die Endzeit 0, falls aktiv ist sie die tatsächliche Endzeit
+
+        // Arrays mit jeweils allen BoolVars (bzw. den TaskTypes die die aktiv-BoolVars enthalten)
+        // und Intvars von endTimes
         TaskType[] activeBools = endTimes.keySet().toArray(new TaskType[endTimes.size()]);
         IntVar[] endtimeInts = endTimes.values().toArray(new IntVar[endTimes.size()]);
 
@@ -201,7 +293,8 @@ public class Main {
 
         for(int i = 0; i < activeBools.length; i++) {
             possibleMaxEndtimes[i] = model.newIntVar(0, maxDuration, "possibleMaxEndtime_" + i);
-            System.out.println("Task " + i + "  " + activeBools[i].active);
+            // System.out.println("Task " + i + "  " + activeBools[i].active);
+
             //Falls es eine optionale Task ist (wenn es keine optionale ist, dann ist active = null)
             if(activeBools[i].active != null) {
                 model.addEquality(possibleMaxEndtimes[i], endtimeInts[i]).onlyEnforceIf(activeBools[i].active);
@@ -258,7 +351,7 @@ public class Main {
             System.out.println("Solution:");
 
             // Create one list of assigned tasks per machine.
-            Map<Integer, List<AssignedTask>> assignedJobs = new HashMap<>();
+            Map<Machine, List<AssignedTask>> assignedJobs = new HashMap<>();
             // Über jede Task iterieren
             for (int jobID = 0; jobID < alleJobs.size(); ++jobID) {
                 List<Task> job = alleJobs.get(jobID);
@@ -284,46 +377,84 @@ public class Main {
                         assignedTask.isActive = true;
                     }
 
-                    assignedJobs.computeIfAbsent(task.machine, (Integer k) -> new ArrayList<>());
-                    assignedJobs.get(task.machine).add(assignedTask);
+                    //assignedJobs.computeIfAbsent(task.machine, (Integer k) -> new ArrayList<>());
+                    //assignedJobs.get(task.machine).add(assignedTask);
+                    Machine machine = null;
+                    for(Machine machine1 : machines) {
+                        if(machine1.id == task.machine) {
+                            machine = machine1;
+                        }
+                    }
+
+                    assignedJobs.computeIfAbsent(machine, (Machine m) -> new ArrayList<>());
+                    assignedJobs.get(machine).add(assignedTask);
 
                 }
             }
 
             // Create per machine output lines.
             String output = "";
-            for (int machine : allMachines) {
-                // Sort by starting time.
-                Collections.sort(assignedJobs.get(machine), new SortTasks());
-                String solLineTasks = "Machine " + machine + ": ";
-                String solLine = "           ";
+            for (Machine machine : machines) {
+                if(!machine.optional || solver.value(machine.active) == 1) {
+                    // Sort by starting time.
+                    Collections.sort(assignedJobs.get(machine), new SortTasks());
+                    String solLineTasks = "Machine " + machine.id + ": ";
+                    String solLine = "           ";
 
-                for (AssignedTask assignedTask : assignedJobs.get(machine)) {
-                    if(assignedTask.isActive) {
-                        String name = "job_" + assignedTask.jobID + "_task_" + assignedTask.taskID;
-                        // Add spaces to output to align columns.
-                        solLineTasks += String.format("%-15s", name);
+                    for (AssignedTask assignedTask : assignedJobs.get(machine)) {
+                        if(assignedTask.isActive) {
+                            String name = "job_" + assignedTask.jobID + "_task_" + assignedTask.taskID;
+                            // Add spaces to output to align columns.
+                            solLineTasks += String.format("%-15s", name);
 
-                        String solTmp = "[" + assignedTask.start + "," + (assignedTask.start + assignedTask.duration) + "]";
-                        // Add spaces to output to align columns.
-                        solLine += String.format("%-15s", solTmp);
+                            String solTmp = "[" + assignedTask.start + "," + (assignedTask.start + assignedTask.duration) + "]";
+                            // Add spaces to output to align columns.
+                            solLine += String.format("%-15s", solTmp);
+                        }
+
                     }
-
+                    output += solLineTasks + "%n";
+                    output += solLine + "%n";
                 }
-                output += solLineTasks + "%n";
-                output += solLine + "%n";
+
             }
             System.out.printf("Optimal Schedule Length: %f%n", solver.objectiveValue());
             System.out.printf(output);
 
-            for(int machine : allMachines) {
-                for(AssignedTask assignedTask : assignedJobs.get(machine)) {
-                    System.out.println("Task " + assignedTask.taskID + " ist aktiv? " + assignedTask.isActive);
-                    System.out.println("Task " + assignedTask.taskID + " startet bei " + assignedTask.start + " und dauert " + assignedTask.duration);
+            for(Machine machine : machines) {
+                if(machine.optional) {
+                    System.out.println("Machine_" + machine.id + " ist aktiv? " + solver.value(machine.active));
+                } else {
+                    System.out.println("Machine_" + machine.id + " ist aktiv? true");
+                }
+                if(assignedJobs.get(machine) != null) {
+                    for (AssignedTask assignedTask : assignedJobs.get(machine)) {
+                        System.out.println("Task " + assignedTask.taskID + " ist aktiv? " + assignedTask.isActive);
+                        System.out.println("Task " + assignedTask.taskID + " startet bei " + assignedTask.start + " und dauert " + assignedTask.duration);
+                    }
+                }
+            }
+
+            for(Machine machine : optionalMachineTaskActives.keySet()) {
+                System.out.println("\n" + "Machine_" + machine.id + "ist optional und enhält BoolVars:");
+                for(BoolVar b : optionalMachineTaskActives.get(machine)) {
+                    System.out.println(solver.value(b));
                 }
             }
         } else {
             System.out.println("No solution found.");
+            /*
+            for(int i = 0; i < alleJobs.size(); i++) {
+                for(int j = 0; j < alleJobs.get(i).size(); j++) {
+                    List<Integer> key = Arrays.asList(i, j);
+                    TaskType task = alleTasks.get(key);
+
+                    System.out.println("Task_" + key + "  Start: " + solver.value(task.start)
+                        + "    End: " + solver.value(task.end));
+                }
+            }
+            */
+
         }
     }
 }

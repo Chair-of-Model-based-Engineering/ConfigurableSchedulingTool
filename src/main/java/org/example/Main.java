@@ -6,6 +6,7 @@ import com.google.ortools.sat.*;
 import org.xml.sax.SAXException;
 
 import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.xpath.XPathExpressionException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -24,59 +25,46 @@ public class Main {
         System.loadLibrary("jniortools");
     }*/
 
-    public static void main(String[] args) throws ParserConfigurationException, IOException, SAXException {
+    public static void main(String[] args) throws ParserConfigurationException, IOException, SAXException, XPathExpressionException {
 
         Loader.loadNativeLibraries();
-
-        //CPU = 0, GPU = 1
-        //Task = (Machine, Duration)
-        //Job 1 = (0,3),(1,4),(1,2) - Job 2 = (1,2),(0,4)
-        //final List<List<Task>> alleJobs =
-        //      Arrays.asList(Arrays.asList(new Task(0,3, "p1"), new Task(1,4, "p2"), new Task(1,2, "p3")),
-        //          Arrays.asList(new Task(1,2, "p4"), new Task(0,4, "p5")));
-
-        /*
-        ProblemGenerator pg = new ProblemGenerator();
-
-        // Bei allen Tasks die Maschine um 1 verringern, da hier die niedrigste Maschine den index 0 haben muss,
-        // beim auslesen ist die niedrigste aber 1
-        for(int i = 0; i < pg.jobs.size(); i++) {
-            for(int j = 0; j < pg.jobs.get(i).size(); j++) {
-                pg.jobs.get(i).get(j).machine = pg.jobs.get(i).get(j).machine - 1;
-            }
-        }
-
-        final List<List<Task>> alleJobs = pg.jobs;
-
-        for(int i = 0; i < alleJobs.size(); i++) {
-            System.out.println("Job " + i + ":  ");
-            for(int j = 0; j < alleJobs.get(i).size(); j++) {
-                System.out.print("Task " + j + ":  ");
-                System.out.println(alleJobs.get(i).get(j).name + " d:" + alleJobs.get(i).get(j).duration
-                        + "   m:" + alleJobs.get(i).get(j).machine);
-            }
-        } */
-
 
         /*
         final List<List<Task>> alleJobs =
                 Arrays.asList(Arrays.asList(new Task(0, new int[]{2,2}, "p1", false),
-                        new Task(0, new int[]{2,4}, "p2", false),
-                        new Task(1, new int[]{2,3}, "p3", false),
-                        new Task(0, new int[]{1,1}, "p4", false)),
-                        Arrays.asList(new Task(1, new int[]{1,3}, "p6", false),
-                                new Task(0, new int[]{3,3}, "p7", false)),
-                        Arrays.asList(new Task(1, new int[]{2,2}, "p8", true)));
-
-        final List<Machine> machines = Arrays.asList(new Machine(0, false), new Machine(1, true));
-        */
-
-        final List<List<Task>> alleJobs =
-                Arrays.asList(Arrays.asList(new Task(0, new int[]{2,2}, "p1", true),
-                        new Task(0, new int[]{5,5}, "p2", true)));
+                        new Task(1, new int[]{1,2}, "p2", false)),
+                        Arrays.asList(new Task(0, new int[] {3,3}, "p3", false)));
 
         final List<Machine> machines = Arrays.asList(new Machine(0, true),
                 new Machine(1, true));
+         */
+
+        FMReader reader = new FMReader();
+        reader.ReadFM();
+        final List<List<Task>> alleJobs = new ArrayList<>(reader.jobs);
+
+        final List<Machine> machines = new ArrayList<>(reader.machines);
+        System.out.println("\n ======================= \n"
+                + "Die Jobs sind: \n"
+                + "=======================");
+
+        for(int i = 0; i < alleJobs.size(); i++) {
+            System.out.println("\n" + "Job " + i + ": ");
+            for(Task task : alleJobs.get(i)) {
+                System.out.print(task.name + "  [" + task.duration[0] + "," + task.duration[1] + "]  " + task.machine + "  " + task.optional + "  |  ");
+            }
+        }
+
+        System.out.println("\n" + "Auf den Maschinen: ");
+        for(Machine machine : machines) {
+            System.out.println(machine.id + "  " + machine.name + "  " + machine.optional);
+        }
+
+
+        System.out.println("\n" + "======================= \n"
+            + "Start Solver \n"
+            + "=======================");
+
 
 
 
@@ -97,9 +85,6 @@ public class Main {
         // Setzt fest wie viele Maschinen es gibt
         int numMachines = machines.size();
 
-        // Und packt sie in ein Array
-        // final int[] allMachines = IntStream.range(0, numMachines).toArray();
-
         // Berechnet wie lange es dauern würde, wenn alle Tasks einzeln nacheinander laufen würden
         int maxDuration = 0;
         for (List<Task> job : alleJobs) {
@@ -107,7 +92,7 @@ public class Main {
                 maxDuration += task.duration[1];
             }
         }
-        System.out.println("Maximale Duration: " + maxDuration);
+        // System.out.println("Maximale Duration: " + maxDuration);
 
         // List<Integer> ist später {JobID, TaskID}, Map ist also <{JobID, TaskID}, TaskType-Objekt>
         Map<List<Integer>, TaskType> alleTasks = new HashMap<>();
@@ -124,7 +109,7 @@ public class Main {
                 optionalMachineTaskActives.put(machine, new ArrayList<>());
             }
         }
-        System.out.println("Anzahl Maschinen: " + numMachines + ", davon sind " + optionalMachineTaskActives.size() + " optional");
+        //System.out.println("Anzahl Maschinen: " + numMachines + ", davon sind " + optionalMachineTaskActives.size() + " optional");
 
         // Iteriert durch Jobs
         for(int jobID = 0; jobID < alleJobs.size(); ++jobID) {
@@ -198,7 +183,7 @@ public class Main {
         // Wenn mindestens eine Task in optionalMachineTaskActives für die Maschine true ist,
         // dann soll die Maschine auch aktiv sein
         for(Machine machine : optionalMachineTaskActives.keySet()) {
-            if(optionalMachineTaskActives.get(machine).size() > 0) {
+            if(!optionalMachineTaskActives.get(machine).isEmpty()) {
                 BoolVar atLeastOneActive = model.newBoolVar(machine.id + "_atLeastOneActiveTask");
                 model.addMaxEquality(atLeastOneActive, optionalMachineTaskActives.get(machine));
                 model.addEquality(machine.active, atLeastOneActive);
@@ -208,10 +193,10 @@ public class Main {
         }
 
 
-        System.out.println("\n" + "Die folgenden Maschineen bekommen addNoOverlap");
+        // System.out.println("\n" + "Die folgenden Maschineen bekommen addNoOverlap");
         // Intervalle (Tasks) auf einer Maschine dürfen sich nicht überlappen
         for (Machine machine : machineToIntervals.keySet()) {
-            System.out.println("Machine_" + machine.id + " mit der Intervalsize " + machineToIntervals.get(machine).size());
+            // System.out.println("Machine_" + machine.id + " mit der Intervalsize " + machineToIntervals.get(machine).size());
             List<IntervalVar> list = machineToIntervals.get(machine);
             model.addNoOverlap(list);
         }
@@ -233,23 +218,6 @@ public class Main {
         // Zielvariable, nimmt am Ende die komplette Duration an und soll minimiert werden
         IntVar objVar = model.newIntVar(0, maxDuration, "makespan");
 
-        // Liste mit Endzeiten
-        List<IntVar> ends = new ArrayList<>();
-
-        // Über alle Jobs
-        /*
-        for (int jobID = 0; jobID < alleJobs.size(); ++jobID) {
-            // Liste mit Tasks des aktuellen Jobs
-            List<Task> job = alleJobs.get(jobID);
-            // Liste key mit Einträgen aus JobID und der Jobsize - 1 (Wenn Jobsize = 5, dann ist in Index 4 die letzte Task)
-            List<Integer> key = Arrays.asList(jobID, job.size() - 1);
-            // Das Ende der Task zu den Endzeiten hinzufügen
-            // Am Ende hat man also eine Liste mit allen Endzeiten der letzten Tasks der Jobs
-            ends.add(alleTasks.get(key).end);
-        }
-
-         */
-
         // Map die für jede Task (TaskType) die Endzeit der Task beinhaltet
         Map<TaskType, IntVar> endTimes = new HashMap<>();
         for (int jobID = 0; jobID < alleJobs.size(); jobID++) {
@@ -257,23 +225,10 @@ public class Main {
             for (int taskID = 0; taskID < job.size(); taskID++) {
                 List<Integer> key = Arrays.asList(jobID, taskID);
                 endTimes.put(alleTasks.get(key), alleTasks.get(key).end);
-                System.out.println(endTimes.size());
+                //System.out.println(endTimes.size());
             }
 
         }
-
-        System.out.println(alleTasks);
-        System.out.println(endTimes.size());
-        for(TaskType key : endTimes.keySet()) {
-            System.out.println(endTimes.get(key).getName());
-        }
-        // Es wird die größte Endzeit in ends (allerletzte Task die beendet wird) gesucht, die mit einer Zahl in objVar
-        // (Spanne von 0 bis maxDuration) übereinstimmt
-        //model.addMaxEquality(objVar, ends);
-        // Diese Zahl, soll minimiert werden
-
-        // IntVar maxFullDuration = model.newIntVar(0, maxDuration, "maximal full duration");
-
 
         // IntervalVars von optionalen Tasks, die nicht ausgeführt werden, werden nicht "performed",
         // sie exisitieren aber immernoch. Ihre lower und upper bounds, sowie noOverlaps werden ignoriert,
@@ -293,8 +248,6 @@ public class Main {
 
         for(int i = 0; i < activeBools.length; i++) {
             possibleMaxEndtimes[i] = model.newIntVar(0, maxDuration, "possibleMaxEndtime_" + i);
-            // System.out.println("Task " + i + "  " + activeBools[i].active);
-
             //Falls es eine optionale Task ist (wenn es keine optionale ist, dann ist active = null)
             if(activeBools[i].active != null) {
                 model.addEquality(possibleMaxEndtimes[i], endtimeInts[i]).onlyEnforceIf(activeBools[i].active);
@@ -305,9 +258,9 @@ public class Main {
 
         }
 
-        System.out.println("Die möglichen Zeiten die ausgewählt werden können wehe es steht 0 drinne :");
+        // System.out.println("Die möglichen Zeiten die ausgewählt werden können wehe es steht 0 drinne :");
         for(IntVar time : possibleMaxEndtimes) {
-            System.out.println(time);
+            //System.out.println(time);
         }
 
         model.addMaxEquality(objVar, possibleMaxEndtimes);
@@ -327,13 +280,15 @@ public class Main {
                 int taskID;
                 int start;
                 int duration;
+                String name;
                 boolean isActive;
 
                 // Constructor
-                AssignedTask(int jobID, int taskID, int start, int duration) {
+                AssignedTask(int jobID, int taskID, int start, int duration, String name) {
                     this.jobID = jobID;
                     this.taskID = taskID;
                     this.start = start;
+                    this.name = name;
                     this.duration = duration;
                 }
             }
@@ -363,7 +318,8 @@ public class Main {
                             jobID,
                             taskID,
                             (int) solver.value(alleTasks.get(key).start),
-                            (int) solver.value(alleTasks.get(key).interval.getSizeExpr()));
+                            (int) solver.value(alleTasks.get(key).interval.getSizeExpr()),
+                            task.name);
 
 
                     if(task.optional) {
@@ -403,7 +359,8 @@ public class Main {
 
                     for (AssignedTask assignedTask : assignedJobs.get(machine)) {
                         if(assignedTask.isActive) {
-                            String name = "job_" + assignedTask.jobID + "_task_" + assignedTask.taskID;
+                            //String name = "job_" + assignedTask.jobID + "_task_" + assignedTask.taskID;
+                            String name = assignedTask.name;
                             // Add spaces to output to align columns.
                             solLineTasks += String.format("%-15s", name);
 
@@ -443,18 +400,6 @@ public class Main {
             }
         } else {
             System.out.println("No solution found.");
-            /*
-            for(int i = 0; i < alleJobs.size(); i++) {
-                for(int j = 0; j < alleJobs.get(i).size(); j++) {
-                    List<Integer> key = Arrays.asList(i, j);
-                    TaskType task = alleTasks.get(key);
-
-                    System.out.println("Task_" + key + "  Start: " + solver.value(task.start)
-                        + "    End: " + solver.value(task.end));
-                }
-            }
-            */
-
-        }
+                   }
     }
 }

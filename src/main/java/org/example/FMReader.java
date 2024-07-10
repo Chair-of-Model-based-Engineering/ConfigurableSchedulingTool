@@ -23,6 +23,19 @@ public class FMReader {
         FMReader reader = new FMReader();
         reader.ReadFM();
 
+        /*
+        for(int i = 0; i < reader.jobs.size(); i++) {
+            System.out.println("\n Job " + i + ": ");
+            for(Task task : reader.jobs.get(i)) {
+                System.out.print(task.name + "  [" + task.duration[0] + "," + task.duration[1] + "]  " + task.machine + "  " + task.optional + "  |  ");
+            }
+        }
+        for(int i = 0; i < reader.machines.size(); i++) {
+            System.out.print("\n Machine " + i + ": " + reader.machines.get(i).name + "  " + reader.machines.get(i).id + "  " + reader.machines.get(i).optional);
+        }
+
+         */
+
     }
     public void ReadFM() throws ParserConfigurationException, IOException, SAXException, XPathExpressionException {
         String modellpfad = "src/main/modelle/FeatureModell";
@@ -55,11 +68,13 @@ public class FMReader {
             if(machineNodes.item(i).getNodeType() == Node.ELEMENT_NODE) {
                 if(machineNodes.item(i).getAttributes().getLength() == 2) {
                     Machine machine = new Machine(id, false);
+                    machine.name = machineNodes.item(i).getAttributes().getNamedItem("name").getNodeValue();
                     id++;
                     machineNameMap.put(machineNodes.item(i).getAttributes().item(1).getNodeValue(), machine);
                     machines.add(machine);
                 } else {
                     Machine machine = new Machine(id, true);
+                    machine.name = machineNodes.item(i).getAttributes().getNamedItem("name").getNodeValue();
                     id++;
                     machineNameMap.put(machineNodes.item(i).getAttributes().item(0).getNodeValue(), machine);
                     machines.add(machine);
@@ -123,6 +138,8 @@ public class FMReader {
         // Req. Constraints
         // ==============================================================
 
+        List<String[]> orderConstraints = new ArrayList<>();
+        List<String[]> machineConstraints = new ArrayList<>();
         for(int i = 0; i < constraints.getLength(); i++) {
             Node currentConstraint = constraints.item(i);
             NodeList constraintPair = currentConstraint.getChildNodes();
@@ -131,14 +148,135 @@ public class FMReader {
 
             int index = 0;
             for(int j = 0; j < constraintPair.getLength(); j++) {
-                if(constraintPair.item(j).getNodeType() == Node.TEXT_NODE) {
+                if(constraintPair.item(j).getNodeType() == Node.ELEMENT_NODE) {
                     constraintPairArr[index] = constraintPair.item(j).getTextContent();
+                    index++;
                 }
             }
 
             System.out.print("\n" + "Constraint " + i + ":  ");
             for(String s : constraintPairArr) {
                 System.out.println(s + " ");
+            }
+
+            // Zuordnen ob es eine Reihenfolge-Constraint oder eine Machine-Constraint ist
+            if(constraintPairArr[1].startsWith("m")) {
+                machineConstraints.add(constraintPairArr);
+            } else {
+                orderConstraints.add(constraintPairArr);
+            }
+        }
+
+        Set<Task> unusedTasks = new HashSet<>(allTasks);
+        // Beispiel: orderConstraints = {[p3,p2], [p2,p1], [p5,p4]} und P = {p1,p2,p3,p4,p5,p6}
+        // Dann J1=p1,p2,p3  J2=p4,p5   J3=p6
+        // Die tasks, die in der orderList bei keinem Orderpaar an erster Stelle stehen, sind Starttasks
+        // Zuerst alle Tasks die bei den Orderpaaren an erster Stelle stehen in notStarter einfügen
+        Set<Task> notStarter = new HashSet<>();
+        for(int i = 0; i < orderConstraints.size(); i++) {
+            int finalI = i;
+            Task task = allTasks.stream()
+                    .filter(t -> orderConstraints.get(finalI)[0].equals(t.name))
+                    .findAny()
+                    .orElse(null);
+
+            if(task != null) {
+                notStarter.add(task);
+            }
+        }
+
+        //Startertasks sind die Differenz von unusedTasks \ notStarter
+        unusedTasks.removeAll(notStarter);
+
+        //unusedTasks enthält jetzt nurnoch Tasks die auch Startertasks sind
+        //Für jede unusedTask einen Job erstellen
+        System.out.println(("Anzahl Startertasks: " + unusedTasks.size()));
+        for(int i = 0; i < unusedTasks.size(); i++) {
+            Task currentTask = unusedTasks.stream().toList().get(i);
+            List<Task> job = new ArrayList<>();
+            job.add(currentTask);
+            //unusedTasks.remove(currentTask);
+
+            //Enthält den namen der aktuellen/ bis jetzt letzten Task im Job, damit die task aus
+            //notStarter gelöscht werden kann
+            String tempPreviousTask = "no next task";
+
+            //für jeden Job einmal die orderList durchgehen und die order finden, bei der die Startertask an zweiter
+            //Stelle steht
+            for (int j = 0; j < orderConstraints.size(); j++) {
+                if (orderConstraints.get(j)[1].equals(currentTask.name)) {
+                    //Task mit dem Namen <p2> von der Relation [p2,p1] finden
+                    int finalJ = j;
+                    Task task = notStarter.stream()
+                            .filter(t -> orderConstraints.get(finalJ)[0].equals(t.name))
+                            .findAny()
+                            .orElse(null);
+                    if (task != null) {
+                        job.add(task);
+                        tempPreviousTask = task.name;
+                        notStarter.remove(task);
+                    }
+                }
+            }
+
+            //Job enthält jetzt 2 Tasks, von hier die Jobkette weiter vervollständigen
+            //Vorigen und jetzigen Schritt hätte man bestimmt in einem machen können, aber naja
+            while(!tempPreviousTask.equals("no next task")) {
+                boolean taskFound = false;
+                for(int j = 0; j < orderConstraints.size(); j++) {
+                    if(orderConstraints.get(j)[1].equals(tempPreviousTask)) {
+                        taskFound = true;
+                        int finalJ = j;
+                        Task task = notStarter.stream()
+                                .filter(t -> orderConstraints.get(finalJ)[0].equals(t.name))
+                                .findAny()
+                                .orElse(null);
+                        if(task != null) {
+                            job.add(task);
+                            tempPreviousTask = task.name;
+                            notStarter.remove(task);
+                        }
+                    } else { taskFound = false; }
+                }
+                if(!taskFound) {
+                    tempPreviousTask = "no next task";
+                }
+            }
+
+            jobs.add(job);
+        }
+        // ==============================
+        // Machine Constraints
+        // ==============================
+
+        /*System.out.println("In ReadFM die allTasks: ");
+        for(Task task : allTasks) {
+            System.out.println(task.name + "   " + task.machine  + "   [" + task.duration[0] + "," + task.duration[1] + "]  " + task.optional);
+        }
+        System.out.println("Und die Machines: ");
+        for(Machine m1 : machines) {
+            System.out.println(m1.name + "  " + m1.active + "  " + m1.optional + "  " + m1.id);
+        }
+        System.out.println("Und jetzt noch die Constraints: ");
+        for(String[] pair :  machineConstraints) {
+            System.out.println(pair[0] + "  " + pair[1]);
+        }*/
+
+        for(String[] con : machineConstraints) {
+            // Maschine Finden die den selben Namen hat wie die Maschine in der Constraint
+            Machine machine = machines.stream()
+                    .filter(mach -> con[1].equals(mach.name))
+                    .findAny()
+                    .orElse(null);
+
+            Task task = allTasks.stream()
+                    .filter(t -> con[0].equals(t.name))
+                    .findAny()
+                    .orElse(null);
+            System.out.println(task.name + "  " + machine.name);
+            if((machine != null) && (task != null)) {
+                System.out.println("Ich bin drin");
+                task.machine = machine.id;
             }
         }
     }

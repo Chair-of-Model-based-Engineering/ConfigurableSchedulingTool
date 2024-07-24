@@ -15,6 +15,7 @@ public class FMReader {
 
     List<List<Task>> jobs = new ArrayList<>();
     List<Machine> machines = new ArrayList<>();
+    int deadline;
 
     public FMReader() {
     }
@@ -23,22 +24,24 @@ public class FMReader {
         FMReader reader = new FMReader();
         reader.ReadFM();
 
-        /*
+        System.out.println("\n" + "Erstellte Jobs:");
         for(int i = 0; i < reader.jobs.size(); i++) {
             System.out.println("\n Job " + i + ": ");
             for(Task task : reader.jobs.get(i)) {
                 System.out.print(task.name + "  [" + task.duration[0] + "," + task.duration[1] + "]  " + task.machine + "  " + task.optional + "  |  ");
+                for(String s : task.excludeTasks) {
+                    System.out.print(" " + s);
+                }
             }
         }
         for(int i = 0; i < reader.machines.size(); i++) {
             System.out.print("\n Machine " + i + ": " + reader.machines.get(i).name + "  " + reader.machines.get(i).id + "  " + reader.machines.get(i).optional);
         }
 
-         */
 
     }
     public void ReadFM() throws ParserConfigurationException, IOException, SAXException, XPathExpressionException {
-        String modellpfad = "src/main/modelle/FeatureModell";
+        String modellpfad = "src/main/modelle/FM2.xml";
 
         DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
         Document modellDoc = builder.parse(new File(modellpfad));
@@ -47,14 +50,29 @@ public class FMReader {
         String expressionP = "//and[@name=\"P\"]";
         String expressionM = "//and[@name=\"M\"]";
         String expressionCon = "//imp";
+        String expressionDesc = "//description";
+        String expressionNot = "//conj";
 
         Node m = (Node) xPath.compile(expressionM).evaluate(modellDoc, XPathConstants.NODE);
         Node p = (Node) xPath.compile(expressionP).evaluate(modellDoc, XPathConstants.NODE);
         NodeList constraints = (NodeList) xPath.compile(expressionCon).evaluate(modellDoc, XPathConstants.NODESET);
+        Node deadlineNode = (Node) xPath.compile(expressionDesc).evaluate(modellDoc, XPathConstants.NODE);
+        NodeList exclConstraints = (NodeList) xPath.compile(expressionNot).evaluate(modellDoc, XPathConstants.NODESET);
 
         List<Task> allTasks = new ArrayList<>();
         Map<String, Task> taskNameMap = new HashMap<>();
         Map<String, Machine> machineNameMap = new HashMap<>();
+
+        // =====================================================================
+        // Deadline auslesen
+        // =====================================================================
+        String deadlineString;
+        deadlineString = deadlineNode.getTextContent();
+        try {
+            deadline = Integer.parseInt(deadlineString);
+        } catch (NumberFormatException e) {
+            System.out.println("Deadline konnte nicht konvertiet werden, überprüfe Description von root");
+        }
 
         // ======================================================================
         // Maschinen
@@ -106,6 +124,8 @@ public class FMReader {
                 int[] durationsArr = new int[2];
                 NodeList durations = currentNode.getChildNodes();
                 int durationsArrIndex = 0;
+                boolean durationsAlreadySet = true;
+                List<Integer> durationsList = new ArrayList<>();
                 for(int j = 0; j < durations.getLength(); j++) {
                     Node currentDuration = durations.item(j);
                     if(currentDuration.getNodeType() == Node.ELEMENT_NODE) {
@@ -115,12 +135,19 @@ public class FMReader {
                             durationsArr[0] = Integer.parseInt(subStrings[2]);
                             durationsArr[1] = Integer.parseInt(subStrings[2]);
                         } else if(currentDuration.getAttributes().getLength() == 1) {
+                            durationsAlreadySet = false;
                             String durationString = currentDuration.getAttributes().item(0).getNodeValue();
                             String[] subStrings = durationString.split(" ");
-                            durationsArr[durationsArrIndex] = Integer.parseInt(subStrings[2]);
-                            durationsArrIndex++;
+                            durationsList.add(Integer.parseInt(subStrings[2]));
+                            //durationsArr[durationsArrIndex] = Integer.parseInt(subStrings[2]);
+                            //durationsArrIndex++;
                         }
                     }
+                }
+                if(!durationsAlreadySet) {
+                    Collections.sort(durationsList);
+                    durationsArr[0] = durationsList.get(0);
+                    durationsArr[1] = durationsList.get(durationsList.size() - 1);
                 }
 
                 Arrays.sort(durationsArr);
@@ -278,6 +305,28 @@ public class FMReader {
                 System.out.println("Ich bin drin");
                 task.machine = machine.id;
             }
+        }
+
+        // ==============================
+        // Exclude Constraints
+        // ==============================
+        for(int i = 0; i < exclConstraints.getLength(); i++) {
+            Node currentConstraint = exclConstraints.item(i);
+
+            NodeList constraintPair = currentConstraint.getChildNodes();
+
+            String[] constraintPairArr = new String[2];
+
+            int index = 0;
+            for(int j = 0; j < constraintPair.getLength(); j++) {
+                if(constraintPair.item(j).getNodeType() == Node.ELEMENT_NODE) {
+                    constraintPairArr[index] = constraintPair.item(j).getTextContent();
+                    index++;
+                }
+            }
+
+            taskNameMap.get(constraintPairArr[0]).excludeTasks.add(constraintPairArr[1]);
+            taskNameMap.get(constraintPairArr[1]).excludeTasks.add(constraintPairArr[0]);
         }
     }
 }

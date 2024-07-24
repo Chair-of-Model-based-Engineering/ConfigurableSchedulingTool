@@ -40,13 +40,46 @@ public class Main {
          */
 
         FMReader reader = new FMReader();
-        reader.ReadFM();
-        final List<List<Task>> alleJobs = new ArrayList<>(reader.jobs);
 
+        reader.ReadFM();
+        final int deadline = reader.deadline;
+        final List<List<Task>> alleJobs = new ArrayList<>(reader.jobs);
         final List<Machine> machines = new ArrayList<>(reader.machines);
-        System.out.println("\n ======================= \n"
+
+
+        /*
+        final int deadline = 100;
+        Task p1 = new Task(0, new int[]{2,4}, "p1", true);
+        Task p2 = new Task(0, new int[]{1,3}, "p2", true);
+        Task p3 = new Task(0, new int[]{4,4}, "p3", false);
+        Task p4 = new Task(0, new int[]{10,10}, "p4", true);
+
+        p1.excludeTasks.add("p2");
+        p2.excludeTasks.add("p1");
+        final List<List<Task>> alleJobs = Arrays.asList(Arrays.asList(p1), Arrays.asList(p2, p3));
+        final List<Machine> machines = Arrays.asList(new Machine(0, false));
+
+         */
+
+        for (List<Task> job : alleJobs) {
+            for (Task task : job) {
+                System.out.println(task.name);
+                if(task.excludeTasks != null) {
+                    for (String t : task.excludeTasks) {
+                        System.out.print(t);
+                    }
+                }
+                System.out.println("\n");
+            }
+        }
+
+
+        System.out.println("\n"
+                + "======================= \n"
                 + "Die Jobs sind: \n"
                 + "=======================");
+
+        System.out.println("Deadline: " + deadline);
 
         for(int i = 0; i < alleJobs.size(); i++) {
             System.out.println("\n" + "Job " + i + ": ");
@@ -61,7 +94,8 @@ public class Main {
         }
 
 
-        System.out.println("\n" + "======================= \n"
+        System.out.println("\n"
+            + "======================= \n"
             + "Start Solver \n"
             + "=======================");
 
@@ -100,6 +134,10 @@ public class Main {
         // Jede Maschine hat eine Liste mit Intervallen (Tasks) die sich nicht überlappen dürfen (kommt später)
         Map<Machine, List<IntervalVar>> machineToIntervals = new HashMap<>();
 
+        // Liste von TaskTypes die einer exclude Constraint angehören, erst wenn alle Tasks erstellt wurden,
+        // können die Constraints für die active BoolVars festgelegt werden
+        List<TaskType> excludingTasks = new ArrayList<>();
+
         // Jede optionale Maschine hat eine Liste mit BoolVars, die dafür stehen,
         // ob die Tasks die auf ihr ausgeführt werden, auch ausgeführt werden
         // Wenn alle false sind, kann die Maschine "deaktiviert" werden
@@ -121,16 +159,24 @@ public class Main {
 
                 // Für jede Task wird ein TaskType erstellt
                 TaskType taskType = new TaskType();
+                taskType.name = task.name;
                 //Tasks dürfen zwischen 0 und maxDuration starten und enden
                 taskType.start = model.newIntVar(0, maxDuration, "start" + suffix);
                 taskType.end = model.newIntVar(0, maxDuration, "end" + suffix);
 
+                taskType.excludeTasks = task.excludeTasks;
+
                 if(task.optional) {
+                    BoolVar bool = model.newBoolVar(task.name + "_active");
+                    taskType.active = bool;
                     taskType.interval = model.newOptionalIntervalVar(taskType.start,
                             model.newIntVar(task.duration[0], task.duration[1], task.name + "_duration"),
                             taskType.end,
-                            taskType.active = model.newBoolVar(task.name + "_active"),
+                            taskType.active,
                             "interval_" + suffix);
+                    if(task.excludeTasks.size() > 0) {
+                        excludingTasks.add(taskType);
+                    }
 
                     // Wenn die optionale Task auf einer optionalen Maschine ausgeführt wird,
                     // Wird ein BoolVar für die Maschine zu optionalMachineTaskActives
@@ -149,6 +195,9 @@ public class Main {
                             "interval" + suffix);
 
                     BoolVar active = model.newBoolVar(task.name + "_active");
+                    if(task.excludeTasks.size() > 0) {
+                        excludingTasks.add(taskType);
+                    }
                     // Wenn die Task mandatory ist und auf einer optionalen Maschine ausgeführt wird,
                     // wird optionalMachineTaskActives der Maschine ein BoolVar hinzugefügt der immer true ist
                     // Dadurch kann die Maschine nicht mehr deaktiviert werden
@@ -178,6 +227,26 @@ public class Main {
             }
         }
 
+
+        for(TaskType tt : excludingTasks) {
+            // Für jeden TaskType in excludingTasks eine Liste mit den TTs active machen, die sie excluden will
+            List<BoolVar> tasksToExclude = new ArrayList<>();
+            for(TaskType tt2 : excludingTasks) {
+                if(tt.excludeTasks.contains(tt2.name)) {
+                    tasksToExclude.add(tt2.active);
+                }
+            }
+
+            BoolVar atLeastOneActive = model.newBoolVar(tt.name + "_exclude_atLeastOneActive");
+            System.out.println(atLeastOneActive);
+            for(BoolVar bv : tasksToExclude) {
+                System.out.println(bv);
+            }
+            model.addMaxEquality(atLeastOneActive, tasksToExclude);
+            model.addEquality(tt.active, 1).onlyEnforceIf(atLeastOneActive.not());
+            model.addEquality(tt.active, 0).onlyEnforceIf(atLeastOneActive);
+            System.out.println("Einmal done");
+        }
 
         // Neue BoolVar erstellen, die am Ende gleich dem Aktivstatus der Maschine sein soll
         // Wenn mindestens eine Task in optionalMachineTaskActives für die Maschine true ist,
@@ -264,10 +333,12 @@ public class Main {
         }
 
         model.addMaxEquality(objVar, possibleMaxEndtimes);
+        model.addLessOrEqual(objVar, deadline);
         model.minimize(objVar);
 
 
         CpSolver solver = new CpSolver();
+        //solver.getParameters().setStopAfterFirstSolution(true);
         CpSolverStatus status = solver.solve(model);
 
 

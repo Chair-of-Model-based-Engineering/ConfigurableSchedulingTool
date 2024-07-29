@@ -22,8 +22,10 @@ public class FMReader {
 
     public static void main(String[] args) throws XPathExpressionException, ParserConfigurationException, IOException, SAXException {
         FMReader reader = new FMReader();
-        reader.ReadFM();
+        String modelPath = "src/main/modelle/FM2.xml";
+        reader.ReadFM(modelPath);
 
+        /*
         System.out.println("\n" + "Erstellte Jobs:");
         for(int i = 0; i < reader.jobs.size(); i++) {
             System.out.println("\n Job " + i + ": ");
@@ -38,10 +40,12 @@ public class FMReader {
             System.out.print("\n Machine " + i + ": " + reader.machines.get(i).name + "  " + reader.machines.get(i).id + "  " + reader.machines.get(i).optional);
         }
 
+         */
+
 
     }
-    public void ReadFM() throws ParserConfigurationException, IOException, SAXException, XPathExpressionException {
-        String modellpfad = "src/main/modelle/FM2.xml";
+    public void ReadFM(String modelPath) throws ParserConfigurationException, IOException, SAXException, XPathExpressionException {
+        String modellpfad = modelPath;
 
         DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
         Document modellDoc = builder.parse(new File(modellpfad));
@@ -82,7 +86,6 @@ public class FMReader {
         int id = 0;
 
         for(int i = 0; i < machineNodes.getLength(); i++) {
-            System.out.println("Childnode " + i);
             if(machineNodes.item(i).getNodeType() == Node.ELEMENT_NODE) {
                 if(machineNodes.item(i).getAttributes().getLength() == 2) {
                     Machine machine = new Machine(id, false);
@@ -99,7 +102,6 @@ public class FMReader {
                 }
             }
         }
-        System.out.println(machineNameMap);
 
         // ======================================================================
         // Tasks
@@ -110,7 +112,6 @@ public class FMReader {
         for(int i = 0; i < taskNodes.getLength(); i++) {
             Node currentNode = taskNodes.item(i);
             if(currentNode.getNodeType() == Node.ELEMENT_NODE) {
-                System.out.println("Task");
                 Task task = new Task();
                 if(currentNode.getAttributes().getLength() == 2) {
                     task.name = currentNode.getAttributes().item(1).getNodeValue();
@@ -157,10 +158,6 @@ public class FMReader {
             }
         }
 
-        for(Task task : allTasks) {
-            System.out.println(task.name + "   " + task.optional + "   " + task.duration[0] + " " + task.duration[1]);
-        }
-
         // =============================================================
         // Req. Constraints
         // ==============================================================
@@ -179,11 +176,6 @@ public class FMReader {
                     constraintPairArr[index] = constraintPair.item(j).getTextContent();
                     index++;
                 }
-            }
-
-            System.out.print("\n" + "Constraint " + i + ":  ");
-            for(String s : constraintPairArr) {
-                System.out.println(s + " ");
             }
 
             // Zuordnen ob es eine Reihenfolge-Constraint oder eine Machine-Constraint ist
@@ -217,7 +209,6 @@ public class FMReader {
 
         //unusedTasks enthält jetzt nurnoch Tasks die auch Startertasks sind
         //Für jede unusedTask einen Job erstellen
-        System.out.println(("Anzahl Startertasks: " + unusedTasks.size()));
         for(int i = 0; i < unusedTasks.size(); i++) {
             Task currentTask = unusedTasks.stream().toList().get(i);
             List<Task> job = new ArrayList<>();
@@ -300,9 +291,7 @@ public class FMReader {
                     .filter(t -> con[0].equals(t.name))
                     .findAny()
                     .orElse(null);
-            System.out.println(task.name + "  " + machine.name);
             if((machine != null) && (task != null)) {
-                System.out.println("Ich bin drin");
                 task.machine = machine.id;
             }
         }

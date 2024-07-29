@@ -33,17 +33,22 @@ public class ConfigurationReader {
         ConfigurationReader reader = new ConfigurationReader();
         reader.ReadConfig(configPath, modelPath);
 
+        /*
         System.out.println("Jobs: ");
         for(List<Task> job : reader.jobs) {
+            System.out.print("Job: ");
             for(Task task : job) {
                 System.out.print(task.name + ", M: " + task.machine + ", D: [" + task.duration[0] + "," + task.duration[1] + "], " + "O: " + task.optional + "E: " + task.excludeTasks.size() + " | ");
             }
+            System.out.print("\n");
         }
 
         System.out.println("Machines: ");
         for(Machine machine : reader.machines) {
             System.out.print(machine.id + " " + machine.name + " " + machine.optional + " | ");
         }
+
+         */
     }
 
     public void ReadConfig(String configPath, String modelPath) throws ParserConfigurationException, IOException, SAXException, XPathExpressionException {
@@ -117,24 +122,21 @@ public class ConfigurationReader {
     }
 
     public void CreateMachines(NodeList machineNodes) {
-        System.out.println("Anfang create machines");
         int amountMachines = 0;
         for(int i = 0; i < machineNodes.getLength(); i++) {
             Node currentNode = machineNodes.item(i);
 
-            if(currentNode.getNodeType() == Node.ELEMENT_NODE) {
-                System.out.println(currentNode.getTextContent());
+            if(currentNode.getNodeType() == Node.ELEMENT_NODE && currentNode.getAttributes().item(0).getNodeValue().equals("selected")) {
                 Machine machine = new Machine(amountMachines, false);
-                machine.name = currentNode.getTextContent();
+                machine.name = currentNode.getAttributes().getNamedItem("name").getNodeValue();
                 machine.id = amountMachines;
                 machine.optional = false;
                 amountMachines++;
 
-                nameToMachine.put(currentNode.getTextContent(), machine);
+                nameToMachine.put(machine.name, machine);
                 machines.add(machine);
             }
         }
-        System.out.println("Ende create machines");
     }
 
     public void CreateJobs(NodeList orderNodes) {
@@ -154,34 +156,40 @@ public class ConfigurationReader {
                     index++;
                 }
             }
+                if (constrPair[1].startsWith("m")) {
+                    if(nameToTask.containsKey(constrPair[0]) && nameToMachine.containsKey(constrPair[1])) {
+                        Task task = nameToTask.get(constrPair[0]);
+                        task.machine = nameToMachine.get(constrPair[1]).id;
+                    }
+                } else {
+                    if(nameToTask.containsKey(constrPair[0]) && nameToTask.containsKey(constrPair[1])) {
+                        orderPairs.add(constrPair);
+                    }
+                }
 
-            if(constrPair[1].startsWith("m")) {
-                Task task = nameToTask.get(constrPair[0]);
-                task.machine = nameToMachine.get(constrPair[1]).id;
-            } else {
-                orderPairs.add(constrPair);
-            }
         }
 
         // Nicht-Startertasks finden
         Set<String> starterTasks = new HashSet<>(nameToTask.keySet());
         Set<String> notStarter = new HashSet<>();
         for(String[] pair : orderPairs) {
-            notStarter.add(pair[1]);
+            notStarter.add(pair[0]);
         }
         // Enthält jetzt nur noch Starter-Tasks
         starterTasks.removeAll(notStarter);
 
         for(String taskname : starterTasks) {
+            String currentTaskname = taskname;
             List<Task> job = new ArrayList<>();
 
             Task task = nameToTask.get(taskname);
             job.add(task);
 
             for(String[] pair : orderPairs) {
-                if(pair[0].equals(taskname)) {
+                if(pair[1].equals(currentTaskname)) {
                     Task followTask = nameToTask.get(pair[0]);
                     job.add(followTask);
+                    currentTaskname = pair[0];
                 }
             }
 

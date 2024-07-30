@@ -22,10 +22,10 @@ public class FMReader {
 
     public static void main(String[] args) throws XPathExpressionException, ParserConfigurationException, IOException, SAXException {
         FMReader reader = new FMReader();
-        String modelPath = "src/main/modelle/FM2.xml";
+        String modelPath = "src/main/modelle/excludeModel.xml";
         reader.ReadFM(modelPath);
 
-        /*
+
         System.out.println("\n" + "Erstellte Jobs:");
         for(int i = 0; i < reader.jobs.size(); i++) {
             System.out.println("\n Job " + i + ": ");
@@ -40,7 +40,7 @@ public class FMReader {
             System.out.print("\n Machine " + i + ": " + reader.machines.get(i).name + "  " + reader.machines.get(i).id + "  " + reader.machines.get(i).optional);
         }
 
-         */
+
 
 
     }
@@ -55,13 +55,13 @@ public class FMReader {
         String expressionM = "//and[@name=\"M\"]";
         String expressionCon = "//imp";
         String expressionDesc = "//description";
-        String expressionNot = "//conj";
+        String expressionExclCount = "//rule/disj";
 
         Node m = (Node) xPath.compile(expressionM).evaluate(modellDoc, XPathConstants.NODE);
         Node p = (Node) xPath.compile(expressionP).evaluate(modellDoc, XPathConstants.NODE);
         NodeList constraints = (NodeList) xPath.compile(expressionCon).evaluate(modellDoc, XPathConstants.NODESET);
         Node deadlineNode = (Node) xPath.compile(expressionDesc).evaluate(modellDoc, XPathConstants.NODE);
-        NodeList exclConstraints = (NodeList) xPath.compile(expressionNot).evaluate(modellDoc, XPathConstants.NODESET);
+        NodeList exclConstraints = (NodeList) xPath.compile(expressionExclCount).evaluate(modellDoc, XPathConstants.NODESET);
 
         List<Task> allTasks = new ArrayList<>();
         Map<String, Task> taskNameMap = new HashMap<>();
@@ -299,23 +299,38 @@ public class FMReader {
         // ==============================
         // Exclude Constraints
         // ==============================
-        for(int i = 0; i < exclConstraints.getLength(); i++) {
-            Node currentConstraint = exclConstraints.item(i);
+        int amount = exclConstraints.getLength();
 
-            NodeList constraintPair = currentConstraint.getChildNodes();
+        for(int i = 1; i <= amount; i++) {
+            String expression = "(//rule/disj/conj)[" + i + "]//text()";
 
-            String[] constraintPairArr = new String[2];
+            Set<String> taskNames = new HashSet<>();
 
-            int index = 0;
-            for(int j = 0; j < constraintPair.getLength(); j++) {
-                if(constraintPair.item(j).getNodeType() == Node.ELEMENT_NODE) {
-                    constraintPairArr[index] = constraintPair.item(j).getTextContent();
-                    index++;
+            System.out.println("Durchlauf " + i);
+            Object evaluation = xPath.compile(expression).evaluate(modellDoc, XPathConstants.NODESET);
+            if(evaluation != null && evaluation instanceof NodeList) {
+                NodeList list = (NodeList) evaluation;
+                for (int j = 0; j < list.getLength(); j++) {
+                    String text = list.item(j).getNodeValue().trim();
+                    if (!text.isEmpty()) {
+                        System.out.println(text);
+                        taskNames.add(text);
+                    }
                 }
             }
 
-            taskNameMap.get(constraintPairArr[0]).excludeTasks.add(constraintPairArr[1]);
-            taskNameMap.get(constraintPairArr[1]).excludeTasks.add(constraintPairArr[0]);
+            String[] names = new String[taskNames.size()];
+            names = taskNames.toArray(names);
+
+            for(int j = 0; j < names.length; j++) {
+                Task task = taskNameMap.get(names[j]);
+
+                for(int k = 0; k < names.length; k++) {
+                    if(k != j) {
+                        task.excludeTasks.add(names[k]);
+                    }
+                }
+            }
         }
     }
 }

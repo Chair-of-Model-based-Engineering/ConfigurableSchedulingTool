@@ -28,12 +28,12 @@ public class ConfigurationReader {
     ConfigurationReader() {};
 
     public static void main(String[] args) throws XPathExpressionException, ParserConfigurationException, IOException, SAXException {
-        String configPath = "src/main/modelle/config.xml";
-        String modelPath = "src/main/modelle/ModelToConfig.xml";
+        String configPath = "src/main/modelle/J2_T10_M2_O2_A4Configs/01487.xml";
+        String modelPath = "src/main/modelle/J2_T10_M2_O2_A4.xml";
         ConfigurationReader reader = new ConfigurationReader();
         reader.ReadConfig(configPath, modelPath);
 
-        /*
+
         System.out.println("Jobs: ");
         for(List<Task> job : reader.jobs) {
             System.out.print("Job: ");
@@ -48,7 +48,6 @@ public class ConfigurationReader {
             System.out.print(machine.id + " " + machine.name + " " + machine.optional + " | ");
         }
 
-         */
     }
 
     public void ReadConfig(String configPath, String modelPath) throws ParserConfigurationException, IOException, SAXException, XPathExpressionException {
@@ -185,11 +184,14 @@ public class ConfigurationReader {
             Task task = nameToTask.get(taskname);
             job.add(task);
 
-            for(String[] pair : orderPairs) {
-                if(pair[1].equals(currentTaskname)) {
-                    Task followTask = nameToTask.get(pair[0]);
+            for(int i = 0; i < orderPairs.size(); i++) {
+                String[] currentPair = orderPairs.get(i);
+                if((currentPair[1].equals(currentTaskname))) {
+                    Task followTask = nameToTask.get(currentPair[0]);
                     job.add(followTask);
-                    currentTaskname = pair[0];
+                    currentTaskname = currentPair[0];
+                    orderPairs.remove(currentPair);
+                    i = -1;
                 }
             }
 

@@ -29,13 +29,13 @@ public class Main {
 
         FMReader fmReader = new FMReader();
 
-        String modelPath = "src/main/modelle/ModelToConfig.xml";
-        String configFolderPath = "src/main/modelle/ProblemConfigs";
+        String modelPath = "src/main/modelle/J3_T20_M3_A5.xml";
+        String configFolderPath = "/home/max/eclipse-workspace/J3_T20_M3_A5/products";
 
         // 0 = Erfüllbarkeit prüfen, 1 = Optimum finden
         int mode = 1;
-        // 0 = Variables FM, 1 = Mehrere Configs
-        int mode2 = 0;
+        // 0 = Variables FM, 1 = Mehrere Configs, 2 = "Zufälliges" Problem generieren
+        int mode2 = 2;
 
         if(mode2 == 0) {
             fmReader.ReadFM(modelPath);
@@ -73,9 +73,12 @@ public class Main {
 
             Double bestResult = Double.POSITIVE_INFINITY;
             String bestResultString = "";
+            int iteration = 0;
 
             if(directoryFiles != null) {
+                int index = 0;
                 for(File config : directoryFiles) {
+                    index++;
                     ConfigurationReader cReader = new ConfigurationReader();
                     String path = config.getPath();
                     cReader.ReadConfig(path, modelPath);
@@ -114,18 +117,48 @@ public class Main {
                     if((result.status == CpSolverStatus.OPTIMAL || result.status == CpSolverStatus.FEASIBLE) && result.time < bestResult) {
                         bestResult = result.time;
                         bestResultString = result.output;
+                        iteration = index;
                     }
                     System.out.println("\n" + "Result: " + result.time + ",  Status: " + result.status);
                 }
 
                 if(mode == 0) {
-                    System.out.println("Feasible Lösung gefunden, die " + bestResult + " dauert.");
+                    System.out.println("Feasible Lösung gefunden, die " + bestResult + " dauert nach " + index + " Iterationen.");
                     System.out.println(bestResultString);
                 } else if(mode == 1) {
-                    System.out.println("================ \n" + "Das beste Ergebnis ist: \n"
+                    System.out.println("================ \n" + "Das beste Ergebnis ist in Iteration "+ iteration +": \n"
                             + bestResultString + "\n" + "Zeit: " + bestResult);
                 }
             }
+        } else if(mode2 == 2) {
+            SPGenerator spg = new SPGenerator();
+            SchedulingProblem sp = spg.generateProblem(5, 500, 100,
+                    9, 6, 300, 20, 1100);
+            final List<List<Task>> alleJobs = new ArrayList<>(sp.jobs);
+            final List<Machine> machines = new ArrayList<>(sp.machines);
+            final int deadline = sp.deadline;
+
+            System.out.println("\n"
+                    + "======================= \n"
+                    + "Die Jobs sind: \n"
+                    + "=======================");
+
+            System.out.println("Deadline: " + deadline);
+            for (int i = 0; i < alleJobs.size(); i++) {
+                System.out.println("\n" + "Job " + i + ": ");
+                for (Task task : alleJobs.get(i)) {
+                    System.out.print(task.name + "  [" + task.duration[0] + "," + task.duration[1] + "]  " + task.machine + "  " + task.optional
+                    + "exclude: " + task.excludeTasks.toString() + " | ");
+                }
+            }
+            System.out.println("\n" + "Auf den Maschinen: ");
+            for (Machine machine : machines) {
+                System.out.println(machine.id + "  " + machine.name + "  " + machine.optional);
+            }
+
+            SolverReturn result = solveProblem(mode, alleJobs, machines, deadline);
+            System.out.println("\n" + "Result: " + result.time + ",  Status: " + result.status);
+
         }
 
 

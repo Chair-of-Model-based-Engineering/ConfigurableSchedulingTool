@@ -8,15 +8,12 @@ import org.xml.sax.SAXException;
 
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.xpath.XPathExpressionException;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.*;
 import java.util.stream.IntStream;
 
 
@@ -30,18 +27,24 @@ public class Main {
         FMReader fmReader = new FMReader();
 
         String modelPath = "src/main/modelle/J3_T20_M3_A5.xml";
-        String configFolderPath = "/home/max/eclipse-workspace/J3_T20_M3_A5/products";
+        String configFolderPath = "src/main/modelle/J2_T5_M1Configs";
 
         // 0 = Erfüllbarkeit prüfen, 1 = Optimum finden
         int mode = 1;
         // 0 = Variables FM, 1 = Mehrere Configs, 2 = "Zufälliges" Problem generieren
-        int mode2 = 2;
+        int mode2 = 1;
+        // Falls mode2 = 2, kann man mit 0 das selbe Problem immer wieder lösen (um zu überprüfen ob die Lösungen
+        // gleich sind), mit 1 nur einmal Lösen (um Zeit zu messen)
+        int mode2repeat = 0;
 
         if(mode2 == 0) {
+            Instant start = Instant.now();
             fmReader.ReadFM(modelPath);
             final int deadline = fmReader.deadline;
             final List<List<Task>> alleJobs = new ArrayList<>(fmReader.jobs);
             final List<Machine> machines = new ArrayList<>(fmReader.machines);
+            Instant end = Instant.now();
+            long readDuration = Duration.between(start, end).toMillis();
 
             System.out.println("\n"
                     + "======================= \n"
@@ -64,8 +67,13 @@ public class Main {
                     + "Start Solver \n"
                     + "=======================");
 
+            Instant solveStart = Instant.now();
             SolverReturn result = solveProblem(mode, alleJobs, machines, deadline);
+            Instant solveEnd = Instant.now();
+            long solveDuration = Duration.between(solveStart, solveEnd).toMillis();
+            long combinedDuration = readDuration + solveDuration;
             System.out.println("\n" + "Result: " + result.time + ",  Status: " + result.status);
+            System.out.println("Read Dauer: " + readDuration +",   Solve Dauer: " + solveDuration + ", \n kombiniert: " + combinedDuration);
         } else if(mode2 == 1) {
             List<SolverReturn> results = new ArrayList<>();
             File directory = new File(configFolderPath);
@@ -75,16 +83,24 @@ public class Main {
             String bestResultString = "";
             int iteration = 0;
 
+            long combinedDuration = 0;
+            long readDuration = 0;
+            long solveDuration = 0;
+
             if(directoryFiles != null) {
                 int index = 0;
                 for(File config : directoryFiles) {
                     index++;
+                    Instant readStart = Instant.now();
                     ConfigurationReader cReader = new ConfigurationReader();
                     String path = config.getPath();
                     cReader.ReadConfig(path, modelPath);
                     final int deadline = cReader.deadline;
                     final List<List<Task>> alleJobs = new ArrayList<>(cReader.jobs);
                     final List<Machine> machines = new ArrayList<>(cReader.machines);
+                    Instant readEnd = Instant.now();
+                    long singleReadDuration = Duration.between(readStart, readEnd).toMillis();
+                    readDuration = readDuration + singleReadDuration;
 
                     System.out.println("\n"
                             + "======================= \n"
@@ -107,7 +123,12 @@ public class Main {
                             + "Start Solver \n"
                             + "=======================");
 
+                    Instant solveStart = Instant.now();
                     SolverReturn result = solveProblem(mode, alleJobs, machines, deadline);
+                    Instant solveEnd = Instant.now();
+                    long singleSolveDuration = Duration.between(solveStart, solveEnd).toMillis();
+                    solveDuration = solveDuration + singleSolveDuration;
+                    System.out.println("Read: " + singleReadDuration + ", Solve: " + singleSolveDuration);
 
                     if(mode == 0 && (result.status == CpSolverStatus.FEASIBLE || result.status == CpSolverStatus.OPTIMAL)) {
                         bestResult = result.time;
@@ -119,21 +140,29 @@ public class Main {
                         bestResultString = result.output;
                         iteration = index;
                     }
+
                     System.out.println("\n" + "Result: " + result.time + ",  Status: " + result.status);
+
                 }
+
+                combinedDuration = readDuration + solveDuration;
 
                 if(mode == 0) {
                     System.out.println("Feasible Lösung gefunden, die " + bestResult + " dauert nach " + index + " Iterationen.");
                     System.out.println(bestResultString);
+                    System.out.println("Read Dauer: " + readDuration + ",  Solve Duration: " + solveDuration
+                            + ", \n Kombiniert: " + combinedDuration);
                 } else if(mode == 1) {
                     System.out.println("================ \n" + "Das beste Ergebnis ist in Iteration "+ iteration +": \n"
                             + bestResultString + "\n" + "Zeit: " + bestResult);
+                    System.out.println("Read Dauer: " + readDuration + ",  Solve Duration: " + solveDuration
+                            + ", \n Kombiniert: " + combinedDuration);
                 }
             }
         } else if(mode2 == 2) {
             SPGenerator spg = new SPGenerator();
-            SchedulingProblem sp = spg.generateProblem(5, 500, 100,
-                    9, 6, 300, 20, 1100);
+            SchedulingProblem sp = spg.generateProblem(4, 200, 40,
+                    3, 40, 40, 10, 600);
             final List<List<Task>> alleJobs = new ArrayList<>(sp.jobs);
             final List<Machine> machines = new ArrayList<>(sp.machines);
             final int deadline = sp.deadline;
@@ -156,8 +185,32 @@ public class Main {
                 System.out.println(machine.id + "  " + machine.name + "  " + machine.optional);
             }
 
-            SolverReturn result = solveProblem(mode, alleJobs, machines, deadline);
-            System.out.println("\n" + "Result: " + result.time + ",  Status: " + result.status);
+            if(mode2repeat == 0) {
+                mode = 0;
+                System.out.println("Problem generiert, 0 eingeben um beliebige Lösung zu suchen, 1 für optimale Lösung.");
+                Scanner scanner = new Scanner(System.in);
+                int con = scanner.nextInt();
+                while(con == 0) {
+                    Instant start = Instant.now();
+                    SolverReturn result = solveProblem(mode, alleJobs, machines, deadline);
+                    Instant end = Instant.now();
+                    System.out.println("\n" + "Result: " + result.time + ",  Status: " + result.status);
+                    System.out.println("(Feasible) Verstrichene Zeit: " + Duration.between(start, end).toMillis());
+                    con = scanner.nextInt();
+                }
+                while (con == 1) {
+                    mode = 1;
+                    Instant start = Instant.now();
+                    SolverReturn result = solveProblem(mode, alleJobs, machines, deadline);
+                    Instant end = Instant.now();
+                    System.out.println("\n" + "Result: " + result.time + ",  Status: " + result.status);
+                    System.out.println("(Optimum) Verstrichene Zeit: " + Duration.between(start, end).toMillis());
+                    con = scanner.nextInt();
+                }
+            } else {
+                SolverReturn result = solveProblem(mode, alleJobs, machines, deadline);
+                System.out.println("\n" + "Result: " + result.time + ",  Status: " + result.status);
+            }
 
         }
 

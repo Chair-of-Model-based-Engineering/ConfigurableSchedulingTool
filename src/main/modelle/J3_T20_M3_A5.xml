@@ -1,0 +1,428 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<featureModel>
+	<properties>
+		<graphics key="autolayoutconstraints" value="false"/>
+		<graphics key="legendautolayout" value="true"/>
+		<graphics key="showconstraints" value="true"/>
+		<graphics key="showshortnames" value="false"/>
+		<graphics key="layout" value="horizontal"/>
+		<graphics key="showcollapsedconstraints" value="true"/>
+		<graphics key="legendhidden" value="false"/>
+		<graphics key="layoutalgorithm" value="1"/>
+	</properties>
+	<struct>
+		<and abstract="true" mandatory="true" name="J3_T20_M3">
+			<description>40</description>
+			<and abstract="true" mandatory="true" name="P">
+				<and mandatory="true" name="p1">
+					<feature mandatory="true" name="dp1 = 3"/>
+				</and>
+				<alt mandatory="true" name="p2">
+					<feature name="dp2 = 2"/>
+					<feature name="dp2 = 3"/>
+				</alt>
+				<alt mandatory="true" name="p3">
+					<feature name="dp3 = 1"/>
+					<feature name="dp3 = 2"/>
+				</alt>
+				<and mandatory="true" name="p4">
+					<feature mandatory="true" name="dp4 = 3"/>
+				</and>
+				<and mandatory="true" name="p5">
+					<feature mandatory="true" name="dp5 = 2"/>
+				</and>
+				<alt mandatory="true" name="p6">
+					<feature name="dp6 = 3"/>
+					<feature name="dp6 = 4"/>
+					<feature name="dp6 = 5"/>
+				</alt>
+				<and mandatory="true" name="p7">
+					<feature mandatory="true" name="dp7 = 2"/>
+				</and>
+				<alt mandatory="true" name="p8">
+					<feature name="dp8 = 1"/>
+					<feature name="dp8 = 2"/>
+				</alt>
+				<and mandatory="true" name="p9">
+					<feature mandatory="true" name="dp9 = 4"/>
+				</and>
+				<alt mandatory="true" name="p10">
+					<feature name="dp10 = 3"/>
+					<feature name="dp10 = 4"/>
+					<feature name="dp10 = 5"/>
+				</alt>
+				<and mandatory="true" name="p11">
+					<feature mandatory="true" name="dp11 = 2"/>
+				</and>
+				<alt mandatory="true" name="p12">
+					<feature name="dp12 = 2"/>
+					<feature name="dp12 = 3"/>
+				</alt>
+				<and mandatory="true" name="p13">
+					<feature mandatory="true" name="dp13 = 3"/>
+				</and>
+				<alt mandatory="true" name="p14">
+					<feature name="dp14 = 2"/>
+					<feature name="dp14 = 3"/>
+					<feature name="dp14 = 4"/>
+				</alt>
+				<and mandatory="true" name="p15">
+					<feature mandatory="true" name="dp15 = 5"/>
+				</and>
+				<alt mandatory="true" name="p16">
+					<feature name="dp16 = 1"/>
+					<feature name="dp16 = 2"/>
+				</alt>
+				<alt mandatory="true" name="p17">
+					<feature name="dp17 = 3"/>
+					<feature name="dp17 = 4"/>
+				</alt>
+				<and mandatory="true" name="p18">
+					<feature mandatory="true" name="dp18 = 5"/>
+				</and>
+				<and mandatory="true" name="p19">
+					<feature mandatory="true" name="dp19 = 1"/>
+				</and>
+				<alt mandatory="true" name="p20">
+					<feature name="dp20 = 2"/>
+					<feature name="dp20 = 3"/>
+					<feature name="dp20 = 4"/>
+				</alt>
+				<alt name="pa1">
+					<feature name="dpa1 = 2"/>
+					<feature name="dpa1 = 3"/>
+				</alt>
+				<and name="pa2">
+					<feature mandatory="true" name="dpa2 = 3"/>
+				</and>
+				<alt name="pa3">
+					<feature name="dpa3 = 2"/>
+					<feature name="dpa3 = 3"/>
+				</alt>
+				<alt name="pa4">
+					<feature name="dpa4 = 1"/>
+					<feature name="dpa4 = 2"/>
+					<feature name="dpa4 = 3"/>
+				</alt>
+				<alt name="pa5">
+					<feature name="dpa5 = 4"/>
+					<feature name="dpa5 = 5"/>
+				</alt>
+			</and>
+			<and abstract="true" mandatory="true" name="M">
+				<feature mandatory="true" name="m1"/>
+				<feature mandatory="true" name="m2"/>
+				<feature mandatory="true" name="m3"/>
+			</and>
+		</and>
+	</struct>
+	<constraints>
+		<rule>
+			<imp>
+				<var>p8</var>
+				<var>p7</var>
+			</imp>
+		</rule>
+		<rule>
+			<imp>
+				<var>p7</var>
+				<var>p6</var>
+			</imp>
+		</rule>
+		<rule>
+			<imp>
+				<var>p6</var>
+				<var>p5</var>
+			</imp>
+		</rule>
+		<rule>
+			<imp>
+				<var>p5</var>
+				<var>p4</var>
+			</imp>
+		</rule>
+		<rule>
+			<imp>
+				<var>p4</var>
+				<var>p3</var>
+			</imp>
+		</rule>
+		<rule>
+			<imp>
+				<var>p3</var>
+				<var>p2</var>
+			</imp>
+		</rule>
+		<rule>
+			<imp>
+				<var>p2</var>
+				<var>p1</var>
+			</imp>
+		</rule>
+		<rule>
+			<imp>
+				<var>p15</var>
+				<var>p14</var>
+			</imp>
+		</rule>
+		<rule>
+			<imp>
+				<var>p14</var>
+				<var>p13</var>
+			</imp>
+		</rule>
+		<rule>
+			<imp>
+				<var>p13</var>
+				<var>p12</var>
+			</imp>
+		</rule>
+		<rule>
+			<imp>
+				<var>p12</var>
+				<var>p11</var>
+			</imp>
+		</rule>
+		<rule>
+			<imp>
+				<var>p11</var>
+				<var>p10</var>
+			</imp>
+		</rule>
+		<rule>
+			<imp>
+				<var>p10</var>
+				<var>p9</var>
+			</imp>
+		</rule>
+		<rule>
+			<imp>
+				<var>p20</var>
+				<var>p19</var>
+			</imp>
+		</rule>
+		<rule>
+			<imp>
+				<var>p19</var>
+				<var>p18</var>
+			</imp>
+		</rule>
+		<rule>
+			<imp>
+				<var>p18</var>
+				<var>p17</var>
+			</imp>
+		</rule>
+		<rule>
+			<imp>
+				<var>p17</var>
+				<var>p16</var>
+			</imp>
+		</rule>
+		<rule>
+			<imp>
+				<var>p1</var>
+				<var>m1</var>
+			</imp>
+		</rule>
+		<rule>
+			<imp>
+				<var>p2</var>
+				<var>m1</var>
+			</imp>
+		</rule>
+		<rule>
+			<imp>
+				<var>p3</var>
+				<var>m2</var>
+			</imp>
+		</rule>
+		<rule>
+			<imp>
+				<var>p4</var>
+				<var>m1</var>
+			</imp>
+		</rule>
+		<rule>
+			<imp>
+				<var>p5</var>
+				<var>m3</var>
+			</imp>
+		</rule>
+		<rule>
+			<imp>
+				<var>p6</var>
+				<var>m2</var>
+			</imp>
+		</rule>
+		<rule>
+			<imp>
+				<var>p7</var>
+				<var>m1</var>
+			</imp>
+		</rule>
+		<rule>
+			<imp>
+				<var>p8</var>
+				<var>m3</var>
+			</imp>
+		</rule>
+		<rule>
+			<imp>
+				<var>p9</var>
+				<var>m3</var>
+			</imp>
+		</rule>
+		<rule>
+			<imp>
+				<var>p10</var>
+				<var>m2</var>
+			</imp>
+		</rule>
+		<rule>
+			<imp>
+				<var>p11</var>
+				<var>m1</var>
+			</imp>
+		</rule>
+		<rule>
+			<imp>
+				<var>p12</var>
+				<var>m2</var>
+			</imp>
+		</rule>
+		<rule>
+			<imp>
+				<var>p13</var>
+				<var>m2</var>
+			</imp>
+		</rule>
+		<rule>
+			<imp>
+				<var>p14</var>
+				<var>m1</var>
+			</imp>
+		</rule>
+		<rule>
+			<imp>
+				<var>p15</var>
+				<var>m3</var>
+			</imp>
+		</rule>
+		<rule>
+			<imp>
+				<var>p16</var>
+				<var>m3</var>
+			</imp>
+		</rule>
+		<rule>
+			<imp>
+				<var>p17</var>
+				<var>m1</var>
+			</imp>
+		</rule>
+		<rule>
+			<imp>
+				<var>p18</var>
+				<var>m2</var>
+			</imp>
+		</rule>
+		<rule>
+			<imp>
+				<var>p19</var>
+				<var>m3</var>
+			</imp>
+		</rule>
+		<rule>
+			<imp>
+				<var>p20</var>
+				<var>m2</var>
+			</imp>
+		</rule>
+		<rule>
+			<imp>
+				<var>pa1</var>
+				<var>m2</var>
+			</imp>
+		</rule>
+		<rule>
+			<imp>
+				<var>pa2</var>
+				<var>m3</var>
+			</imp>
+		</rule>
+		<rule>
+			<imp>
+				<var>pa3</var>
+				<var>m1</var>
+			</imp>
+		</rule>
+		<rule>
+			<imp>
+				<var>pa4</var>
+				<var>m2</var>
+			</imp>
+		</rule>
+		<rule>
+			<imp>
+				<var>pa5</var>
+				<var>m1</var>
+			</imp>
+		</rule>
+		<rule>
+			<disj>
+				<conj>
+					<var>pa1</var>
+					<conj>
+						<not>
+							<var>pa2</var>
+						</not>
+						<not>
+							<var>pa3</var>
+						</not>
+					</conj>
+				</conj>
+				<disj>
+					<conj>
+						<not>
+							<var>pa1</var>
+						</not>
+						<conj>
+							<var>pa2</var>
+							<not>
+								<var>pa3</var>
+							</not>
+						</conj>
+					</conj>
+					<conj>
+						<not>
+							<var>pa1</var>
+						</not>
+						<conj>
+							<not>
+								<var>pa2</var>
+							</not>
+							<var>pa3</var>
+						</conj>
+					</conj>
+				</disj>
+			</disj>
+		</rule>
+		<rule>
+			<disj>
+				<conj>
+					<var>pa4</var>
+					<not>
+						<var>pa5</var>
+					</not>
+				</conj>
+				<conj>
+					<not>
+						<var>pa4</var>
+					</not>
+					<var>pa5</var>
+				</conj>
+			</disj>
+		</rule>
+	</constraints>
+</featureModel>

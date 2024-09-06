@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>org.mbe</groupId>
+    <artifactId>AnCorS</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <name>Analysis of Configurable Scheduling Problems</name>
+    <organization>
+        <name>Chair of Model-based Engineering at the University of Siegen (MBE)</name>
+        <url>https://mbe.informatik.uni-siegen.de/?lang=en</url>
+    </organization>
+    <licenses>
+        <license>
+            <name>MIT License</name>
+            <url>TODO</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+    <developers>
+        <developer>
+            <name>Max Breit</name>
+            <email>max.breit@student.uni-siegen.de</email>
+            <organization>University of Siegen</organization>
+            <organizationUrl>https://www.uni-siegen.de</organizationUrl>
+        </developer>
+        <developer>
+            <name>Mathis Weiß</name>
+            <email>mathis.weiss@uni-siegen.de</email>
+            <organization>University of Siegen</organization>
+            <organizationUrl>https://www.uni-siegen.de</organizationUrl>
+        </developer>
+    </developers>
+    <properties>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+    <dependencies>
+        <!-- https://mvnrepository.com/artifact/com.google.ortools/ortools-java -->
+        <dependency>
+            <groupId>com.google.ortools</groupId>
+            <artifactId>ortools-java</artifactId>
+            <version>9.10.4067</version>
+        </dependency>
+    </dependencies>
+</project>

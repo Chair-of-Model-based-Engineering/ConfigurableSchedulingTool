@@ -1,5 +1,7 @@
-package org.example;
+package org.mbe.parser;
 
+import org.mbe.model.Task;
+import org.mbe.model.Machine;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -16,16 +18,17 @@ import java.io.File;
 import java.io.IOException;
 import java.util.*;
 
+
 public class ConfigurationReader {
 
-    List<List<Task>> jobs = new ArrayList<>();
-    List<Machine> machines = new ArrayList<>();
-    int deadline;
+    private List<List<Task>> jobs = new ArrayList<>();
+    private List<Machine> machines = new ArrayList<>();
+    private int deadline;
 
     Map<String, Task> nameToTask = new HashMap<>();
     Map<String, Machine> nameToMachine = new HashMap<>();
 
-    ConfigurationReader() {};
+    public ConfigurationReader() {};
 
     public static void main(String[] args) throws XPathExpressionException, ParserConfigurationException, IOException, SAXException {
         String configPath = "src/main/modelle/J2_T10_M2_O2_A4Configs/01487.xml";
@@ -45,7 +48,7 @@ public class ConfigurationReader {
 
         System.out.println("Machines: ");
         for(Machine machine : reader.machines) {
-            System.out.print(machine.id + " " + machine.name + " " + machine.optional + " | ");
+            System.out.print(machine.getId() + " " + machine.getName() + " " + machine.isOptional() + " | ");
         }
 
     }
@@ -127,12 +130,12 @@ public class ConfigurationReader {
 
             if(currentNode.getNodeType() == Node.ELEMENT_NODE && currentNode.getAttributes().item(0).getNodeValue().equals("selected")) {
                 Machine machine = new Machine(amountMachines, false);
-                machine.name = currentNode.getAttributes().getNamedItem("name").getNodeValue();
-                machine.id = amountMachines;
-                machine.optional = false;
+                machine.setName(currentNode.getAttributes().getNamedItem("name").getNodeValue());
+                machine.setId(amountMachines);
+                machine.setOptional(false);
                 amountMachines++;
 
-                nameToMachine.put(machine.name, machine);
+                nameToMachine.put(machine.getName(), machine);
                 machines.add(machine);
             }
         }
@@ -155,16 +158,16 @@ public class ConfigurationReader {
                     index++;
                 }
             }
-                if (constrPair[1].startsWith("m")) {
-                    if(nameToTask.containsKey(constrPair[0]) && nameToMachine.containsKey(constrPair[1])) {
-                        Task task = nameToTask.get(constrPair[0]);
-                        task.machine = nameToMachine.get(constrPair[1]).id;
-                    }
-                } else {
-                    if(nameToTask.containsKey(constrPair[0]) && nameToTask.containsKey(constrPair[1])) {
-                        orderPairs.add(constrPair);
-                    }
+            if (constrPair[1].startsWith("m")) {
+                if(nameToTask.containsKey(constrPair[0]) && nameToMachine.containsKey(constrPair[1])) {
+                    Task task = nameToTask.get(constrPair[0]);
+                    task.machine = nameToMachine.get(constrPair[1]).getId();
                 }
+            } else {
+                if(nameToTask.containsKey(constrPair[0]) && nameToTask.containsKey(constrPair[1])) {
+                    orderPairs.add(constrPair);
+                }
+            }
 
         }
 
@@ -197,5 +200,21 @@ public class ConfigurationReader {
 
             jobs.add(job);
         }
+    }
+
+    public int getDeadline() {
+        return deadline;
+    }
+
+    public void setDeadline(int deadline) {
+        this.deadline = deadline;
+    }
+
+    public List<List<Task>> getJobs(){
+        return jobs;
+    }
+
+    public List<Machine> getMachines(){
+        return machines;
     }
 }

@@ -1,4 +1,8 @@
-package org.example;
+package org.mbe.generator;
+
+import org.mbe.model.Machine;
+import org.mbe.model.SchedulingProblem;
+import org.mbe.model.Task;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -27,7 +31,7 @@ public class SPGenerator {
         int machineID = 1;
         for(int i = 0; i < machineCount; i++) {
             Machine machine = new Machine(i, false);
-            machine.name = "m" + machineID;
+            machine.setName("m" + machineID);
             machineID++;
             machines.add(machine);
         }

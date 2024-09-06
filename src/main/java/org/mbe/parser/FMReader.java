@@ -1,5 +1,6 @@
-package org.example;
-
+package org.mbe.parser;
+import org.mbe.model.Machine;
+import org.mbe.model.Task;
 import org.w3c.dom.*;
 import org.xml.sax.SAXException;
 
@@ -13,9 +14,9 @@ import java.util.*;
 
 public class FMReader {
 
-    List<List<Task>> jobs = new ArrayList<>();
-    List<Machine> machines = new ArrayList<>();
-    int deadline;
+    private List<List<Task>> jobs = new ArrayList<>();
+    private List<Machine> machines = new ArrayList<>();
+    private int deadline;
 
     public FMReader() {
     }
@@ -37,7 +38,7 @@ public class FMReader {
             }
         }
         for (int i = 0; i < reader.machines.size(); i++) {
-            System.out.print("\n Machine " + i + ": " + reader.machines.get(i).name + "  " + reader.machines.get(i).id + "  " + reader.machines.get(i).optional);
+            System.out.print("\n Machine " + i + ": " + reader.machines.get(i).getName() + "  " + reader.machines.get(i).getId() + "  " + reader.machines.get(i).isOptional());
         }
 
 
@@ -88,13 +89,13 @@ public class FMReader {
             if (machineNodes.item(i).getNodeType() == Node.ELEMENT_NODE) {
                 if (machineNodes.item(i).getAttributes().getLength() == 2) {
                     Machine machine = new Machine(id, false);
-                    machine.name = machineNodes.item(i).getAttributes().getNamedItem("name").getNodeValue();
+                    machine.setName(machineNodes.item(i).getAttributes().getNamedItem("name").getNodeValue());
                     id++;
                     machineNameMap.put(machineNodes.item(i).getAttributes().item(1).getNodeValue(), machine);
                     machines.add(machine);
                 } else {
                     Machine machine = new Machine(id, true);
-                    machine.name = machineNodes.item(i).getAttributes().getNamedItem("name").getNodeValue();
+                    machine.setName(machineNodes.item(i).getAttributes().getNamedItem("name").getNodeValue());
                     id++;
                     machineNameMap.put(machineNodes.item(i).getAttributes().item(0).getNodeValue(), machine);
                     machines.add(machine);
@@ -304,7 +305,7 @@ public class FMReader {
         for (String[] con : machineConstraints) {
             // Maschine Finden die den selben Namen hat wie die Maschine in der Constraint
             Machine machine = machines.stream()
-                    .filter(mach -> con[1].equals(mach.name))
+                    .filter(mach -> con[1].equals(mach.getName()))
                     .findAny()
                     .orElse(null);
 
@@ -313,7 +314,7 @@ public class FMReader {
                     .findAny()
                     .orElse(null);
             if ((machine != null) && (task != null)) {
-                task.machine = machine.id;
+                task.machine = machine.getId();
             }
         }
 
@@ -422,5 +423,15 @@ public class FMReader {
             }
 
              */
+    }
+
+    public int getDeadline(){
+        return deadline;
+    }
+    public List<Machine> getMachines(){
+        return machines;
+    }
+    public List<List<Task>> getJobs(){
+        return jobs;
     }
 }

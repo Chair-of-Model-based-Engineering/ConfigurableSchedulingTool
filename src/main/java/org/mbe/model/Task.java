@@ -1,4 +1,4 @@
-package org.example;
+package org.mbe.model;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -10,7 +10,7 @@ public class Task {
     public boolean optional;
     public List<String> excludeTasks = new ArrayList<>();
 
-    Task(int machine, int[] duration, String name, boolean optional, List<String> excludeTasks) {
+    public Task(int machine, int[] duration, String name, boolean optional, List<String> excludeTasks) {
         this.machine = machine;
         this.duration = duration;
         this.name = name;
@@ -18,12 +18,11 @@ public class Task {
         this.excludeTasks = excludeTasks;
     }
 
-    Task(int machine, int[] duration, String name, boolean optional) {
+    public Task(int machine, int[] duration, String name, boolean optional) {
         this.machine = machine;
         this.duration = duration;
         this.name = name;
         this.optional = optional;
     }
-
-    Task() {}
+    public Task() {}
 }

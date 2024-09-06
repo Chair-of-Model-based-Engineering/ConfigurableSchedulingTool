@@ -2,7 +2,9 @@ package org.example;
 
 import com.google.ortools.sat.BoolVar;
 
-public class Machine {
+import java.io.Serializable;
+
+public class Machine implements Serializable {
     public String name;
     int id;
     boolean optional;

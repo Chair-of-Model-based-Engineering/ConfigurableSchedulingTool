@@ -1,9 +1,10 @@
 package org.example;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Task {
+public class Task implements Serializable {
     public int machine;
     public int[] duration;
     public String name;

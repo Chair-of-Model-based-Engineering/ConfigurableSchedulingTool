@@ -49,6 +49,7 @@ public class FMReader {
         DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
         Document modellDoc = builder.parse(new File(modellpfad));
 
+        // XPath-Expressions
         XPath xPath = XPathFactory.newInstance().newXPath();
         String expressionP = "//and[@name=\"P\"]";
         String expressionM = "//and[@name=\"M\"]";
@@ -56,6 +57,7 @@ public class FMReader {
         String expressionDesc = "//description";
         String expressionExclCount = "//rule/disj";
 
+        // Expressions evaluieren und Nodes zurückgeben lassen
         Node m = (Node) xPath.compile(expressionM).evaluate(modellDoc, XPathConstants.NODE);
         Node p = (Node) xPath.compile(expressionP).evaluate(modellDoc, XPathConstants.NODE);
         NodeList constraints = (NodeList) xPath.compile(expressionCon).evaluate(modellDoc, XPathConstants.NODESET);
@@ -63,6 +65,7 @@ public class FMReader {
         NodeList exclConstraints = (NodeList) xPath.compile(expressionExclCount).evaluate(modellDoc, XPathConstants.NODESET);
 
         List<Task> allTasks = new ArrayList<>();
+        // Der Name der Task/ Der Maschine als key und das Objekt als value
         Map<String, Task> taskNameMap = new HashMap<>();
         Map<String, Machine> machineNameMap = new HashMap<>();
 
@@ -80,12 +83,17 @@ public class FMReader {
         // ======================================================================
         // Maschinen
         // ======================================================================
+
+        // Maschinen sind die Child Nodes des abstract Features M
         NodeList machineNodes = m.getChildNodes();
 
         int id = 0;
 
         for (int i = 0; i < machineNodes.getLength(); i++) {
             if (machineNodes.item(i).getNodeType() == Node.ELEMENT_NODE) {
+                // Wenn die Node 2 Attribute hat, hat es ein mandatory = false Attribut. Ist es nicht mandatory,
+                // hat es dieses Attribute einfach nicht. Darüber können wir bestimmen ob die Maschine optional
+                // oder nicht optional ist
                 if (machineNodes.item(i).getAttributes().getLength() == 2) {
                     Machine machine = new Machine(id, false);
                     machine.name = machineNodes.item(i).getAttributes().getNamedItem("name").getNodeValue();
@@ -106,12 +114,17 @@ public class FMReader {
         // Tasks
         // ======================================================================
 
+        //Tasks befinden sich in Childnodes des abstract Features P
         NodeList taskNodes = p.getChildNodes();
 
         for (int i = 0; i < taskNodes.getLength(); i++) {
             Node currentNode = taskNodes.item(i);
             if (currentNode.getNodeType() == Node.ELEMENT_NODE) {
                 Task task = new Task();
+                // Selbe wie bei Maschinen
+                // Wenn die Node 2 Attribute hat, hat es ein mandatory = false Attribut. Ist es nicht mandatory,
+                // hat es dieses Attribute einfach nicht. Darüber können wir bestimmen ob die Task optional
+                // oder nicht optional ist
                 if (currentNode.getAttributes().getLength() == 2) {
                     task.name = currentNode.getAttributes().item(1).getNodeValue();
                     task.optional = false;
@@ -129,11 +142,18 @@ public class FMReader {
                 for (int j = 0; j < durations.getLength(); j++) {
                     Node currentDuration = durations.item(j);
                     if (currentDuration.getNodeType() == Node.ELEMENT_NODE) {
+                        // Wenn es zwei Attribute hat, dann weil es ein mandatory = true Attribut hat,
+                        // damit ist es die einzige, feste Duration für die Task
                         if (currentDuration.getAttributes().getLength() == 2) {
                             String durationString = currentDuration.getAttributes().item(1).getNodeValue();
                             String[] subStrings = durationString.split(" ");
                             durationsArr[0] = Integer.parseInt(subStrings[2]);
                             durationsArr[1] = Integer.parseInt(subStrings[2]);
+                        // Wenn es nur ein Attribut hat, ist es eine alternative Group, deswegen alle
+                        // möglichen Durations in eine Liste packen, danach sortieren und die min und max Werte
+                        // in das Durations-Array der Task packen
+                        // Wird nur gemacht, wenn durationsAlreadySet = false, was hier gesetzt wird. Normalerweise
+                        // ist er true
                         } else if (currentDuration.getAttributes().getLength() == 1) {
                             durationsAlreadySet = false;
                             String durationString = currentDuration.getAttributes().item(0).getNodeValue();
@@ -169,6 +189,8 @@ public class FMReader {
 
             String[] constraintPairArr = new String[2];
 
+            // ConstraintPair füllen (man muss das mit einem Index machen,
+            // da es mehr Nodes gibt als nur die Textnodes
             int index = 0;
             for (int j = 0; j < constraintPair.getLength(); j++) {
                 if (constraintPair.item(j).getNodeType() == Node.ELEMENT_NODE) {
@@ -206,6 +228,10 @@ public class FMReader {
         //Startertasks sind die Differenz von unusedTasks \ notStarter
         unusedTasks.removeAll(notStarter);
 
+        // Für jede StarterTask (hier in unusedTasks) einen Job erstellen
+        // OrderConstraints durchgehen und durch sie den Job versvollständigen
+        // Wenn eine Task durch eine Orderconstraints hinzgefügt wurde, Constraint löschen
+        // und wieder von vorne durch die Liste gehen
         for (Task task : unusedTasks) {
             List<Task> job = new ArrayList<>();
             job.add(task);
@@ -223,86 +249,14 @@ public class FMReader {
             }
             jobs.add(job);
         }
-        /*
-        //unusedTasks enthält jetzt nurnoch Tasks die auch Startertasks sind
-        //Für jede unusedTask einen Job erstellen
-        for(int i = 0; i < unusedTasks.size(); i++) {
-            Task currentTask = unusedTasks.stream().toList().get(i);
-            List<Task> job = new ArrayList<>();
-            job.add(currentTask);
-            //unusedTasks.remove(currentTask);
-
-            //Enthält den namen der aktuellen/ bis jetzt letzten Task im Job, damit die task aus
-            //notStarter gelöscht werden kann
-            String tempPreviousTask = "no next task";
-
-            //für jeden Job einmal die orderList durchgehen und die order finden, bei der die Startertask an zweiter
-            //Stelle steht
-            for (int j = 0; j < orderConstraints.size(); j++) {
-                if (orderConstraints.get(j)[1].equals(currentTask.name)) {
-                    //Task mit dem Namen <p2> von der Relation [p2,p1] finden
-                    int finalJ = j;
-                    Task task = notStarter.stream()
-                            .filter(t -> orderConstraints.get(finalJ)[0].equals(t.name))
-                            .findAny()
-                            .orElse(null);
-                    if (task != null) {
-                        job.add(task);
-                        tempPreviousTask = task.name;
-                        notStarter.remove(task);
-                    }
-                    orderConstraints.remove(j);
-                    j = 0;
-                }
-            }
-
-            //Job enthält jetzt 2 Tasks, von hier die Jobkette weiter vervollständigen
-            //Vorigen und jetzigen Schritt hätte man bestimmt in einem machen können, aber naja
-            while(!tempPreviousTask.equals("no next task")) {
-                boolean taskFound = false;
-                for(int j = 0; j < orderConstraints.size(); j++) {
-                    if(orderConstraints.get(j)[1].equals(tempPreviousTask)) {
-                        taskFound = true;
-                        int finalJ = j;
-                        Task task = notStarter.stream()
-                                .filter(t -> orderConstraints.get(finalJ)[0].equals(t.name))
-                                .findAny()
-                                .orElse(null);
-                        if(task != null) {
-                            job.add(task);
-                            tempPreviousTask = task.name;
-                            notStarter.remove(task);
-                        }
-                    } else { taskFound = false; }
-                }
-                if(!taskFound) {
-                    tempPreviousTask = "no next task";
-                }
-            }
-
-            jobs.add(job);
-        }
-        /*
 
         // ==============================
         // Machine Constraints
         // ==============================
 
-        /*System.out.println("In ReadFM die allTasks: ");
-        for(Task task : allTasks) {
-            System.out.println(task.name + "   " + task.machine  + "   [" + task.duration[0] + "," + task.duration[1] + "]  " + task.optional);
-        }
-        System.out.println("Und die Machines: ");
-        for(Machine m1 : machines) {
-            System.out.println(m1.name + "  " + m1.active + "  " + m1.optional + "  " + m1.id);
-        }
-        System.out.println("Und jetzt noch die Constraints: ");
-        for(String[] pair :  machineConstraints) {
-            System.out.println(pair[0] + "  " + pair[1]);
-        }*/
-
         for (String[] con : machineConstraints) {
-            // Maschine Finden die den selben Namen hat wie die Maschine in der Constraint
+            // Maschine und Tasken Finden die den selben Namen hat wie die Maschine/ Task in der Constraint
+            // und zuordnen
             Machine machine = machines.stream()
                     .filter(mach -> con[1].equals(mach.name))
                     .findAny()
@@ -320,6 +274,21 @@ public class FMReader {
         // ==============================
         // Exclude Constraints
         // ==============================
+
+        // Man hätte es wahrscheinlich auch rekursiv machen können, aber so funtkioniert es auch
+        // Uns wurde auch mal beigebracht dass rekursive Funktionen sehr schlecht performen, deswegen
+        // habe ich es mal ein bisschen umständlicher gemacht, aber ob meine Version WIRKLICH performanter ist,
+        // wurde nicht getestet
+
+        // Durch die Expression wird sozusagen einmal die Liste der Tasks in einer alternative Task Group
+        // geholt, da sie aber durch XOR-Ausdrücke (p1 * !p2) + (!p1 * p2) realisiert sind, gibt es so viele Listen
+        // mit den selben Tasks, wie es Klasueln in dem Ausdruck gibt. Mit i kann man sich die Task-Liste holen,
+        // die zwischen dem i'ten <conj></conj> steht
+        // Das wird so lange gemacht, bis man eine leere Liste wiederbekommt
+        // Nach jeder Iteration muss man aber einmal überprüfen, ob es die selbe Liste wie letztes mal ist, damit man
+        // sie skippen kann
+
+        //Zuerst muss man sich eine Task-Liste holen
         int i = 1;
         String expression = "(//rule/disj/conj)[" + i + "]//text()";
         Object evaluation = xPath.compile(expression).evaluate(modellDoc, XPathConstants.NODESET);
@@ -337,9 +306,15 @@ public class FMReader {
         int listSize = taskNames.size();
         List<String> prevList = new ArrayList<>();
 
+        // Solange die Liste die man sich am Ende der while Schleife holt nicht leer ist
         while (listSize > 0) {
             i++;
             boolean sameList = false;
+            // prevlist != null tritt ein, wenn es die erste Iteration ist und wir nur die Liste haben,
+            // die wir außerhalb der while Schleife geholt haben
+            // Wenn Liste unterschiedliche Größe zu vorher hat, dann ist sie eh nicht die selbe
+            // Bei selber Größe solange checken ob die selben Tasks enthalten sind, dann breaken,
+            // Ansonsten ist es zum Schluss die selbe Liste wenn break nicht aufgerufen wird
             if ((prevList != null) && (taskNames.size() == prevList.size())) {
                 sameList = true;
                 for (int j = 0; j < taskNames.size(); j++) {
@@ -350,6 +325,9 @@ public class FMReader {
 
                 }
             }
+
+            // Wenn es nicht die selbe Liste ist, können den Tasks die anderen Task in der alternative Gruppe
+            // zu der exludeTasks-Liste hinzugefügt werden
             if (!sameList) {
                 String[] names = new String[taskNames.size()];
                 names = taskNames.toArray(names);
@@ -364,12 +342,17 @@ public class FMReader {
                     }
                 }
             }
+
+            // Man muss leider über die Liste iterieren und alle Elemente prevListe hinzufügen,
+            // da es ansonsten immer nur eine referenz auf die alte Liste ist
             if (prevList != null) {
                 prevList.clear();
             }
             for(String n : taskNames) {
                 prevList.add(n);
             }
+
+            // Neue Liste holen
 
             String expression2 = "(//rule/disj/conj)[" + i + "]//text()";
             Object evaluation2 = xPath.compile(expression2).evaluate(modellDoc, XPathConstants.NODESET);
@@ -386,41 +369,5 @@ public class FMReader {
             }
             listSize = taskNames.size();
         }
-
-
-
-            /*
-        for(int i = 1; i <= amount; i++) {
-            String expression = "(//rule/disj/conj)[" + i + "]//text()";
-
-            Set<String> taskNames = new HashSet<>();
-
-            System.out.println("Durchlauf " + i);
-            Object evaluation = xPath.compile(expression).evaluate(modellDoc, XPathConstants.NODESET);
-            if(evaluation != null && evaluation instanceof NodeList) {
-                NodeList list = (NodeList) evaluation;
-                for (int j = 0; j < list.getLength(); j++) {
-                    String text = list.item(j).getNodeValue().trim();
-                    if (!text.isEmpty()) {
-                        System.out.println(text);
-                        taskNames.add(text);
-                    }
-                }
-            }
-            String taskNamesS = taskNames.toString();
-            String[] names = new String[taskNames.size()];
-            names = taskNames.toArray(names);
-
-            for(int j = 0; j < names.length; j++) {
-                Task task = taskNameMap.get(names[j]);
-
-                for(int k = 0; k < names.length; k++) {
-                    if(k != j) {
-                        task.excludeTasks.add(names[k]);
-                    }
-                }
-            }
-
-             */
     }
 }

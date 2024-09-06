@@ -1,5 +1,9 @@
 package org.example;
 
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -9,9 +13,9 @@ import static java.lang.Math.floor;
 
 public class SPGenerator {
 
-    public SchedulingProblem generateProblem(int jobCount, int taskCount,
+    public void generateProblem(int jobCount, int taskCount,
                                              int durationOutlierCount, int machineCount, int optionalCount,
-                                             int altCount, int altGroupCount, int deadline) {
+                                             int altCount, int altGroupCount, int deadline) throws IOException {
         List<List<Task>> jobs = new ArrayList<>();
         List<Machine> machines = new ArrayList<>();
 
@@ -63,7 +67,7 @@ public class SPGenerator {
                 task.machine = random.nextInt(machineCount);
                 task.duration = new int[2];
 
-                // Wenn mehr durationOutlier übrig sind (oder so viele) wie noch zu erstellende Tasks
+                // Wenn mehr durationOutlier übrig sind (oder so viele) wie noch zu erstellende Tasks gibt,
                 // soll die Task auf jeden Fall ein Outlier sein
                 if (((taskCount - taskID) == durationOutlierCount) && (durationOutlierCount > 0)){
                     // Soll es eine variable Dauer sein?
@@ -85,6 +89,7 @@ public class SPGenerator {
                     durationOutlierCount--;
 
                 } else {
+                    // Trotzdem noch die Chance ein Outlier zu werden
                     int outLierChance = random.nextInt(2);
                     // 0 = Outlier, 1 = Kein Outlier
                     if(outLierChance == 0 && durationOutlierCount > 0) {
@@ -134,7 +139,7 @@ public class SPGenerator {
         }
 
         // ===============================
-        // Optionale Jobs erstellen
+        // Optionale Task-Jobs erstellen
         // ===============================
         for(int i = 0; i < optionalCount; i++) {
             List<Task> job = new ArrayList<>();
@@ -157,6 +162,7 @@ public class SPGenerator {
                 task.duration[1] = dur2;
                 Arrays.sort(task.duration);
             } else {
+                // Nicht variabel
                 int dur = random.nextInt(5) + 1;
                 task.duration[0] = dur;
                 task.duration[1] = dur;
@@ -232,6 +238,15 @@ public class SPGenerator {
             }
         }
 
-        return new SchedulingProblem(jobs, machines, deadline);
+        SchedulingProblem sp = new SchedulingProblem(jobs, machines, deadline);
+
+        FileOutputStream fOut = new FileOutputStream("src/main/probleme/problem.txt");
+        ObjectOutputStream oOut = new ObjectOutputStream(fOut);
+
+        oOut.writeObject(sp);
+        oOut.flush();
+        oOut.close();
+
+        //return new SchedulingProblem(jobs, machines, deadline);
     }
 }

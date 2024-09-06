@@ -58,12 +58,14 @@ public class ConfigurationReader {
 
         XPath xPath = XPathFactory.newInstance().newXPath();
 
+        // Expressions
         String exprRoot = "//description";
         String exprOrder = "//imp";
         String exprTask = "//feature[starts-with(@name, 'p')]";
         String exprMachine = "//feature[starts-with(@name, 'm')]";
         String exprDuration = "//feature[starts-with(@name, 'd')]";
 
+        // Expressions evaluieren und Nodes/ Nodelisten bekommen
         Node rootDescription = (Node) xPath.compile(exprRoot).evaluate(modelDoc, XPathConstants.NODE);
         NodeList orderNodes = (NodeList) xPath.compile(exprOrder).evaluate(modelDoc, XPathConstants.NODESET);
         NodeList taskNodes = (NodeList) xPath.compile(exprTask).evaluate(configDoc, XPathConstants.NODESET);
@@ -91,9 +93,11 @@ public class ConfigurationReader {
         for (int i = 0; i < taskNodes.getLength(); i++) {
             Node taskNode = taskNodes.item(i);
 
+            // Selected = angewählt, naja offensichtlich
             if(taskNode.getNodeType() == Node.ELEMENT_NODE && taskNode.getAttributes().item(0).getNodeValue().equals("selected")) {
                 Task task = new Task();
                 task.name = taskNode.getAttributes().getNamedItem("name").getNodeValue();
+                // In einer instanz ist keine task optional
                 task.optional = false;
                 task.excludeTasks = new ArrayList<>();
 
@@ -106,6 +110,8 @@ public class ConfigurationReader {
         for(int i = 0; i < durationNodes.getLength(); i++) {
             Node durationNode = durationNodes.item(i);
 
+            // Duration Features haben ja den Tasknamen im Namen, von daher kann man sie darüber zuordnen
+            // Die Duration kommt in beide Arrayplätze, sodass die Range von x bis x geht (x = gleiche Zahl)
             if(durationNode.getNodeType() == Node.ELEMENT_NODE && durationNode.getAttributes().item(0).getNodeValue().equals("selected")) {
                 String durationString = durationNode.getAttributes().getNamedItem("name").getNodeValue();
                 String[] subStrings = durationString.split(" ");
@@ -155,6 +161,8 @@ public class ConfigurationReader {
                     index++;
                 }
             }
+            // Falls der erste Constraint-String mit m Startet, ist es eine zuweisung von Task zu Machine
+            // Wenn er mit p beginnt, dann eine Reihenfolgen require-Constraint
                 if (constrPair[1].startsWith("m")) {
                     if(nameToTask.containsKey(constrPair[0]) && nameToMachine.containsKey(constrPair[1])) {
                         Task task = nameToTask.get(constrPair[0]);
@@ -169,14 +177,19 @@ public class ConfigurationReader {
         }
 
         // Nicht-Startertasks finden
+        // Wenn eine Task auf der linken Seite einer Relation (p1, p2) steht, dann kann sie kein Starter sein,
+        // weil das bedeutet, dass sie nach p2 startet
         Set<String> starterTasks = new HashSet<>(nameToTask.keySet());
         Set<String> notStarter = new HashSet<>();
         for(String[] pair : orderPairs) {
             notStarter.add(pair[0]);
         }
+
         // Enthält jetzt nur noch Starter-Tasks
+        // Enthält auch immer noch optionale Tasks, da diese ja ein eigener Job sind
         starterTasks.removeAll(notStarter);
 
+        // Für jede Startertask einen Job erstellen
         for(String taskname : starterTasks) {
             String currentTaskname = taskname;
             List<Task> job = new ArrayList<>();
@@ -184,6 +197,9 @@ public class ConfigurationReader {
             Task task = nameToTask.get(taskname);
             job.add(task);
 
+            // Die Orderpairs durchgehen und jedes mal, wenn eine Order, die die letzte Task des
+            // aktuellen Jobs enthält, die andere Task anhängen, die Order löschen und wieder von vorne
+            // die Orderpairs durchgehen
             for(int i = 0; i < orderPairs.size(); i++) {
                 String[] currentPair = orderPairs.get(i);
                 if((currentPair[1].equals(currentTaskname))) {

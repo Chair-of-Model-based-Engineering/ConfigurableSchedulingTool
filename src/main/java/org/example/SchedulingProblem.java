@@ -1,8 +1,9 @@
 package org.example;
 
+import java.io.Serializable;
 import java.util.List;
 
-public class SchedulingProblem {
+public class SchedulingProblem implements Serializable {
     List<List<Task>> jobs;
     List<Machine> machines;
     int deadline;

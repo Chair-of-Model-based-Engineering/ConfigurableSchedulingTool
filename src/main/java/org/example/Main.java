@@ -8,35 +8,38 @@ import org.xml.sax.SAXException;
 
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.xpath.XPathExpressionException;
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.stream.IntStream;
 
-
+// =======================================================================
+// Basierend auf dem Jobshop-Problem-Beispiel von Google OR-Tools
+// https://developers.google.com/optimization/scheduling/job_shop?hl=de
+// 07.08.2024
+// ========================================================================
 
 public class Main {
 
-    public static void main(String[] args) throws ParserConfigurationException, IOException, SAXException, XPathExpressionException {
+    public static void main(String[] args) throws ParserConfigurationException, IOException, SAXException, XPathExpressionException, ClassNotFoundException {
 
         Loader.loadNativeLibraries();
 
         FMReader fmReader = new FMReader();
 
-        String modelPath = "src/main/modelle/J3_T20_M3_A5.xml";
+        String modelPath = "src/main/modelle/J2_T10_M2_O2_A4.xml";
         String configFolderPath = "src/main/modelle/J2_T5_M1Configs";
 
         // 0 = Erfüllbarkeit prüfen, 1 = Optimum finden
         int mode = 1;
         // 0 = Variables FM, 1 = Mehrere Configs, 2 = "Zufälliges" Problem generieren
-        int mode2 = 1;
+        int mode2 = 2;
         // Falls mode2 = 2, kann man mit 0 das selbe Problem immer wieder lösen (um zu überprüfen ob die Lösungen
         // gleich sind), mit 1 nur einmal Lösen (um Zeit zu messen)
         int mode2repeat = 0;
 
+        // Suche über Problemfamilie
         if(mode2 == 0) {
             Instant start = Instant.now();
             fmReader.ReadFM(modelPath);
@@ -55,7 +58,7 @@ public class Main {
             for (int i = 0; i < alleJobs.size(); i++) {
                 System.out.println("\n" + "Job " + i + ": ");
                 for (Task task : alleJobs.get(i)) {
-                    System.out.print(task.name + "  [" + task.duration[0] + "," + task.duration[1] + "]  " + task.machine + "  " + task.optional + "  |  ");
+                    System.out.print(task.name + "  [" + task.duration[0] + "," + task.duration[1] + "]  " + task.machine + "  " + task.optional + " " + task.excludeTasks.toString() + "  |  ");
                 }
             }
             System.out.println("\n" + "Auf den Maschinen: ");
@@ -74,6 +77,7 @@ public class Main {
             long combinedDuration = readDuration + solveDuration;
             System.out.println("\n" + "Result: " + result.time + ",  Status: " + result.status);
             System.out.println("Read Dauer: " + readDuration +",   Solve Dauer: " + solveDuration + ", \n kombiniert: " + combinedDuration);
+            // Suche über mehrere Iinstanzen
         } else if(mode2 == 1) {
             List<SolverReturn> results = new ArrayList<>();
             File directory = new File(configFolderPath);
@@ -111,7 +115,7 @@ public class Main {
                     for (int i = 0; i < alleJobs.size(); i++) {
                         System.out.println("\n" + "Job " + i + ": ");
                         for (Task task : alleJobs.get(i)) {
-                            System.out.print(task.name + "  [" + task.duration[0] + "," + task.duration[1] + "]  " + task.machine + "  " + task.optional + "  |  ");
+                            System.out.print(task.name + "  [" + task.duration[0] + "," + task.duration[1] + "]  " + task.machine + "  " + task.optional + " " + task.excludeTasks.toString() + "  |  ");
                         }
                     }
                     System.out.println("\n" + "Auf den Maschinen: ");
@@ -130,11 +134,13 @@ public class Main {
                     solveDuration = solveDuration + singleSolveDuration;
                     System.out.println("Read: " + singleReadDuration + ", Solve: " + singleSolveDuration);
 
+                    // Wenn nur nach feasible Lösung gesucht wird, kann die Suche beendet werden wenn eine gefunden wurde
                     if(mode == 0 && (result.status == CpSolverStatus.FEASIBLE || result.status == CpSolverStatus.OPTIMAL)) {
                         bestResult = result.time;
                         bestResultString = result.output;
                         break;
                     }
+                    // Wenn nach Optimum gesucht wird, Werte updaten
                     if((result.status == CpSolverStatus.OPTIMAL || result.status == CpSolverStatus.FEASIBLE) && result.time < bestResult) {
                         bestResult = result.time;
                         bestResultString = result.output;
@@ -147,22 +153,33 @@ public class Main {
 
                 combinedDuration = readDuration + solveDuration;
 
+                // Erfüllbarkeit Output
                 if(mode == 0) {
                     System.out.println("Feasible Lösung gefunden, die " + bestResult + " dauert nach " + index + " Iterationen.");
-                    System.out.println(bestResultString);
+                    System.out.printf(bestResultString);
                     System.out.println("Read Dauer: " + readDuration + ",  Solve Duration: " + solveDuration
                             + ", \n Kombiniert: " + combinedDuration);
+
+                    // Optimum Output
                 } else if(mode == 1) {
                     System.out.println("================ \n" + "Das beste Ergebnis ist in Iteration "+ iteration +": \n"
-                            + bestResultString + "\n" + "Zeit: " + bestResult);
+                            + "Zeit: " + bestResult);
+                    System.out.printf(bestResultString);
                     System.out.println("Read Dauer: " + readDuration + ",  Solve Duration: " + solveDuration
                             + ", \n Kombiniert: " + combinedDuration);
                 }
             }
+            // Zufällige Probleme erstellen
         } else if(mode2 == 2) {
             SPGenerator spg = new SPGenerator();
-            SchedulingProblem sp = spg.generateProblem(4, 200, 40,
-                    3, 40, 40, 10, 600);
+            spg.generateProblem(2, 5, 2,
+                    2, 1, 2, 1, 50);
+
+            FileInputStream fIn = new FileInputStream("src/main/probleme/problem.txt");
+            ObjectInputStream oIn = new ObjectInputStream(fIn);
+            SchedulingProblem sp = (SchedulingProblem) oIn.readObject();
+            oIn.close();
+
             final List<List<Task>> alleJobs = new ArrayList<>(sp.jobs);
             final List<Machine> machines = new ArrayList<>(sp.machines);
             final int deadline = sp.deadline;
@@ -177,7 +194,7 @@ public class Main {
                 System.out.println("\n" + "Job " + i + ": ");
                 for (Task task : alleJobs.get(i)) {
                     System.out.print(task.name + "  [" + task.duration[0] + "," + task.duration[1] + "]  " + task.machine + "  " + task.optional
-                    + "exclude: " + task.excludeTasks.toString() + " | ");
+                            + " exclude: " + task.excludeTasks.toString() + " | ");
                 }
             }
             System.out.println("\n" + "Auf den Maschinen: ");
@@ -187,7 +204,8 @@ public class Main {
 
             if(mode2repeat == 0) {
                 mode = 0;
-                System.out.println("Problem generiert, 0 eingeben um beliebige Lösung zu suchen, 1 für optimale Lösung.");
+                System.out.println("Problem generiert, 0 eingeben um beliebige Lösung zu suchen, 1 für optimale Lösung. \n " +
+                        "Mit anderer ZAHL abbrechen");
                 Scanner scanner = new Scanner(System.in);
                 int con = scanner.nextInt();
                 while(con == 0) {
@@ -223,7 +241,7 @@ public class Main {
         // Model
         CpModel model = new CpModel();
 
-        // Für jede optionale Maschine wird eine neue BoolVar
+        // Für jede optionale Maschine wird eine neue BoolVar erstellt
         for (Machine machine : machines) {
             if (machine.optional) {
                 machine.active = model.newBoolVar("Machine" + machine.id + "_active");
@@ -240,20 +258,20 @@ public class Main {
                 maxDuration += task.duration[1];
             }
         }
-        // System.out.println("Maximale Duration: " + maxDuration);
 
         // List<Integer> ist später {JobID, TaskID}, Map ist also <{JobID, TaskID}, TaskType-Objekt>
+        // TaskID ist nur der Index der Task im Job, {JobID, TaskID} ist sozusagen die echte TaskID der Task
         Map<List<Integer>, TaskType> alleTasks = new HashMap<>();
 
-        // Jede Maschine hat eine Liste mit Intervallen (Tasks) die sich nicht überlappen dürfen (kommt später)
+        // Jede Maschine hat eine Liste mit Intervallen (Tasks) die sich nicht überlappen dürfen
         Map<Machine, List<IntervalVar>> machineToIntervals = new HashMap<>();
 
-        // Liste von TaskTypes die einer exclude Constraint angehören, erst wenn alle Tasks erstellt wurden,
+        // Liste von TaskTypes die einer alterantive Task Gruppe angehören, erst wenn alle Tasks erstellt wurden,
         // können die Constraints für die active BoolVars festgelegt werden
         List<TaskType> excludingTasks = new ArrayList<>();
 
         // Jede optionale Maschine hat eine Liste mit BoolVars, die dafür stehen,
-        // ob die Tasks die auf ihr ausgeführt werden, auch ausgeführt werden
+        // ob die Tasks die auf ihr ausgeführt werden, auch aktiv sind
         // Wenn alle false sind, kann die Maschine "deaktiviert" werden
         Map<Machine, List<BoolVar>> optionalMachineTaskActives = new HashMap<>();
         for (Machine machine : machines) {
@@ -261,7 +279,6 @@ public class Main {
                 optionalMachineTaskActives.put(machine, new ArrayList<>());
             }
         }
-        //System.out.println("Anzahl Maschinen: " + numMachines + ", davon sind " + optionalMachineTaskActives.size() + " optional");
 
         // Iteriert durch Jobs
         for (int jobID = 0; jobID < alleJobs.size(); ++jobID) {
@@ -280,6 +297,9 @@ public class Main {
 
                 taskType.excludeTasks = task.excludeTasks;
 
+                // Wenn eine Task optional ist, bekommt sie ein OptionalIntervalVar, sodass das Interval
+                // nicht performed, wenn die Task nicht aktiv ist
+                // dafür hat das Interval den Task.active als Literal
                 if (task.optional) {
                     BoolVar bool = model.newBoolVar(task.name + "_active");
                     taskType.active = bool;
@@ -293,13 +313,14 @@ public class Main {
                     }
 
                     // Wenn die optionale Task auf einer optionalen Maschine ausgeführt wird,
-                    // Wird ein BoolVar für die Maschine zu optionalMachineTaskActives
+                    // Wird ein BoolVar für die Maschine zu optionalMachineTaskActives hinzugefügt
                     for (Machine machine : machines) {
                         if (task.machine == machine.id && machine.optional) {
                             optionalMachineTaskActives.get(machine).add(taskType.active);
                         }
                     }
 
+                    // Wenn die Task nicht optional ist wird ein normales IntervalVar erstellt, das immer performed
                 } else {
                     // Erstellt ein neues Interval mit (start, size, end, name)
                     taskType.interval = model.newIntervalVar(
@@ -308,6 +329,8 @@ public class Main {
                             taskType.end,
                             "interval" + suffix);
 
+                    // Wenn die Task einer alternative Task Gruppe angehört, wird sie der Liste mit
+                    // den Tasks, welche einer Gruppe angehören hinzugefügt
                     BoolVar active = model.newBoolVar(task.name + "_active");
                     if (task.excludeTasks.size() > 0) {
                         excludingTasks.add(taskType);
@@ -327,7 +350,7 @@ public class Main {
                 List<Integer> key = Arrays.asList(jobID, taskID);
                 alleTasks.put(key, taskType);
 
-                // Die Maschine finden auf der die Task ausgeführt wird und ihr in
+                // Die Maschine finden, auf der die Task ausgeführt wird, und ihr in
                 // machineToIntervals das Interval der Task hinzufügen
                 Machine machine = null;
                 for (Machine machine1 : machines) {
@@ -342,6 +365,11 @@ public class Main {
         }
 
 
+        // Für jede Task in der excludingTasks-Liste wird ein BoolVar und eine Liste mit den actives der Tasks,
+        // mit denen sie in eienr alt. Task Gruppe ist
+        // Der BoolVar nimmt den maximalen Value der Liste an
+        // Wenn der BoolVar = 0, dann muss task.active = 1
+        // Wenn der BoolVar = 1, dann muss task.active = 0
         for (TaskType tt : excludingTasks) {
             // Für jeden TaskType in excludingTasks eine Liste mit den TTs active machen, die sie excluden will
             List<BoolVar> tasksToExclude = new ArrayList<>();
@@ -371,11 +399,8 @@ public class Main {
             }
         }
 
-
-        // System.out.println("\n" + "Die folgenden Maschineen bekommen addNoOverlap");
         // Intervalle (Tasks) auf einer Maschine dürfen sich nicht überlappen
         for (Machine machine : machineToIntervals.keySet()) {
-            // System.out.println("Machine_" + machine.id + " mit der Intervalsize " + machineToIntervals.get(machine).size());
             List<IntervalVar> list = machineToIntervals.get(machine);
             model.addNoOverlap(list);
         }
@@ -404,7 +429,6 @@ public class Main {
             for (int taskID = 0; taskID < job.size(); taskID++) {
                 List<Integer> key = Arrays.asList(jobID, taskID);
                 endTimes.put(alleTasks.get(key), alleTasks.get(key).end);
-                //System.out.println(endTimes.size());
             }
 
         }
@@ -441,9 +465,11 @@ public class Main {
         for (IntVar time : possibleMaxEndtimes) {
             //System.out.println(time);
         }
+
+        // objVar darf höchstens so groß wie die Deadline sein
+        // und soll den selben Wert wie die  maximale Endtime haben (Endzeitpunkt der letzten Task)
         model.addLessOrEqual(objVar, deadline);
         model.addMaxEquality(objVar, possibleMaxEndtimes);
-
 
         CpSolver solver = new CpSolver();
 
@@ -451,7 +477,11 @@ public class Main {
         if(mode == 0){
             solver.getParameters().setStopAfterFirstSolution(true);
         }
+
+        // objVar soll so klein wie möglich gehalten werden
         model.minimize(objVar);
+
+        // Solven
         CpSolverStatus status = solver.solve(model);
 
 

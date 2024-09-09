@@ -133,7 +133,7 @@ public class Main {
                         }
                     // Wenn über die Instanzmenge gesucht werden soll
                     } else if (args.length == 4){
-                        //try {
+                        try {
                             String modelPath = args[2];
                             FMReader fmReader = new FMReader();
                             SchedulingProblem sp = fmReader.ReadFM(modelPath);
@@ -148,9 +148,9 @@ public class Main {
                                 System.out.println("Searched in " + (csr.searchedConfigs - 1) + " configurations \n" +
                                         "Read time: " + csr.readTime + "ms, Solve time: " + csr.timeSolve + "ms, Combined: " + csr.neededTime + "ms");
                             }
-                        //} catch (Exception e) {
-                        //    System.out.println("Error - Please make sure that you entered the complete path to the configurations-directory");
-                        //}
+                        } catch (Exception e) {
+                            System.out.println("Error - Please make sure that you entered the complete path to the configurations-directory");
+                        }
                     }
                     break;
 

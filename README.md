@@ -1,4 +1,4 @@
-# BA
+# Solver Eingabemöglichkeiten
 
 ## Generieren von Problemen mit
 ```generate <jobCount> <taskCount> <durationOutlier> <machineCount> <optionalCount> <altCount> <altGroupCount> <deadline> <name>```

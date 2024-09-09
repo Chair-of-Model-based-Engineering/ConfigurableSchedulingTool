@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<configuration>
+	<feature manual="selected" name="J2_T5_M1"/>
+	<feature manual="selected" name="P"/>
+	<feature manual="selected" name="p1"/>
+	<feature manual="selected" name="dp1 = 2"/>
+	<feature manual="selected" name="p2"/>
+	<feature manual="selected" name="dp2 = 5"/>
+	<feature manual="unselected" name="dp2 = 6"/>
+	<feature manual="selected" name="p3"/>
+	<feature manual="selected" name="dp3 = 1"/>
+	<feature manual="unselected" name="dp3 = 2"/>
+	<feature manual="unselected" name="dp3 = 3"/>
+	<feature manual="selected" name="p4"/>
+	<feature manual="unselected" name="dp4 = 2"/>
+	<feature manual="selected" name="dp4 = 3"/>
+	<feature manual="selected" name="p5"/>
+	<feature manual="selected" name="dp5 = 3"/>
+	<feature manual="selected" name="M"/>
+	<feature manual="selected" name="m1"/>
+</configuration>

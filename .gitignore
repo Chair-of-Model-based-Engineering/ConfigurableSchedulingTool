@@ -1,0 +1,10 @@
+/pom.xml
+target/
+.idea
+src/main/modelle/BeispielConfigs
+src/main/modelle/J2_T5_M1Confgis
+src/main/modelle/J2_T10_M2Configs
+src/main/modelle/J2_T10_M2_O2_A2Configs
+src/main/modelle/J2_T10_M2_O2_A4Configs
+src/main/modelle/J3_T20_M3_A5Configs
+src/main/modelle/J3_T20_M3Configs

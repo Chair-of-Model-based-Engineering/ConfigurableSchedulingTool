@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<featureModel>
+    <properties>
+        <graphics key="autolayoutconstraints" value="false"/>
+        <graphics key="legendautolayout" value="true"/>
+        <graphics key="showconstraints" value="true"/>
+        <graphics key="showshortnames" value="false"/>
+        <graphics key="layout" value="horizontal"/>
+        <graphics key="showcollapsedconstraints" value="true"/>
+        <graphics key="legendhidden" value="false"/>
+        <graphics key="layoutalgorithm" value="1"/>
+    </properties>
+    <struct>
+        <and abstract="true" mandatory="true" name="Musikplayer">
+            <description>14</description>
+            <and abstract="true" mandatory="true" name="P">
+                <and name="pA0">
+                    <feature mandatory="true" name="dpA0 = 1"/>
+                </and>
+                <and mandatory="true" name="pA1">
+                    <feature mandatory="true" name="dpA1 = 3"/>
+                </and>
+                <alt mandatory="true" name="pA2">
+                    <feature name="dpA2 = 3"/>
+                    <feature name="dpA2 = 4"/>
+                    <feature name="dpA2 = 5"/>
+                </alt>
+                <alt mandatory="true" name="pA3">
+                    <feature name="dpA3 = 1"/>
+                    <feature name="dpA3 = 2"/>
+                    <feature name="dpA3 = 3"/>
+                </alt>
+                <and mandatory="true" name="pB1">
+                    <feature mandatory="true" name="dpB1 = 2"/>
+                </and>
+                <and mandatory="true" name="pB2">
+                    <feature mandatory="true" name="dpB2 = 4"/>
+                </and>
+                <and name="pC1">
+                    <feature mandatory="true" name="dpC1 = 4"/>
+                </and>
+                <alt name="pC2">
+                    <feature name="dpC2 = 2"/>
+                    <feature name="dpC2 = 3"/>
+                </alt>
+            </and>
+            <and abstract="true" mandatory="true" name="M">
+                <feature mandatory="true" name="mCPU"/>
+                <feature mandatory="true" name="mGPU"/>
+                <feature name="mRAM"/>
+            </and>
+        </and>
+    </struct>
+    <constraints>
+        <rule>
+            <imp>
+                <var>pA3</var>
+                <var>pA2</var>
+            </imp>
+        </rule>
+        <rule>
+            <imp>
+                <var>pA2</var>
+                <var>pA1</var>
+            </imp>
+        </rule>
+        <rule>
+            <imp>
+                <var>pB2</var>
+                <var>pB1</var>
+            </imp>
+        </rule>
+        <rule>
+            <disj>
+                <conj>
+                    <var>pC1</var>
+                    <not>
+                        <var>pC2</var>
+                    </not>
+                </conj>
+                <conj>
+                    <not>
+                        <var>pC1</var>
+                    </not>
+                    <var>pC2</var>
+                </conj>
+            </disj>
+        </rule>
+        <rule>
+            <imp>
+                <var>pA0</var>
+                <var>mRAM</var>
+            </imp>
+        </rule>
+        <rule>
+            <imp>
+                <var>pA2</var>
+                <var>mGPU</var>
+            </imp>
+        </rule>
+        <rule>
+            <imp>
+                <var>pA3</var>
+                <var>mGPU</var>
+            </imp>
+        </rule>
+        <rule>
+            <imp>
+                <var>pA1</var>
+                <var>mCPU</var>
+            </imp>
+        </rule>
+        <rule>
+            <imp>
+                <var>pB1</var>
+                <var>mGPU</var>
+            </imp>
+        </rule>
+        <rule>
+            <imp>
+                <var>pB2</var>
+                <var>mCPU</var>
+            </imp>
+        </rule>
+        <rule>
+            <imp>
+                <var>pC1</var>
+                <var>mCPU</var>
+            </imp>
+        </rule>
+        <rule>
+            <imp>
+                <var>pC2</var>
+                <var>mGPU</var>
+            </imp>
+        </rule>
+    </constraints>
+</featureModel>

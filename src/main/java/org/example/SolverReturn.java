@@ -12,4 +12,6 @@ public class SolverReturn {
         this.status = status;
         this.output = output;
     }
+
+    public SolverReturn() {};
 }

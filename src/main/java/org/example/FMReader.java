@@ -13,18 +13,14 @@ import java.util.*;
 
 public class FMReader {
 
-    List<List<Task>> jobs = new ArrayList<>();
-    List<Machine> machines = new ArrayList<>();
-    int deadline;
-
     public FMReader() {
     }
 
     public static void main(String[] args) throws XPathExpressionException, ParserConfigurationException, IOException, SAXException {
-        FMReader reader = new FMReader();
+
+        /*FMReader reader = new FMReader();
         String modelPath = "src/main/modelle/J2_T10_M2_O2_A4.xml";
         reader.ReadFM(modelPath);
-
 
         System.out.println("\n" + "Erstellte Jobs:");
         for (int i = 0; i < reader.jobs.size(); i++) {
@@ -40,11 +36,17 @@ public class FMReader {
             System.out.print("\n Machine " + i + ": " + reader.machines.get(i).name + "  " + reader.machines.get(i).id + "  " + reader.machines.get(i).optional);
         }
 
+         */
+
 
     }
 
-    public void ReadFM(String modelPath) throws ParserConfigurationException, IOException, SAXException, XPathExpressionException {
+    public SchedulingProblem ReadFM(String modelPath) throws ParserConfigurationException, IOException, SAXException, XPathExpressionException {
         String modellpfad = modelPath;
+
+        List<List<Task>> jobs = new ArrayList<>();
+        List<Machine> machines = new ArrayList<>();
+        int deadline = -1;
 
         DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
         Document modellDoc = builder.parse(new File(modellpfad));
@@ -353,7 +355,6 @@ public class FMReader {
             }
 
             // Neue Liste holen
-
             String expression2 = "(//rule/disj/conj)[" + i + "]//text()";
             Object evaluation2 = xPath.compile(expression2).evaluate(modellDoc, XPathConstants.NODESET);
             taskNames.clear();
@@ -369,5 +370,8 @@ public class FMReader {
             }
             listSize = taskNames.size();
         }
+
+        SchedulingProblem sp = new SchedulingProblem(jobs, machines, deadline);
+        return sp;
     }
 }

@@ -50,7 +50,10 @@ public class ConfigurationReader {
 
     }
 
-    public void ReadConfig(String configPath, String modelPath) throws ParserConfigurationException, IOException, SAXException, XPathExpressionException {
+    public SchedulingProblem ReadConfig(String configPath, String modelPath) throws ParserConfigurationException, IOException, SAXException, XPathExpressionException {
+        jobs.clear();
+        machines.clear();
+        deadline = -1;
 
         DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
         Document modelDoc = builder.parse(new File(modelPath));
@@ -77,6 +80,9 @@ public class ConfigurationReader {
         ReadDurations(durationNodes);
         CreateMachines(machineNodes);
         CreateJobs(orderNodes);
+
+        SchedulingProblem sp = new SchedulingProblem(jobs, machines, deadline);
+        return sp;
     }
 
     private void ReadDeadline(Node root) {

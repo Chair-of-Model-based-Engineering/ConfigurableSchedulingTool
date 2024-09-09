@@ -15,7 +15,7 @@ public class SPGenerator {
 
     public void generateProblem(int jobCount, int taskCount,
                                              int durationOutlierCount, int machineCount, int optionalCount,
-                                             int altCount, int altGroupCount, int deadline) throws IOException {
+                                             int altCount, int altGroupCount, int deadline, String name) throws IOException {
         List<List<Task>> jobs = new ArrayList<>();
         List<Machine> machines = new ArrayList<>();
 
@@ -240,7 +240,8 @@ public class SPGenerator {
 
         SchedulingProblem sp = new SchedulingProblem(jobs, machines, deadline);
 
-        FileOutputStream fOut = new FileOutputStream("src/main/probleme/problem.txt");
+        String fileOutputString = "src/main/probleme/" + name + ".txt";
+        FileOutputStream fOut = new FileOutputStream(fileOutputString);
         ObjectOutputStream oOut = new ObjectOutputStream(fOut);
 
         oOut.writeObject(sp);

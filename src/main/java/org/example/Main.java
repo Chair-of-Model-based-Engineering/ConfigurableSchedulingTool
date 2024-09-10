@@ -4,11 +4,13 @@ import static java.lang.Math.max;
 import com.google.ortools.Loader;
 import com.google.ortools.constraintsolver.Solver;
 import com.google.ortools.sat.*;
+import com.opencsv.CSVWriter;
 import org.xml.sax.SAXException;
 
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.xpath.XPathExpressionException;
 import java.io.*;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
@@ -75,7 +77,7 @@ public class Main {
                     if(args.length == 3) {
                         // Wenn es ein durch den Generator erstelltes Problem ist
                         if(args[2].endsWith(".txt")) {
-                            try {
+                            //try {
                                 Instant readStart = Instant.now();
                                 SchedulingProblem sp = ReadProblemGen(args[2]);
                                 Instant readEnd = Instant.now();
@@ -93,17 +95,18 @@ public class Main {
                                 if(sr != null) {
                                     PrintSolution(sr);
                                     System.out.println("Read Time: " + readTime + "ms, Solve Time: " + solveTime + "ms, Combined: " + combinedTime + "ms");
+                                    WriteCSV(sr, mode, args[2]);
                                 } else {
                                     System.out.println("No solution found");
                                     System.out.println("Read Time: " + readTime + "ms, Solve Time: " + solveTime + "ms, Combined: " + combinedTime + "ms");
                                 }
-                            } catch (Exception e) {
-                                System.out.println("Error - Please make sure that a problem with the name " + args[2] + " exists");
-                            }
+                            //} catch (Exception e) {
+                            //    System.out.println("Error - Please make sure that a problem with the name " + args[2] + " exists");
+                            //}
                         }
                         // Wenn es die Problemfamilie ist (XML-Datei)
                         else if(args[2].endsWith(".xml")) {
-                            try {
+                            //try {
                                 FMReader fmReader = new FMReader();
 
                                 Instant readStart = Instant.now();
@@ -123,13 +126,14 @@ public class Main {
                                 if(sr != null) {
                                     PrintSolution(sr);
                                     System.out.println("Read Time: " + readTime + "ms, Solve Time: " + solveTime + "ms, Combined: " + combinedTime + "ms");
+                                    WriteCSV(sr, mode, args[2]);
                                 } else {
                                     System.out.println("No solution found");
                                     System.out.println("Read Time: " + readTime + "ms, Solve Time: " + solveTime + "ms, Combined: " + combinedTime + "ms");
                                 }
-                            } catch (Exception e) {
-                                System.out.println("Error - Please make sure that you entered the complete file-path and your model follows the correct structure");
-                            }
+                            //} catch (Exception e) {
+                            //    System.out.println("Error - Please make sure that you entered the complete file-path and your model follows the correct structure");
+                            //}
                         }
                     // Wenn über die Instanzmenge gesucht werden soll
                     } else if (args.length == 4){
@@ -143,6 +147,7 @@ public class Main {
                                 PrintSolution(csr.solverReturn);
                                 System.out.println("Found solution in iteration " + csr.iteration + "\n" +
                                         "Read time: " + csr.readTime + "ms, Solve time: " + csr.timeSolve + "ms, Combined: " + csr.neededTime + "ms");
+                                WriteCSV(csr.solverReturn, mode, args[2]);
                             } else {
                                 System.out.println("No solution found");
                                 System.out.println("Searched in " + (csr.searchedConfigs - 1) + " configurations \n" +
@@ -404,5 +409,64 @@ public class Main {
         System.out.println("Solution:");
         System.out.printf(sr.output + "\n");
         System.out.println("Schedule is " + sr.status + ", takes " + sr.time);
+    }
+
+    public static List<String[]> ConvertSRToStrings(SolverReturn sr) {
+        Map<Machine, List<AssignedTask>> assignedJobs = new HashMap<>(sr.assignedJobs);
+        List<String[]> resultString = new ArrayList<>();
+
+        for(Machine m : assignedJobs.keySet()) {
+            String[] mLine = new String[assignedJobs.get(m).size() + 1];
+            String[] iLine = new String[assignedJobs.get(m).size() + 1];
+            mLine[0] = m.name;
+            iLine[0] = m.name + "Intervals";
+
+            int index = 1;
+            for(AssignedTask t : assignedJobs.get(m)) {
+                if(t.isActive) {
+                    mLine[index] = t.name;
+                    iLine[index] = t.start + "," + (t.start + t.duration);
+                    index++;
+                }
+            }
+
+            resultString.add(mLine);
+            resultString.add(iLine);
+        }
+
+
+        return resultString;
+    }
+
+    public static void WriteCSV(SolverReturn sr, int mode, String ProblemPath) throws IOException {
+        List<String[]> data = ConvertSRToStrings(sr);
+        String fileName = ReadProblemName(ProblemPath);
+
+        if (mode == 0) {
+            fileName = fileName + "-feasible";
+        } else if(mode == 1) {
+            fileName = fileName + "-optimum";
+        }
+
+        File file = new File("src/main/schedules/" + fileName);
+        FileWriter outputFile = new FileWriter(file);
+        CSVWriter csvWriter = new CSVWriter(outputFile);
+
+        for(String[] line : data) {
+            csvWriter.writeNext(line);
+        }
+
+        csvWriter.close();
+
+    }
+
+    public static String ReadProblemName(String path) {
+        String[] subStrings = path.split("/");
+        String s = subStrings[subStrings.length - 1];
+
+        String[] subStrings2 = s.split("\\.");
+        String s2 = subStrings2[0];
+
+        return s2;
     }
 }

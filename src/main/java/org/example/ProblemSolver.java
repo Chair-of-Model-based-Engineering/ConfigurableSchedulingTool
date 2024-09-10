@@ -271,24 +271,8 @@ public class ProblemSolver {
         //Output
         //==============================================================================================================
         String outputString = "";
+        Map<Machine, List<AssignedTask>> assignedJobs = new HashMap<>();
         if (status == CpSolverStatus.OPTIMAL || status == CpSolverStatus.FEASIBLE) {
-            class AssignedTask {
-                int jobID;
-                int taskID;
-                int start;
-                int duration;
-                String name;
-                boolean isActive;
-
-                // Constructor
-                AssignedTask(int jobID, int taskID, int start, int duration, String name) {
-                    this.jobID = jobID;
-                    this.taskID = taskID;
-                    this.start = start;
-                    this.name = name;
-                    this.duration = duration;
-                }
-            }
 
             class SortTasks implements Comparator<AssignedTask> {
                 @Override
@@ -303,7 +287,7 @@ public class ProblemSolver {
             //System.out.println("Solution:");
 
             // Create one list of assigned tasks per machine.
-            Map<Machine, List<AssignedTask>> assignedJobs = new HashMap<>();
+            //Map<Machine, List<AssignedTask>> assignedJobs = new HashMap<>();
             // Über jede Task iterieren
             for (int jobID = 0; jobID < alleJobs.size(); ++jobID) {
                 List<Task> job = alleJobs.get(jobID);
@@ -407,7 +391,7 @@ public class ProblemSolver {
             return null;
             //System.out.println("No solution found.");
         }
-        SolverReturn result = new SolverReturn(solver.objectiveValue(), status, outputString);
+        SolverReturn result = new SolverReturn(solver.objectiveValue(), status, outputString, assignedJobs);
         return result;
     }
 

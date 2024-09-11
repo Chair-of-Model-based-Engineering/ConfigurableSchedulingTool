@@ -48,4 +48,8 @@ public class Machine implements Serializable {
     public void setActive(BoolVar active) {
         this.active = active;
     }
+
+    public boolean equals(Machine m) {
+        return this.id == m.id;
+    }
 }

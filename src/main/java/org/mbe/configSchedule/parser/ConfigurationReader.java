@@ -141,9 +141,8 @@ public class ConfigurationReader {
             Node currentNode = machineNodes.item(i);
 
             if(currentNode.getNodeType() == Node.ELEMENT_NODE && currentNode.getAttributes().item(0).getNodeValue().equals("selected")) {
-                Machine machine = new Machine(amountMachines, false);
-                machine.setName(currentNode.getAttributes().getNamedItem("name").getNodeValue());
-                machine.setId(amountMachines);
+                String name = currentNode.getAttributes().getNamedItem("name").getNodeValue();
+                Machine machine = new Machine(name, amountMachines, false);
                 machine.setOptional(false);
                 amountMachines++;
 
@@ -175,7 +174,7 @@ public class ConfigurationReader {
                 if (constrPair[1].startsWith("m")) {
                     if(nameToTask.containsKey(constrPair[0]) && nameToMachine.containsKey(constrPair[1])) {
                         Task task = nameToTask.get(constrPair[0]);
-                        task.setMachine(nameToMachine.get(constrPair[1]).getId());
+                        task.setMachine(nameToMachine.get(constrPair[1]));
                     }
                 } else {
                     if(nameToTask.containsKey(constrPair[0]) && nameToTask.containsKey(constrPair[1])) {

@@ -6,13 +6,13 @@ import java.util.Arrays;
 import java.util.List;
 
 public class Task implements Serializable {
-    private int machine;
+    private Machine machine;
     private int[] duration;
     private String name;
     private boolean optional;
     private List<String> excludeTasks = new ArrayList<>();
 
-    Task(int machine, int[] duration, String name, boolean optional, List<String> excludeTasks) {
+    Task(Machine machine, int[] duration, String name, boolean optional, List<String> excludeTasks) {
         this.machine = machine;
         this.duration = duration;
         this.name = name;
@@ -20,7 +20,7 @@ public class Task implements Serializable {
         this.excludeTasks = excludeTasks;
     }
 
-    Task(int machine, int[] duration, String name, boolean optional) {
+    Task(Machine machine, int[] duration, String name, boolean optional) {
         this.machine = machine;
         this.duration = duration;
         this.name = name;
@@ -29,15 +29,11 @@ public class Task implements Serializable {
 
     public Task() {}
 
-    public void sortDuration() {
-        Arrays.sort(duration);
-    }
-
-    public int getMachine() {
+    public Machine getMachine() {
         return machine;
     }
 
-    public void setMachine(int machine) {
+    public void setMachine(Machine machine) {
         this.machine = machine;
     }
 
@@ -47,6 +43,7 @@ public class Task implements Serializable {
 
     public void setDuration(int[] duration) {
         this.duration = duration;
+        Arrays.sort(this.duration);
     }
 
     public String getName() {

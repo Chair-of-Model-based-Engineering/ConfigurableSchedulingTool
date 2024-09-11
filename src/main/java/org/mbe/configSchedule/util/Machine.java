@@ -10,9 +10,11 @@ public class Machine implements Serializable {
     private boolean optional;
     private BoolVar active;
 
-    public Machine(int id, boolean optional) {
+    public Machine(String name, int id, boolean optional) {
+        this.name = name;
         this.id = id;
         this.optional = optional;
+        this.active = null;
     }
 
     public String getName() {
@@ -27,9 +29,9 @@ public class Machine implements Serializable {
         return id;
     }
 
-    public void setId(int id) {
-        this.id = id;
-    }
+    //public void setId(int id) {
+    //    this.id = id;
+    //}
 
     public boolean isOptional() {
         return optional;

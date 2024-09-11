@@ -100,14 +100,14 @@ public class FMReader {
                 // hat es dieses Attribute einfach nicht. Darüber können wir bestimmen ob die Maschine optional
                 // oder nicht optional ist
                 if (machineNodes.item(i).getAttributes().getLength() == 2) {
-                    Machine machine = new Machine(id, false);
-                    machine.setName(machineNodes.item(i).getAttributes().getNamedItem("name").getNodeValue());
+                    String name = machineNodes.item(i).getAttributes().getNamedItem("name").getNodeValue();
+                    Machine machine = new Machine(name, id, false);
                     id++;
                     machineNameMap.put(machineNodes.item(i).getAttributes().item(1).getNodeValue(), machine);
                     machines.add(machine);
                 } else {
-                    Machine machine = new Machine(id, true);
-                    machine.setName(machineNodes.item(i).getAttributes().getNamedItem("name").getNodeValue());
+                    String name = machineNodes.item(i).getAttributes().getNamedItem("name").getNodeValue();
+                    Machine machine = new Machine(name, id, true);
                     id++;
                     machineNameMap.put(machineNodes.item(i).getAttributes().item(0).getNodeValue(), machine);
                     machines.add(machine);
@@ -272,7 +272,7 @@ public class FMReader {
                     .findAny()
                     .orElse(null);
             if ((machine != null) && (task != null)) {
-                task.setMachine(machine.getId());
+                task.setMachine(machine);
             }
         }
 

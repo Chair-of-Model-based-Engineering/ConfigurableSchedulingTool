@@ -1,4 +1,4 @@
-package org.example;
+package org.mbe.configschedule.util;
 
 import com.google.ortools.sat.CpSolverStatus;
 
@@ -7,10 +7,10 @@ import java.util.List;
 import java.util.Map;
 
 public class SolverReturn {
-    public Double time;
-    public CpSolverStatus status;
-    public String output;
-    public Map<Machine, List<AssignedTask>> assignedJobs;
+    private Double time;
+    private CpSolverStatus status;
+    private String output;
+    private Map<Machine, List<AssignedTask>> assignedJobs;
 
     public SolverReturn(Double time, CpSolverStatus status, String output, Map<Machine, List<AssignedTask>> assignedJobs) {
         this.time = time;
@@ -20,4 +20,36 @@ public class SolverReturn {
     }
 
     public SolverReturn() {};
+
+    public Double getTime() {
+        return time;
+    }
+
+    public void setTime(Double time) {
+        this.time = time;
+    }
+
+    public CpSolverStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(CpSolverStatus status) {
+        this.status = status;
+    }
+
+    public String getOutput() {
+        return output;
+    }
+
+    public void setOutput(String output) {
+        this.output = output;
+    }
+
+    public Map<Machine, List<AssignedTask>> getAssignedJobs() {
+        return assignedJobs;
+    }
+
+    public void setAssignedJobs(Map<Machine, List<AssignedTask>> assignedJobs) {
+        this.assignedJobs = assignedJobs;
+    }
 }

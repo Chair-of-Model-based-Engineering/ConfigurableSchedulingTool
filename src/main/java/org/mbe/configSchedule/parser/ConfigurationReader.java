@@ -1,5 +1,8 @@
-package org.example;
+package org.mbe.configschedule.parser;
 
+import org.mbe.configschedule.util.Machine;
+import org.mbe.configschedule.util.SchedulingProblem;
+import org.mbe.configschedule.util.Task;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -25,7 +28,7 @@ public class ConfigurationReader {
     Map<String, Task> nameToTask = new HashMap<>();
     Map<String, Machine> nameToMachine = new HashMap<>();
 
-    ConfigurationReader() {};
+    public ConfigurationReader() {};
 
     public static void main(String[] args) throws XPathExpressionException, ParserConfigurationException, IOException, SAXException {
         String configPath = "src/main/modelle/J2_T10_M2_O2_A4Configs/01487.xml";
@@ -38,14 +41,14 @@ public class ConfigurationReader {
         for(List<Task> job : reader.jobs) {
             System.out.print("Job: ");
             for(Task task : job) {
-                System.out.print(task.name + ", M: " + task.machine + ", D: [" + task.duration[0] + "," + task.duration[1] + "], " + "O: " + task.optional + "E: " + task.excludeTasks.size() + " | ");
+                System.out.print(task.getName() + ", M: " + task.getMachine() + ", D: [" + task.getDuration()[0] + "," + task.getDuration()[1] + "], " + "O: " + task.isOptional() + "E: " + task.getExcludeTasks().size() + " | ");
             }
             System.out.print("\n");
         }
 
         System.out.println("Machines: ");
         for(Machine machine : reader.machines) {
-            System.out.print(machine.id + " " + machine.name + " " + machine.optional + " | ");
+            System.out.print(machine.getId() + " " + machine.getName() + " " + machine.isOptional() + " | ");
         }
 
     }
@@ -102,12 +105,12 @@ public class ConfigurationReader {
             // Selected = angewählt, naja offensichtlich
             if(taskNode.getNodeType() == Node.ELEMENT_NODE && taskNode.getAttributes().item(0).getNodeValue().equals("selected")) {
                 Task task = new Task();
-                task.name = taskNode.getAttributes().getNamedItem("name").getNodeValue();
+                task.setName(taskNode.getAttributes().getNamedItem("name").getNodeValue());
                 // In einer instanz ist keine task optional
-                task.optional = false;
-                task.excludeTasks = new ArrayList<>();
+                task.setOptional(false);
+                task.setExcludeTasks(new ArrayList<>());
 
-                nameToTask.put(task.name, task);
+                nameToTask.put(task.getName(), task);
             }
         }
     }
@@ -127,7 +130,7 @@ public class ConfigurationReader {
 
                 String nameString = subStrings[0].substring(1);
                 Task task = nameToTask.get(nameString);
-                task.duration = durationsArr;
+                task.setDuration(durationsArr);
             }
         }
     }
@@ -139,12 +142,12 @@ public class ConfigurationReader {
 
             if(currentNode.getNodeType() == Node.ELEMENT_NODE && currentNode.getAttributes().item(0).getNodeValue().equals("selected")) {
                 Machine machine = new Machine(amountMachines, false);
-                machine.name = currentNode.getAttributes().getNamedItem("name").getNodeValue();
-                machine.id = amountMachines;
-                machine.optional = false;
+                machine.setName(currentNode.getAttributes().getNamedItem("name").getNodeValue());
+                machine.setId(amountMachines);
+                machine.setOptional(false);
                 amountMachines++;
 
-                nameToMachine.put(machine.name, machine);
+                nameToMachine.put(machine.getName(), machine);
                 machines.add(machine);
             }
         }
@@ -172,7 +175,7 @@ public class ConfigurationReader {
                 if (constrPair[1].startsWith("m")) {
                     if(nameToTask.containsKey(constrPair[0]) && nameToMachine.containsKey(constrPair[1])) {
                         Task task = nameToTask.get(constrPair[0]);
-                        task.machine = nameToMachine.get(constrPair[1]).id;
+                        task.setMachine(nameToMachine.get(constrPair[1]).getId());
                     }
                 } else {
                     if(nameToTask.containsKey(constrPair[0]) && nameToTask.containsKey(constrPair[1])) {

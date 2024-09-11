@@ -1,20 +1,19 @@
-package org.example;
-import static java.lang.Math.max;
+package org.mbe.configschedule;
 
 import com.google.ortools.Loader;
-import com.google.ortools.constraintsolver.Solver;
-import com.google.ortools.sat.*;
 import com.opencsv.CSVWriter;
+import org.mbe.configschedule.generator.SPGenerator;
+import org.mbe.configschedule.parser.FMReader;
+import org.mbe.configschedule.solver.ProblemSolver;
+import org.mbe.configschedule.util.*;
 import org.xml.sax.SAXException;
 
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.xpath.XPathExpressionException;
 import java.io.*;
-import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
-import java.util.stream.IntStream;
 
 // =======================================================================
 // Basierend auf dem Jobshop-Problem-Beispiel von Google OR-Tools
@@ -143,15 +142,15 @@ public class Main {
                             SchedulingProblem sp = fmReader.ReadFM(modelPath);
                             PrintProblem(sp);
                             ConfigurationSolverReturn csr = pSolver.SolveConfigurations(mode, args[3], modelPath);
-                            if(csr.hasSolution) {
-                                PrintSolution(csr.solverReturn);
-                                System.out.println("Found solution in iteration " + csr.iteration + "\n" +
-                                        "Read time: " + csr.readTime + "ms, Solve time: " + csr.timeSolve + "ms, Combined: " + csr.neededTime + "ms");
-                                WriteCSV(csr.solverReturn, mode, args[2]);
+                            if(csr.isHasSolution()) {
+                                PrintSolution(csr.getSolverReturn());
+                                System.out.println("Found solution in iteration " + csr.getIteration() + "\n" +
+                                        "Read time: " + csr.getReadTime() + "ms, Solve time: " + csr.getTimeSolve() + "ms, Combined: " + csr.getNeededTime() + "ms");
+                                WriteCSV(csr.getSolverReturn(), mode, args[2]);
                             } else {
                                 System.out.println("No solution found");
-                                System.out.println("Searched in " + (csr.searchedConfigs - 1) + " configurations \n" +
-                                        "Read time: " + csr.readTime + "ms, Solve time: " + csr.timeSolve + "ms, Combined: " + csr.neededTime + "ms");
+                                System.out.println("Searched in " + (csr.getSearchedConfigs() - 1) + " configurations \n" +
+                                        "Read time: " + csr.getReadTime() + "ms, Solve time: " + csr.getTimeSolve() + "ms, Combined: " + csr.getNeededTime() + "ms");
                             }
                         } catch (Exception e) {
                             System.out.println("Error - Please make sure that you entered the complete path to the configurations-directory");
@@ -390,13 +389,13 @@ public class Main {
     public static void PrintProblem(SchedulingProblem sp) {
         System.out.println("*********************** \n" +
             "Scheduling problem:");
-        System.out.println("Deadline: " + sp.deadline);
+        System.out.println("Deadline: " + sp.getDeadline());
         int index = 0;
-        for(List<Task> job : sp.jobs) {
+        for(List<Task> job : sp.getJobs()) {
             System.out.println("Job " + index + ": ");
             for(Task task : job) {
-                System.out.println(task.name + ", d: [" + task.duration[0] +"," + task.duration[1] + "], m: " + task.machine + ", o: " + task.optional
-                    + ", e: " + task.excludeTasks.toString());
+                System.out.println(task.getName() + ", d: [" + task.getDuration()[0] +"," + task.getDuration()[1] + "], m: " + task.getMachine() + ", o: " + task.isOptional()
+                    + ", e: " + task.getExcludeTasks().toString());
             }
             index++;
         }
@@ -407,25 +406,25 @@ public class Main {
 
     public static void PrintSolution(SolverReturn sr) {
         System.out.println("Solution:");
-        System.out.printf(sr.output + "\n");
-        System.out.println("Schedule is " + sr.status + ", takes " + sr.time);
+        System.out.printf(sr.getOutput() + "\n");
+        System.out.println("Schedule is " + sr.getStatus() + ", takes " + sr.getTime());
     }
 
     public static List<String[]> ConvertSRToStrings(SolverReturn sr) {
-        Map<Machine, List<AssignedTask>> assignedJobs = new HashMap<>(sr.assignedJobs);
+        Map<Machine, List<AssignedTask>> assignedJobs = new HashMap<>(sr.getAssignedJobs());
         List<String[]> resultString = new ArrayList<>();
 
         for(Machine m : assignedJobs.keySet()) {
             String[] mLine = new String[assignedJobs.get(m).size() + 1];
             String[] iLine = new String[assignedJobs.get(m).size() + 1];
-            mLine[0] = m.name;
-            iLine[0] = m.name + "Intervals";
+            mLine[0] = m.getName();
+            iLine[0] = m.getName() + "Intervals";
 
             int index = 1;
             for(AssignedTask t : assignedJobs.get(m)) {
-                if(t.isActive) {
-                    mLine[index] = t.name;
-                    iLine[index] = t.start + "," + (t.start + t.duration);
+                if(t.isActive()) {
+                    mLine[index] = t.getName();
+                    iLine[index] = t.getStart() + "," + (t.getStart() + t.getDuration());
                     index++;
                 }
             }

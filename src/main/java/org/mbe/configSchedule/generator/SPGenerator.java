@@ -1,6 +1,9 @@
-package org.example;
+package org.mbe.configschedule.generator;
 
-import java.io.FileNotFoundException;
+import org.mbe.configschedule.util.Machine;
+import org.mbe.configschedule.util.SchedulingProblem;
+import org.mbe.configschedule.util.Task;
+
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
@@ -31,7 +34,7 @@ public class SPGenerator {
         int machineID = 1;
         for(int i = 0; i < machineCount; i++) {
             Machine machine = new Machine(i, false);
-            machine.name = "m" + machineID;
+            machine.setName("m" + machineID);
             machineID++;
             machines.add(machine);
         }
@@ -62,10 +65,10 @@ public class SPGenerator {
             for(int j = 0; j < tasksInJob; j++) {
 
                 Task task = new Task();
-                task.name = "p" + taskID;
+                task.setName("p" + taskID);
                 taskID++;
-                task.machine = random.nextInt(machineCount);
-                task.duration = new int[2];
+                task.setMachine(random.nextInt(machineCount));
+                task.setDuration(new int[2]);
 
                 // Wenn mehr durationOutlier übrig sind (oder so viele) wie noch zu erstellende Tasks gibt,
                 // soll die Task auf jeden Fall ein Outlier sein
@@ -77,14 +80,13 @@ public class SPGenerator {
                         // Zwischen 6 und 15
                         int dur1 = random.nextInt(10) + 6;
                         int dur2 = random.nextInt(10) + 6;
-
-                        task.duration[0] = dur1;
-                        task.duration[1] = dur2;
-                        Arrays.sort(task.duration);
+                        int[] duration = {dur1, dur2};
+                        task.setDuration(duration);
+                        task.sortDuration();
                     } else {
                         int dur = random.nextInt(10) + 6;
-                        task.duration[0] = dur;
-                        task.duration[1] = dur;
+                        int[] duration = {dur, dur};
+                        task.setDuration(duration);
                     }
                     durationOutlierCount--;
 
@@ -100,14 +102,13 @@ public class SPGenerator {
                             // Zwischen 6 und 15
                             int dur1 = random.nextInt(10) + 6;
                             int dur2 = random.nextInt(10) + 6;
-
-                            task.duration[0] = dur1;
-                            task.duration[1] = dur2;
-                            Arrays.sort(task.duration);
+                            int[] duration = {dur1, dur2};
+                            task.setDuration(duration);
+                            task.sortDuration();
                         } else {
                             int dur = random.nextInt(10) + 6;
-                            task.duration[0] = dur;
-                            task.duration[1] = dur;
+                            int[] duration = {dur, dur};
+                            task.setDuration(duration);
                         }
                         durationOutlierCount--;
 
@@ -120,19 +121,18 @@ public class SPGenerator {
                             // Zwischen 1 und 5
                             int dur1 = random.nextInt(5) + 1;
                             int dur2 = random.nextInt(5) + 1;
-
-                            task.duration[0] = dur1;
-                            task.duration[1] = dur2;
-                            Arrays.sort(task.duration);
+                            int[] duration = {dur1, dur2};
+                            task.setDuration(duration);
+                            task.sortDuration();
                         } else {
                             int dur = random.nextInt(5) + 1;
-                            task.duration[0] = dur;
-                            task.duration[1] = dur;
+                            int[] duration = {dur, dur};
+                            task.setDuration(duration);
                         }
                     }
                 }
 
-                task.optional = false;
+                task.setOptional(false);
                 job.add(task);
             }
             jobs.add(job);
@@ -145,11 +145,11 @@ public class SPGenerator {
             List<Task> job = new ArrayList<>();
             Task task = new Task();
 
-            task.name = "p" + taskID;
+            task.setName("p" + taskID);
             taskID++;
-            task.machine = random.nextInt(machineCount);
-            task.optional = true;
-            task.duration = new int[2];
+            task.setMachine(random.nextInt(machineCount));
+            task.setOptional(true);
+            task.setDuration(new int[2]);
 
             int varDurationChance = random.nextInt(2);
 
@@ -157,15 +157,14 @@ public class SPGenerator {
                 // Zwischen 1 und 5
                 int dur1 = random.nextInt(5) + 1;
                 int dur2 = random.nextInt(5) + 1;
-
-                task.duration[0] = dur1;
-                task.duration[1] = dur2;
-                Arrays.sort(task.duration);
+                int[] duration = {dur1, dur2};
+                task.setDuration(duration);
+                task.sortDuration();
             } else {
                 // Nicht variabel
                 int dur = random.nextInt(5) + 1;
-                task.duration[0] = dur;
-                task.duration[1] = dur;
+                int[] duration = {dur, dur};
+                task.setDuration(duration);
             }
             job.add(task);
             jobs.add(job);
@@ -196,10 +195,10 @@ public class SPGenerator {
             for(int j = 0; j < tasksInGroup; j++) {
                 List<Task> job = new ArrayList<>();
                 Task task = new Task();
-                task.name = "p" + taskID;
+                task.setName("p" + taskID);
                 taskID++;
-                task.machine = random.nextInt(machineCount);
-                task.duration = new int[2];
+                task.setMachine(random.nextInt(machineCount));
+                task.setDuration(new int[2]);
 
                 // Soll es eine variable Dauer sein?
                 int variableDurationChance  = random.nextInt(2);
@@ -208,18 +207,17 @@ public class SPGenerator {
                     // Zwischen 1 und 5
                     int dur1 = random.nextInt(5) + 1;
                     int dur2 = random.nextInt(5) + 1;
-
-                    task.duration[0] = dur1;
-                    task.duration[1] = dur2;
-                    Arrays.sort(task.duration);
+                    int[] duration = {dur1, dur2};
+                    task.setDuration(duration);
+                    task.sortDuration();
                 } else {
                     int dur = random.nextInt(5) + 1;
-                    task.duration[0] = dur;
-                    task.duration[1] = dur;
+                    int[] duration = {dur, dur};
+                    task.setDuration(duration);
                 }
 
-                task.optional = true;
-                task.excludeTasks = new ArrayList<>();
+                task.setOptional(true);
+                task.setExcludeTasks(new ArrayList<>());
                 group[j] = task;
 
                 job.add(task);
@@ -228,11 +226,11 @@ public class SPGenerator {
 
             // Jeder Task in der Gruppe die anderen Tasks in excludeTasks Liste packen
             for(int j = 0; j < group.length; j++) {
-                List<String> list = group[j].excludeTasks;
+                List<String> list = group[j].getExcludeTasks();
 
                 for(int k = 0; k < group.length; k++) {
                     if(j != k) {
-                        list.add(group[k].name);
+                        list.add(group[k].getName());
                     }
                 }
             }

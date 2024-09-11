@@ -1,6 +1,8 @@
-package org.example;
+package org.mbe.configschedule.solver;
 
 import com.google.ortools.sat.*;
+import org.mbe.configschedule.parser.ConfigurationReader;
+import org.mbe.configschedule.util.*;
 import org.xml.sax.SAXException;
 
 import javax.xml.parsers.ParserConfigurationException;
@@ -16,17 +18,17 @@ public class ProblemSolver {
     public ProblemSolver() {}
 
     public static SolverReturn solveProblem(int mode, SchedulingProblem sp) {
-        List<List<Task>> alleJobs = sp.jobs;
-        List<Machine> machines = sp.machines;
-        int deadline = sp.deadline;
+        List<List<Task>> alleJobs = sp.getJobs();
+        List<Machine> machines = sp.getMachines();
+        int deadline = sp.getDeadline();
 
         // Model
         CpModel model = new CpModel();
 
         // Für jede optionale Maschine wird eine neue BoolVar erstellt
         for (Machine machine : machines) {
-            if (machine.optional) {
-                machine.active = model.newBoolVar("Machine" + machine.id + "_active");
+            if (machine.isOptional()) {
+                machine.setActive(model.newBoolVar("Machine" + machine.getId() + "_active"));
             }
         }
 
@@ -37,7 +39,7 @@ public class ProblemSolver {
         int maxDuration = 0;
         for (List<Task> job : alleJobs) {
             for (Task task : job) {
-                maxDuration += task.duration[1];
+                maxDuration += task.getDuration()[1];
             }
         }
 
@@ -57,7 +59,7 @@ public class ProblemSolver {
         // Wenn alle false sind, kann die Maschine "deaktiviert" werden
         Map<Machine, List<BoolVar>> optionalMachineTaskActives = new HashMap<>();
         for (Machine machine : machines) {
-            if (machine.optional) {
+            if (machine.isOptional()) {
                 optionalMachineTaskActives.put(machine, new ArrayList<>());
             }
         }
@@ -72,49 +74,49 @@ public class ProblemSolver {
 
                 // Für jede Task wird ein TaskType erstellt
                 TaskType taskType = new TaskType();
-                taskType.name = task.name;
+                taskType.setName(task.getName());
                 //Tasks dürfen zwischen 0 und maxDuration starten und enden
-                taskType.start = model.newIntVar(0, maxDuration, "start" + suffix);
-                taskType.end = model.newIntVar(0, maxDuration, "end" + suffix);
+                taskType.setStart(model.newIntVar(0, maxDuration, "start" + suffix));
+                taskType.setEnd(model.newIntVar(0, maxDuration, "end" + suffix));
 
-                taskType.excludeTasks = task.excludeTasks;
+                taskType.setExcludeTasks(task.getExcludeTasks());
 
                 // Wenn eine Task optional ist, bekommt sie ein OptionalIntervalVar, sodass das Interval
                 // nicht performed, wenn die Task nicht aktiv ist
                 // dafür hat das Interval den Task.active als Literal
-                if (task.optional) {
-                    BoolVar bool = model.newBoolVar(task.name + "_active");
-                    taskType.active = bool;
-                    taskType.interval = model.newOptionalIntervalVar(taskType.start,
-                            model.newIntVar(task.duration[0], task.duration[1], task.name + "_duration"),
-                            taskType.end,
-                            taskType.active,
-                            "interval_" + suffix);
-                    if (task.excludeTasks.size() > 0) {
+                if (task.isOptional()) {
+                    BoolVar bool = model.newBoolVar(task.getName() + "_active");
+                    taskType.setActive(bool);
+                    taskType.setInterval(model.newOptionalIntervalVar(taskType.getStart(),
+                            model.newIntVar(task.getDuration()[0], task.getDuration()[1], task.getName() + "_duration"),
+                            taskType.getEnd(),
+                            taskType.getActive(),
+                            "interval_" + suffix));
+                    if (task.getExcludeTasks().size() > 0) {
                         excludingTasks.add(taskType);
                     }
 
                     // Wenn die optionale Task auf einer optionalen Maschine ausgeführt wird,
                     // Wird ein BoolVar für die Maschine zu optionalMachineTaskActives hinzugefügt
                     for (Machine machine : machines) {
-                        if (task.machine == machine.id && machine.optional) {
-                            optionalMachineTaskActives.get(machine).add(taskType.active);
+                        if (task.getMachine() == machine.getId() && machine.isOptional()) {
+                            optionalMachineTaskActives.get(machine).add(taskType.getActive());
                         }
                     }
 
                     // Wenn die Task nicht optional ist wird ein normales IntervalVar erstellt, das immer performed
                 } else {
                     // Erstellt ein neues Interval mit (start, size, end, name)
-                    taskType.interval = model.newIntervalVar(
-                            taskType.start,
-                            model.newIntVar(task.duration[0], task.duration[1], task.name + "_duration"),
-                            taskType.end,
-                            "interval" + suffix);
+                    taskType.setInterval(model.newIntervalVar(
+                            taskType.getStart(),
+                            model.newIntVar(task.getDuration()[0], task.getDuration()[1], task.getName() + "_duration"),
+                            taskType.getEnd(),
+                            "interval" + suffix));
 
                     // Wenn die Task einer alternative Task Gruppe angehört, wird sie der Liste mit
                     // den Tasks, welche einer Gruppe angehören hinzugefügt
-                    BoolVar active = model.newBoolVar(task.name + "_active");
-                    if (task.excludeTasks.size() > 0) {
+                    BoolVar active = model.newBoolVar(task.getName() + "_active");
+                    if (task.getExcludeTasks().size() > 0) {
                         excludingTasks.add(taskType);
                     }
                     // Wenn die Task mandatory ist und auf einer optionalen Maschine ausgeführt wird,
@@ -122,7 +124,7 @@ public class ProblemSolver {
                     // Dadurch kann die Maschine nicht mehr deaktiviert werden
                     model.addEquality(active, 1);
                     for (Machine machine : machines) {
-                        if (task.machine == machine.id && machine.optional) {
+                        if (task.getMachine() == machine.getId() && machine.isOptional()) {
                             optionalMachineTaskActives.get(machine).add(active);
                         }
                     }
@@ -136,13 +138,13 @@ public class ProblemSolver {
                 // machineToIntervals das Interval der Task hinzufügen
                 Machine machine = null;
                 for (Machine machine1 : machines) {
-                    if (machine1.id == task.machine) {
+                    if (machine1.getId() == task.getMachine()) {
                         machine = machine1;
                     }
                 }
                 // Falls noch keine ArrayList für die Maschine vorhanden ist, wird eine neue erstellt
                 machineToIntervals.computeIfAbsent(machine, (Machine m) -> new ArrayList<>());
-                machineToIntervals.get(machine).add(taskType.interval);
+                machineToIntervals.get(machine).add(taskType.getInterval());
             }
         }
 
@@ -156,16 +158,16 @@ public class ProblemSolver {
             // Für jeden TaskType in excludingTasks eine Liste mit den TTs active machen, die sie excluden will
             List<BoolVar> tasksToExclude = new ArrayList<>();
             for (TaskType tt2 : excludingTasks) {
-                if (tt.excludeTasks.contains(tt2.name)) {
-                    tasksToExclude.add(tt2.active);
+                if (tt.getExcludeTasks().contains(tt2.getName())) {
+                    tasksToExclude.add(tt2.getActive());
                 }
             }
 
-            BoolVar atLeastOneActive = model.newBoolVar(tt.name + "_exclude_atLeastOneActive");
+            BoolVar atLeastOneActive = model.newBoolVar(tt.getName() + "_exclude_atLeastOneActive");
 
             model.addMaxEquality(atLeastOneActive, tasksToExclude);
-            model.addEquality(tt.active, 1).onlyEnforceIf(atLeastOneActive.not());
-            model.addEquality(tt.active, 0).onlyEnforceIf(atLeastOneActive);
+            model.addEquality(tt.getActive(), 1).onlyEnforceIf(atLeastOneActive.not());
+            model.addEquality(tt.getActive(), 0).onlyEnforceIf(atLeastOneActive);
         }
 
         // Neue BoolVar erstellen, die am Ende gleich dem Aktivstatus der Maschine sein soll
@@ -173,11 +175,11 @@ public class ProblemSolver {
         // dann soll die Maschine auch aktiv sein
         for (Machine machine : optionalMachineTaskActives.keySet()) {
             if (!optionalMachineTaskActives.get(machine).isEmpty()) {
-                BoolVar atLeastOneActive = model.newBoolVar(machine.id + "_atLeastOneActiveTask");
+                BoolVar atLeastOneActive = model.newBoolVar(machine.getId() + "_atLeastOneActiveTask");
                 model.addMaxEquality(atLeastOneActive, optionalMachineTaskActives.get(machine));
-                model.addEquality(machine.active, atLeastOneActive);
+                model.addEquality(machine.getActive(), atLeastOneActive);
             } else {
-                model.addEquality(machine.active, 0);
+                model.addEquality(machine.getActive(), 0);
             }
         }
 
@@ -196,7 +198,7 @@ public class ProblemSolver {
                 List<Integer> prevKey = Arrays.asList(jobID, taskID);
                 List<Integer> nextKey = Arrays.asList(jobID, taskID + 1);
                 // Einschränkung, dass Task 2 aus Job 1 erst nach Beendigung von Task 1 aus Job 1 startet (Beispiel)
-                model.addGreaterOrEqual(alleTasks.get(nextKey).start, alleTasks.get(prevKey).end);
+                model.addGreaterOrEqual(alleTasks.get(nextKey).getStart(), alleTasks.get(prevKey).getEnd());
             }
         }
 
@@ -210,7 +212,7 @@ public class ProblemSolver {
             List<Task> job = alleJobs.get(jobID);
             for (int taskID = 0; taskID < job.size(); taskID++) {
                 List<Integer> key = Arrays.asList(jobID, taskID);
-                endTimes.put(alleTasks.get(key), alleTasks.get(key).end);
+                endTimes.put(alleTasks.get(key), alleTasks.get(key).getEnd());
             }
 
         }
@@ -234,9 +236,9 @@ public class ProblemSolver {
         for (int i = 0; i < activeBools.length; i++) {
             possibleMaxEndtimes[i] = model.newIntVar(0, maxDuration, "possibleMaxEndtime_" + i);
             //Falls es eine optionale Task ist (wenn es keine optionale ist, dann ist active = null)
-            if (activeBools[i].active != null) {
-                model.addEquality(possibleMaxEndtimes[i], endtimeInts[i]).onlyEnforceIf(activeBools[i].active);
-                model.addEquality(possibleMaxEndtimes[i], 0).onlyEnforceIf(activeBools[i].active.not());
+            if (activeBools[i].getActive() != null) {
+                model.addEquality(possibleMaxEndtimes[i], endtimeInts[i]).onlyEnforceIf(activeBools[i].getActive());
+                model.addEquality(possibleMaxEndtimes[i], 0).onlyEnforceIf(activeBools[i].getActive().not());
             } else {
                 model.addEquality(possibleMaxEndtimes[i], endtimeInts[i]);
             }
@@ -277,10 +279,10 @@ public class ProblemSolver {
             class SortTasks implements Comparator<AssignedTask> {
                 @Override
                 public int compare(AssignedTask a, AssignedTask b) {
-                    if (a.start != b.start) {
-                        return a.start - b.start;
+                    if (a.getStart() != b.getStart()) {
+                        return a.getStart() - b.getStart();
                     } else {
-                        return a.duration - b.duration;
+                        return a.getDuration() - b.getDuration();
                     }
                 }
             }
@@ -298,27 +300,27 @@ public class ProblemSolver {
                     AssignedTask assignedTask = new AssignedTask(
                             jobID,
                             taskID,
-                            (int) solver.value(alleTasks.get(key).start),
-                            (int) solver.value(alleTasks.get(key).interval.getSizeExpr()),
-                            task.name);
+                            (int) solver.value(alleTasks.get(key).getStart()),
+                            (int) solver.value(alleTasks.get(key).getInterval().getSizeExpr()),
+                            task.getName());
 
 
-                    if (task.optional) {
-                        int active = (int) solver.value(alleTasks.get(key).active);
+                    if (task.isOptional()) {
+                        int active = (int) solver.value(alleTasks.get(key).getActive());
                         if (active == 1) {
-                            assignedTask.isActive = true;
+                            assignedTask.setActive(true);
                         } else {
-                            assignedTask.isActive = false;
+                            assignedTask.setActive(false);
                         }
                     } else {
-                        assignedTask.isActive = true;
+                        assignedTask.setActive(true);
                     }
 
                     //assignedJobs.computeIfAbsent(task.machine, (Integer k) -> new ArrayList<>());
                     //assignedJobs.get(task.machine).add(assignedTask);
                     Machine machine = null;
                     for (Machine machine1 : machines) {
-                        if (machine1.id == task.machine) {
+                        if (machine1.getId() == task.getMachine()) {
                             machine = machine1;
                         }
                     }
@@ -332,23 +334,23 @@ public class ProblemSolver {
             // Create per machine output lines.
             String output = "";
             for (Machine machine : machines) {
-                if (!machine.optional || solver.value(machine.active) == 1) {
+                if (!machine.isOptional() || solver.value(machine.getActive()) == 1) {
                     // Sort by starting time.
                     if(assignedJobs.get(machine) != null) {
                         Collections.sort(assignedJobs.get(machine), new SortTasks());
                     }
-                    String solLineTasks = "Machine " + machine.id + ": ";
+                    String solLineTasks = "Machine " + machine.getId() + ": ";
                     String solLine = "           ";
 
                     if(assignedJobs.get(machine) != null) {
                         for (AssignedTask assignedTask : assignedJobs.get(machine)) {
-                            if (assignedTask.isActive) {
+                            if (assignedTask.isActive()) {
                                 //String name = "job_" + assignedTask.jobID + "_task_" + assignedTask.taskID;
-                                String name = assignedTask.name;
+                                String name = assignedTask.getName();
                                 // Add spaces to output to align columns.
                                 solLineTasks += String.format("%-15s", name);
 
-                                String solTmp = "[" + assignedTask.start + "," + (assignedTask.start + assignedTask.duration) + "]";
+                                String solTmp = "[" + assignedTask.getStart() + "," + (assignedTask.getStart() + assignedTask.getDuration()) + "]";
                                 // Add spaces to output to align columns.
                                 solLine += String.format("%-15s", solTmp);
                             }
@@ -427,7 +429,7 @@ public class ProblemSolver {
                     sumTimeRead += readTime;
                     sumTimeSolve += solveTime;
 
-                    if(sr != null && (sr.status == CpSolverStatus.OPTIMAL || sr.status == CpSolverStatus.FEASIBLE)) {
+                    if(sr != null && (sr.getStatus() == CpSolverStatus.OPTIMAL || sr.getStatus() == CpSolverStatus.FEASIBLE)) {
                         ConfigurationSolverReturn csr = new ConfigurationSolverReturn(true, sr, sumTimeRead, sumTimeSolve, sumTimeRead+sumTimeSolve, iteration, iteration);
                         return csr;
                     }
@@ -457,8 +459,8 @@ public class ProblemSolver {
                     SolverReturn sr = solveProblem(mode, sp);
                     Instant solveEnd = Instant.now();
 
-                    if(sr != null && (sr.status == CpSolverStatus.OPTIMAL && sr.time < bestResultTime)) {
-                        bestResultTime = sr.time;
+                    if(sr != null && (sr.getStatus() == CpSolverStatus.OPTIMAL && sr.getTime() < bestResultTime)) {
+                        bestResultTime = sr.getTime();
                         bestResult = sr;
                         bestIteration = iteration;
                     }

@@ -1,5 +1,8 @@
-package org.example;
+package org.mbe.configschedule.parser;
 
+import org.mbe.configschedule.util.Machine;
+import org.mbe.configschedule.util.SchedulingProblem;
+import org.mbe.configschedule.util.Task;
 import org.w3c.dom.*;
 import org.xml.sax.SAXException;
 
@@ -98,13 +101,13 @@ public class FMReader {
                 // oder nicht optional ist
                 if (machineNodes.item(i).getAttributes().getLength() == 2) {
                     Machine machine = new Machine(id, false);
-                    machine.name = machineNodes.item(i).getAttributes().getNamedItem("name").getNodeValue();
+                    machine.setName(machineNodes.item(i).getAttributes().getNamedItem("name").getNodeValue());
                     id++;
                     machineNameMap.put(machineNodes.item(i).getAttributes().item(1).getNodeValue(), machine);
                     machines.add(machine);
                 } else {
                     Machine machine = new Machine(id, true);
-                    machine.name = machineNodes.item(i).getAttributes().getNamedItem("name").getNodeValue();
+                    machine.setName(machineNodes.item(i).getAttributes().getNamedItem("name").getNodeValue());
                     id++;
                     machineNameMap.put(machineNodes.item(i).getAttributes().item(0).getNodeValue(), machine);
                     machines.add(machine);
@@ -128,11 +131,11 @@ public class FMReader {
                 // hat es dieses Attribute einfach nicht. Darüber können wir bestimmen ob die Task optional
                 // oder nicht optional ist
                 if (currentNode.getAttributes().getLength() == 2) {
-                    task.name = currentNode.getAttributes().item(1).getNodeValue();
-                    task.optional = false;
+                    task.setName(currentNode.getAttributes().item(1).getNodeValue());
+                    task.setOptional(false);
                 } else {
-                    task.name = currentNode.getAttributes().item(0).getNodeValue();
-                    task.optional = true;
+                    task.setName(currentNode.getAttributes().item(0).getNodeValue());
+                    task.setOptional(true);
                 }
 
                 // Duration für Task
@@ -173,8 +176,8 @@ public class FMReader {
                 }
 
                 Arrays.sort(durationsArr);
-                task.duration = durationsArr;
-                taskNameMap.put(task.name, task);
+                task.setDuration(durationsArr);
+                taskNameMap.put(task.getName(), task);
                 allTasks.add(task);
             }
         }
@@ -218,7 +221,7 @@ public class FMReader {
         for (int i = 0; i < orderConstraints.size(); i++) {
             int finalI = i;
             Task task = allTasks.stream()
-                    .filter(t -> orderConstraints.get(finalI)[0].equals(t.name))
+                    .filter(t -> orderConstraints.get(finalI)[0].equals(t.getName()))
                     .findAny()
                     .orElse(null);
 
@@ -237,7 +240,7 @@ public class FMReader {
         for (Task task : unusedTasks) {
             List<Task> job = new ArrayList<>();
             job.add(task);
-            String currentTaskName = task.name;
+            String currentTaskName = task.getName();
             for (int i = 0; i < orderConstraints.size(); i++) {
                 String[] currentConstraint = orderConstraints.get(i);
                 if (orderConstraints.get(i)[1].equals(currentTaskName)) {
@@ -260,16 +263,16 @@ public class FMReader {
             // Maschine und Tasken Finden die den selben Namen hat wie die Maschine/ Task in der Constraint
             // und zuordnen
             Machine machine = machines.stream()
-                    .filter(mach -> con[1].equals(mach.name))
+                    .filter(mach -> con[1].equals(mach.getName()))
                     .findAny()
                     .orElse(null);
 
             Task task = allTasks.stream()
-                    .filter(t -> con[0].equals(t.name))
+                    .filter(t -> con[0].equals(t.getName()))
                     .findAny()
                     .orElse(null);
             if ((machine != null) && (task != null)) {
-                task.machine = machine.id;
+                task.setMachine(machine.getId());
             }
         }
 
@@ -339,7 +342,7 @@ public class FMReader {
 
                     for (int k = 0; k < names.length; k++) {
                         if (k != j) {
-                            task.excludeTasks.add(names[k]);
+                            task.getExcludeTasks().add(names[k]);
                         }
                     }
                 }

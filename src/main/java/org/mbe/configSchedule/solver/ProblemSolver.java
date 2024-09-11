@@ -99,7 +99,7 @@ public class ProblemSolver {
                     // Wenn die optionale Task auf einer optionalen Maschine ausgeführt wird,
                     // Wird ein BoolVar für die Maschine zu optionalMachineTaskActives hinzugefügt
                     for (Machine machine : machines) {
-                        if (task.getMachine() == machine.getId() && machine.isOptional()) {
+                        if (task.getMachine() == machine && machine.isOptional()) {
                             optionalMachineTaskActives.get(machine).add(taskType.getActive());
                         }
                     }
@@ -124,7 +124,7 @@ public class ProblemSolver {
                     // Dadurch kann die Maschine nicht mehr deaktiviert werden
                     model.addEquality(active, 1);
                     for (Machine machine : machines) {
-                        if (task.getMachine() == machine.getId() && machine.isOptional()) {
+                        if (task.getMachine() == machine && machine.isOptional()) {
                             optionalMachineTaskActives.get(machine).add(active);
                         }
                     }
@@ -138,7 +138,7 @@ public class ProblemSolver {
                 // machineToIntervals das Interval der Task hinzufügen
                 Machine machine = null;
                 for (Machine machine1 : machines) {
-                    if (machine1.getId() == task.getMachine()) {
+                    if (machine1 == task.getMachine()) {
                         machine = machine1;
                     }
                 }
@@ -320,7 +320,7 @@ public class ProblemSolver {
                     //assignedJobs.get(task.machine).add(assignedTask);
                     Machine machine = null;
                     for (Machine machine1 : machines) {
-                        if (machine1.getId() == task.getMachine()) {
+                        if (machine1 == task.getMachine()) {
                             machine = machine1;
                         }
                     }

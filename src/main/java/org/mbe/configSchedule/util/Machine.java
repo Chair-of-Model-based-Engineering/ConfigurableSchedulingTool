@@ -6,7 +6,7 @@ import java.io.Serializable;
 
 public class Machine implements Serializable {
     private String name;
-    private int id;
+    private final int id;
     private boolean optional;
     private BoolVar active;
 
@@ -28,10 +28,6 @@ public class Machine implements Serializable {
     public int getId() {
         return id;
     }
-
-    //public void setId(int id) {
-    //    this.id = id;
-    //}
 
     public boolean isOptional() {
         return optional;

@@ -2,8 +2,10 @@ package org.mbe.configschedule;
 
 import com.google.ortools.Loader;
 import com.opencsv.CSVWriter;
+import de.vill.model.FeatureModel;
 import org.mbe.configschedule.generator.SPGenerator;
 import org.mbe.configschedule.parser.FMReader;
+import org.mbe.configschedule.parser.UVLReader;
 import org.mbe.configschedule.solver.ProblemSolver;
 import org.mbe.configschedule.util.*;
 import org.xml.sax.SAXException;
@@ -23,7 +25,17 @@ import java.util.*;
 
 public class Main {
 
-    public static void main(String[] args) throws ParserConfigurationException, IOException, SAXException, XPathExpressionException, ClassNotFoundException {
+    public static void main(String[] args){
+        try{
+            FeatureModel model = UVLReader.read("src/main/modelle/J2_T5_M1(extendedUVL).uvl");
+            SchedulingProblem problem = new SchedulingProblem(model);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+
+        public static void tmain(String[] args) throws ParserConfigurationException, IOException, SAXException, XPathExpressionException, ClassNotFoundException {
 
         Loader.loadNativeLibraries();
 
@@ -106,10 +118,8 @@ public class Main {
                         // Wenn es die Problemfamilie ist (XML-Datei)
                         else if(args[2].endsWith(".xml")) {
                             //try {
-                                FMReader fmReader = new FMReader();
-
                                 Instant readStart = Instant.now();
-                                SchedulingProblem sp = fmReader.ReadFM(args[2]);
+                                SchedulingProblem sp = FMReader.readFM(args[2]);
                                 Instant readEnd = Instant.now();
 
                                 PrintProblem(sp);
@@ -138,8 +148,7 @@ public class Main {
                     } else if (args.length == 4){
                         try {
                             String modelPath = args[2];
-                            FMReader fmReader = new FMReader();
-                            SchedulingProblem sp = fmReader.ReadFM(modelPath);
+                            SchedulingProblem sp = FMReader.readFM(modelPath);
                             PrintProblem(sp);
                             ConfigurationSolverReturn csr = pSolver.SolveConfigurations(mode, args[3], modelPath);
                             if(csr.isHasSolution()) {
@@ -168,211 +177,6 @@ public class Main {
                     "To solve a problem: solve [o or f] <name>");
         }
 
-        /*
-        FMReader fmReader = new FMReader();
-
-        String modelPath = "src/main/modelle/J2_T10_M2_O2_A4.xml";
-        String configFolderPath = "src/main/modelle/J2_T5_M1Configs";
-
-
-        // Falls mode2 = 2, kann man mit 0 das selbe Problem immer wieder lösen (um zu überprüfen ob die Lösungen
-        // gleich sind), mit 1 nur einmal Lösen (um Zeit zu messen)
-        int mode2repeat = 0;
-
-        // Suche über Problemfamilie
-        if(mode2 == 0) {
-            Instant start = Instant.now();
-            fmReader.ReadFM(modelPath);
-            final int deadline = fmReader.deadline;
-            final List<List<Task>> alleJobs = new ArrayList<>(fmReader.jobs);
-            final List<Machine> machines = new ArrayList<>(fmReader.machines);
-            Instant end = Instant.now();
-            long readDuration = Duration.between(start, end).toMillis();
-
-            System.out.println("\n"
-                    + "======================= \n"
-                    + "Die Jobs sind: \n"
-                    + "=======================");
-
-            System.out.println("Deadline: " + deadline);
-            for (int i = 0; i < alleJobs.size(); i++) {
-                System.out.println("\n" + "Job " + i + ": ");
-                for (Task task : alleJobs.get(i)) {
-                    System.out.print(task.name + "  [" + task.duration[0] + "," + task.duration[1] + "]  " + task.machine + "  " + task.optional + " " + task.excludeTasks.toString() + "  |  ");
-                }
-            }
-            System.out.println("\n" + "Auf den Maschinen: ");
-            for (Machine machine : machines) {
-                System.out.println(machine.id + "  " + machine.name + "  " + machine.optional);
-            }
-            System.out.println("\n"
-                    + "======================= \n"
-                    + "Start Solver \n"
-                    + "=======================");
-
-            Instant solveStart = Instant.now();
-            SolverReturn result = solveProblem(mode, alleJobs, machines, deadline);
-            Instant solveEnd = Instant.now();
-            long solveDuration = Duration.between(solveStart, solveEnd).toMillis();
-            long combinedDuration = readDuration + solveDuration;
-            System.out.println("\n" + "Result: " + result.time + ",  Status: " + result.status);
-            System.out.println("Read Dauer: " + readDuration +",   Solve Dauer: " + solveDuration + ", \n kombiniert: " + combinedDuration);
-            // Suche über mehrere Instanzen
-        } else if(mode2 == 1) {
-            List<SolverReturn> results = new ArrayList<>();
-            File directory = new File(configFolderPath);
-            File[] directoryFiles = directory.listFiles();
-
-            Double bestResult = Double.POSITIVE_INFINITY;
-            String bestResultString = "";
-            int iteration = 0;
-
-            long combinedDuration = 0;
-            long readDuration = 0;
-            long solveDuration = 0;
-
-            if(directoryFiles != null) {
-                int index = 0;
-                for(File config : directoryFiles) {
-                    index++;
-                    Instant readStart = Instant.now();
-                    ConfigurationReader cReader = new ConfigurationReader();
-                    String path = config.getPath();
-                    cReader.ReadConfig(path, modelPath);
-                    final int deadline = cReader.deadline;
-                    final List<List<Task>> alleJobs = new ArrayList<>(cReader.jobs);
-                    final List<Machine> machines = new ArrayList<>(cReader.machines);
-                    Instant readEnd = Instant.now();
-                    long singleReadDuration = Duration.between(readStart, readEnd).toMillis();
-                    readDuration = readDuration + singleReadDuration;
-
-                    System.out.println("\n"
-                            + "======================= \n"
-                            + "Die Jobs sind: \n"
-                            + "=======================");
-
-                    System.out.println("Deadline: " + deadline);
-                    for (int i = 0; i < alleJobs.size(); i++) {
-                        System.out.println("\n" + "Job " + i + ": ");
-                        for (Task task : alleJobs.get(i)) {
-                            System.out.print(task.name + "  [" + task.duration[0] + "," + task.duration[1] + "]  " + task.machine + "  " + task.optional + " " + task.excludeTasks.toString() + "  |  ");
-                        }
-                    }
-                    System.out.println("\n" + "Auf den Maschinen: ");
-                    for (Machine machine : machines) {
-                        System.out.println(machine.id + "  " + machine.name + "  " + machine.optional);
-                    }
-                    System.out.println("\n"
-                            + "======================= \n"
-                            + "Start Solver \n"
-                            + "=======================");
-
-                    Instant solveStart = Instant.now();
-                    SolverReturn result = solveProblem(mode, alleJobs, machines, deadline);
-                    Instant solveEnd = Instant.now();
-                    long singleSolveDuration = Duration.between(solveStart, solveEnd).toMillis();
-                    solveDuration = solveDuration + singleSolveDuration;
-                    System.out.println("Read: " + singleReadDuration + ", Solve: " + singleSolveDuration);
-
-                    // Wenn nur nach feasible Lösung gesucht wird, kann die Suche beendet werden wenn eine gefunden wurde
-                    if(mode == 0 && (result.status == CpSolverStatus.FEASIBLE || result.status == CpSolverStatus.OPTIMAL)) {
-                        bestResult = result.time;
-                        bestResultString = result.output;
-                        break;
-                    }
-                    // Wenn nach Optimum gesucht wird, Werte updaten
-                    if((result.status == CpSolverStatus.OPTIMAL || result.status == CpSolverStatus.FEASIBLE) && result.time < bestResult) {
-                        bestResult = result.time;
-                        bestResultString = result.output;
-                        iteration = index;
-                    }
-
-                    System.out.println("\n" + "Result: " + result.time + ",  Status: " + result.status);
-
-                }
-
-                combinedDuration = readDuration + solveDuration;
-
-                // Erfüllbarkeit Output
-                if(mode == 0) {
-                    System.out.println("Feasible Lösung gefunden, die " + bestResult + " dauert nach " + index + " Iterationen.");
-                    System.out.printf(bestResultString);
-                    System.out.println("Read Dauer: " + readDuration + ",  Solve Duration: " + solveDuration
-                            + ", \n Kombiniert: " + combinedDuration);
-
-                    // Optimum Output
-                } else if(mode == 1) {
-                    System.out.println("================ \n" + "Das beste Ergebnis ist in Iteration "+ iteration +": \n"
-                            + "Zeit: " + bestResult);
-                    System.out.printf(bestResultString);
-                    System.out.println("Read Dauer: " + readDuration + ",  Solve Duration: " + solveDuration
-                            + ", \n Kombiniert: " + combinedDuration);
-                }
-            }
-            // Zufällige Probleme erstellen
-        } else if(mode2 == 2) {
-            SPGenerator spg = new SPGenerator();
-            spg.generateProblem(2, 5, 2,
-                    2, 1, 2, 1, 50, "asdf");
-
-            FileInputStream fIn = new FileInputStream("src/main/probleme/problem.txt");
-            ObjectInputStream oIn = new ObjectInputStream(fIn);
-            SchedulingProblem sp = (SchedulingProblem) oIn.readObject();
-            oIn.close();
-
-            final List<List<Task>> alleJobs = new ArrayList<>(sp.jobs);
-            final List<Machine> machines = new ArrayList<>(sp.machines);
-            final int deadline = sp.deadline;
-
-            System.out.println("\n"
-                    + "======================= \n"
-                    + "Die Jobs sind: \n"
-                    + "=======================");
-
-            System.out.println("Deadline: " + deadline);
-            for (int i = 0; i < alleJobs.size(); i++) {
-                System.out.println("\n" + "Job " + i + ": ");
-                for (Task task : alleJobs.get(i)) {
-                    System.out.print(task.name + "  [" + task.duration[0] + "," + task.duration[1] + "]  " + task.machine + "  " + task.optional
-                            + " exclude: " + task.excludeTasks.toString() + " | ");
-                }
-            }
-
-            System.out.println("\n" + "Auf den Maschinen: ");
-            for (Machine machine : machines) {
-                System.out.println(machine.id + "  " + machine.name + "  " + machine.optional);
-            }
-
-            if(mode2repeat == 0) {
-                mode = 0;
-                System.out.println("Problem generiert, 0 eingeben um beliebige Lösung zu suchen, 1 für optimale Lösung. \n " +
-                        "Mit anderer ZAHL abbrechen");
-                Scanner scanner = new Scanner(System.in);
-                int con = scanner.nextInt();
-                while(con == 0) {
-                    Instant start = Instant.now();
-                    SolverReturn result = solveProblem(mode, alleJobs, machines, deadline);
-                    Instant end = Instant.now();
-                    System.out.println("\n" + "Result: " + result.time + ",  Status: " + result.status);
-                    System.out.println("(Feasible) Verstrichene Zeit: " + Duration.between(start, end).toMillis());
-                    con = scanner.nextInt();
-                }
-                while (con == 1) {
-                    mode = 1;
-                    Instant start = Instant.now();
-                    SolverReturn result = solveProblem(mode, alleJobs, machines, deadline);
-                    Instant end = Instant.now();
-                    System.out.println("\n" + "Result: " + result.time + ",  Status: " + result.status);
-                    System.out.println("(Optimum) Verstrichene Zeit: " + Duration.between(start, end).toMillis());
-                    con = scanner.nextInt();
-                }
-            } else {
-                SolverReturn result = solveProblem(mode, alleJobs, machines, deadline);
-                System.out.println("\n" + "Result: " + result.time + ",  Status: " + result.status);
-            }
-        }
-
-         */
     }
 
 

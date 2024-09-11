@@ -16,35 +16,7 @@ import java.util.*;
 
 public class FMReader {
 
-    public FMReader() {
-    }
-
-    public static void main(String[] args) throws XPathExpressionException, ParserConfigurationException, IOException, SAXException {
-
-        /*FMReader reader = new FMReader();
-        String modelPath = "src/main/modelle/J2_T10_M2_O2_A4.xml";
-        reader.ReadFM(modelPath);
-
-        System.out.println("\n" + "Erstellte Jobs:");
-        for (int i = 0; i < reader.jobs.size(); i++) {
-            System.out.println("\n Job " + i + ": ");
-            for (Task task : reader.jobs.get(i)) {
-                System.out.print(task.name + "  [" + task.duration[0] + "," + task.duration[1] + "]  " + task.machine + "  " + task.optional + "  |  ");
-                for (String s : task.excludeTasks) {
-                    System.out.print(" " + s);
-                }
-            }
-        }
-        for (int i = 0; i < reader.machines.size(); i++) {
-            System.out.print("\n Machine " + i + ": " + reader.machines.get(i).name + "  " + reader.machines.get(i).id + "  " + reader.machines.get(i).optional);
-        }
-
-         */
-
-
-    }
-
-    public SchedulingProblem ReadFM(String modelPath) throws ParserConfigurationException, IOException, SAXException, XPathExpressionException {
+    public static SchedulingProblem readFM(String modelPath) throws ParserConfigurationException, IOException, SAXException, XPathExpressionException {
         String modellpfad = modelPath;
 
         List<List<Task>> jobs = new ArrayList<>();

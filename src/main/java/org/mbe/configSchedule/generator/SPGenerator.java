@@ -1,8 +1,8 @@
-package org.mbe.configschedule.generator;
+package org.mbe.configSchedule.generator;
 
-import org.mbe.configschedule.util.Machine;
-import org.mbe.configschedule.util.SchedulingProblem;
-import org.mbe.configschedule.util.Task;
+import org.mbe.configSchedule.util.Machine;
+import org.mbe.configSchedule.util.SchedulingProblem;
+import org.mbe.configSchedule.util.Task;
 
 import java.io.FileOutputStream;
 import java.io.IOException;

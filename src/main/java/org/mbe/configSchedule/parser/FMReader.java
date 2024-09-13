@@ -1,8 +1,8 @@
-package org.mbe.configschedule.parser;
+package org.mbe.configSchedule.parser;
 
-import org.mbe.configschedule.util.Machine;
-import org.mbe.configschedule.util.SchedulingProblem;
-import org.mbe.configschedule.util.Task;
+import org.mbe.configSchedule.util.Machine;
+import org.mbe.configSchedule.util.SchedulingProblem;
+import org.mbe.configSchedule.util.Task;
 import org.w3c.dom.*;
 import org.xml.sax.SAXException;
 

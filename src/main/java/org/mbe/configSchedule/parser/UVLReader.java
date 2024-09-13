@@ -1,9 +1,9 @@
-package org.mbe.configschedule.parser;
+package org.mbe.configSchedule.parser;
 
 
 import de.vill.main.UVLModelFactory;
 import de.vill.model.FeatureModel;
-import org.mbe.configschedule.util.SchedulingProblem;
+import org.mbe.configSchedule.util.SchedulingProblem;
 
 import java.io.IOException;
 import java.nio.file.Files;

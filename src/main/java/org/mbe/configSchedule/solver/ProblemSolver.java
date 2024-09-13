@@ -1,8 +1,8 @@
-package org.mbe.configschedule.solver;
+package org.mbe.configSchedule.solver;
 
 import com.google.ortools.sat.*;
-import org.mbe.configschedule.parser.ConfigurationReader;
-import org.mbe.configschedule.util.*;
+import org.mbe.configSchedule.parser.ConfigurationReader;
+import org.mbe.configSchedule.util.*;
 import org.xml.sax.SAXException;
 
 import javax.xml.parsers.ParserConfigurationException;

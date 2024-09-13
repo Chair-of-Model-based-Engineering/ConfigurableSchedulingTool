@@ -1,4 +1,4 @@
-package org.mbe.configschedule.util;
+package org.mbe.configSchedule.util;
 
 public class AssignedTask {
     private int jobID;

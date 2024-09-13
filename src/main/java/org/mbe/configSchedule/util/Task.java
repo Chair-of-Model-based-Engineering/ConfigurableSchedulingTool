@@ -1,4 +1,4 @@
-package org.mbe.configschedule.util;
+package org.mbe.configSchedule.util;
 
 import java.io.Serializable;
 import java.util.ArrayList;

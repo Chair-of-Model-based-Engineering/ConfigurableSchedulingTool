@@ -1,13 +1,15 @@
-package org.mbe.configschedule;
+package org.mbe.configSchedule;
 
 import com.google.ortools.Loader;
 import com.opencsv.CSVWriter;
 import de.vill.model.FeatureModel;
-import org.mbe.configschedule.generator.SPGenerator;
-import org.mbe.configschedule.parser.FMReader;
-import org.mbe.configschedule.parser.UVLReader;
-import org.mbe.configschedule.solver.ProblemSolver;
-import org.mbe.configschedule.util.*;
+import org.mbe.configSchedule.generator.SPGenerator;
+import org.mbe.configSchedule.parser.FMReader;
+import org.mbe.configSchedule.parser.UVLReader;
+import org.mbe.configSchedule.solver.ProblemSolver;
+//import org.mbe.configschedule.util.SchedulingProblem;
+//import org.mbe.configschedule.util.SolverReturn;
+import org.mbe.configSchedule.util.*;
 import org.xml.sax.SAXException;
 
 import javax.xml.parsers.ParserConfigurationException;

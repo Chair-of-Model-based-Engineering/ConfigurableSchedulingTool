@@ -1,10 +1,11 @@
-package org.mbe.configschedule.util;
+package org.mbe.configSchedule.util;
 
 import de.vill.model.Feature;
 import de.vill.model.FeatureModel;
 
 import java.io.Serializable;
 import java.util.List;
+import org.mbe.configSchedule.util.Task;
 
 public class SchedulingProblem implements Serializable {
     private List<List<Task>> jobs;

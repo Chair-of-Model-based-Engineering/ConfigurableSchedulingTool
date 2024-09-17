@@ -160,6 +160,7 @@ public class FMReader {
 
         List<String[]> orderConstraints = new ArrayList<>();
         List<String[]> machineConstraints = new ArrayList<>();
+        List<String[]> durationConstraints = new ArrayList<>();
         for (int i = 0; i < constraints.getLength(); i++) {
             Node currentConstraint = constraints.item(i);
             NodeList constraintPair = currentConstraint.getChildNodes();
@@ -176,9 +177,11 @@ public class FMReader {
                 }
             }
 
-            // Zuordnen ob es eine Reihenfolge-Constraint oder eine Machine-Constraint ist
+            // Zuordnen ob es eine Reihenfolge-, Duration- oder eine Machine-Constraint ist
             if (constraintPairArr[1].startsWith("m")) {
                 machineConstraints.add(constraintPairArr);
+            } else if(constraintPairArr[0].startsWith("d")){
+                durationConstraints.add(constraintPairArr);
             } else {
                 orderConstraints.add(constraintPairArr);
             }
@@ -344,6 +347,50 @@ public class FMReader {
                 }
             }
             listSize = taskNames.size();
+        }
+
+        //===============================================
+        // Duration Constraints
+        //===============================================
+
+        for(String con[] : durationConstraints) {
+            String duration = con[0];
+            // String zerlegen, sodass man zugehörige Task und Duratio herauslesen kann
+            // "dp1 = 1" -> "dp1", "=", "1"
+            String[] subStrings = duration.split(" ");
+            String taskDurationString = subStrings[0].substring(1);
+            int durationValue = -1;
+            try {
+                durationValue = Integer.valueOf(subStrings[2]);
+            } catch (Exception e) {
+                System.out.println("Cannot read a duration value from " + duration);
+            }
+
+            // Die Task, welche ausgeführt werden muss, damit die oben gewählte Duration genutzt werden kann
+            String requiredTaskString = con[1];
+
+            // Die beiden Tasks suchen
+            Task task = allTasks.stream()
+                    .filter(t -> taskDurationString.equals(t.getName()))
+                    .findAny()
+                    .orElse(null);
+
+            Task requiredTask = allTasks.stream()
+                    .filter(t -> requiredTaskString.equals(t.getName()))
+                    .findAny()
+                    .orElse(null);
+
+            if(task != null && requiredTask != null && durationValue != -1) {
+                if(task.getDurationCons().get(durationValue) != null) {
+                    System.out.println("Die Constraint " + con[0] + ", " + con[1] + " wird einer bestehenden Liste hinzugefügt");
+                    task.addTaskToDurationCon(durationValue, requiredTask);
+                } else {
+                    System.out.println("Für die Constraint " + con[0] + ", " + con[1] + " wir eine neue Liste erstellt");
+                    List<Task> taskList = new ArrayList<>();
+                    taskList.add(requiredTask);
+                    task.addDurationCon(durationValue, taskList);
+                }
+            }
         }
 
         SchedulingProblem sp = new SchedulingProblem(jobs, machines, deadline);

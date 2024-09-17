@@ -45,7 +45,11 @@ public class ProblemSolver {
 
         // List<Integer> ist später {JobID, TaskID}, Map ist also <{JobID, TaskID}, TaskType-Objekt>
         // TaskID ist nur der Index der Task im Job, {JobID, TaskID} ist sozusagen die echte TaskID der Task
-        Map<List<Integer>, TaskType> alleTasks = new HashMap<>();
+        Map<List<Integer>, TaskType> allTaskTypes = new HashMap<>();
+
+        // Map mit Tasknamen als Key, genutzt für die Duration Constraints
+        Map<String, TaskType> nameToTaskType = new HashMap<>();
+        Map<String, Task> nameToTask = new HashMap<>();
 
         // Jede Maschine hat eine Liste mit Intervallen (Tasks) die sich nicht überlappen dürfen
         Map<Machine, List<IntervalVar>> machineToIntervals = new HashMap<>();
@@ -53,6 +57,8 @@ public class ProblemSolver {
         // Liste von TaskTypes die einer alterantive Task Gruppe angehören, erst wenn alle Tasks erstellt wurden,
         // können die Constraints für die active BoolVars festgelegt werden
         List<TaskType> excludingTasks = new ArrayList<>();
+
+        Map<List<Integer>, TaskType> idToTaskTypesWithDurationConstraints= new HashMap<>();
 
         // Jede optionale Maschine hat eine Liste mit BoolVars, die dafür stehen,
         // ob die Tasks die auf ihr ausgeführt werden, auch aktiv sind
@@ -64,6 +70,7 @@ public class ProblemSolver {
             }
         }
 
+        // Erstellen der TaskTypes
         // Iteriert durch Jobs
         for (int jobID = 0; jobID < alleJobs.size(); ++jobID) {
             List<Task> job = alleJobs.get(jobID);
@@ -132,7 +139,14 @@ public class ProblemSolver {
 
                 // Packt die Task mit (jobID, taskID) in die AlleTasks Map
                 List<Integer> key = Arrays.asList(jobID, taskID);
-                alleTasks.put(key, taskType);
+                allTaskTypes.put(key, taskType);
+                nameToTaskType.put(task.getName(), taskType);
+                nameToTask.put(task.getName(), task);
+
+                // Wenn die Task eine Duration hat, die nur gewählt werden darf, wenn eine andere Task ausgeführt wird
+                if(task.getDurationCons() != null && task.getDurationCons().size() > 0) {
+                    idToTaskTypesWithDurationConstraints.put(key, taskType);
+                }
 
                 // Die Maschine finden, auf der die Task ausgeführt wird, und ihr in
                 // machineToIntervals das Interval der Task hinzufügen
@@ -146,6 +160,47 @@ public class ProblemSolver {
                 machineToIntervals.computeIfAbsent(machine, (Machine m) -> new ArrayList<>());
                 machineToIntervals.get(machine).add(taskType.getInterval());
             }
+        }
+
+
+        // Für die TaskTypes, deren Task duration-Constraints haben die entsprechenden Constraints auch im
+        // TaskType erstellen
+        for(Map.Entry<List<Integer>, TaskType> entry : idToTaskTypesWithDurationConstraints.entrySet()) {
+            TaskType tt = entry.getValue();
+            Task task = nameToTask.get(tt.getName());
+
+            for(Map.Entry<Integer, List<Task>> con : task.getDurationCons().entrySet()) {
+                int durationValue = con.getKey();
+                List<TaskType> conTTs = new ArrayList<>();
+                for(Task conTask : con.getValue()) {
+                    conTTs.add(nameToTaskType.get(conTask.getName()));
+                }
+                tt.addDurationsConstraint(durationValue, conTTs);
+            }
+        }
+
+
+        // Für jede Task, die mindestens eine durationConstraint hat, werden Constraints dem Model hinzugefügt
+        for(TaskType tt : idToTaskTypesWithDurationConstraints.values()) {
+            // Über jede Constraint dieser Task iterieren
+            for(Map.Entry<Integer, List<TaskType>> con : tt.getDurationsConstraints().entrySet()) {
+                int durationValue = con.getKey();
+                // BoolVar soll 1 annehmen, wenn alle benötigten Tasks für diese Duration aktiv sind, ansonsten 0
+                BoolVar allRequiredTasksActive = model.newBoolVar(tt.getName() + "_durationConstraints_" + con.getKey());
+
+                // Liste mit den active-BoolVars der required TaskTypes
+                List<BoolVar> requiredBoolVars = new ArrayList<>();
+                for(TaskType requiredTT : con.getValue()) {
+                    requiredBoolVars.add(requiredTT.getActive());
+                }
+
+                model.addMinEquality(allRequiredTasksActive, requiredBoolVars);
+
+                // Falls eine der required Tasks nicht aktiv ist, darf die zugehörie Dauer auch nicht für
+                // die Task gewählt werden
+                model.addDifferent(tt.getInterval().getSizeExpr(), durationValue).onlyEnforceIf(allRequiredTasksActive.not());
+            }
+
         }
 
 
@@ -198,7 +253,7 @@ public class ProblemSolver {
                 List<Integer> prevKey = Arrays.asList(jobID, taskID);
                 List<Integer> nextKey = Arrays.asList(jobID, taskID + 1);
                 // Einschränkung, dass Task 2 aus Job 1 erst nach Beendigung von Task 1 aus Job 1 startet (Beispiel)
-                model.addGreaterOrEqual(alleTasks.get(nextKey).getStart(), alleTasks.get(prevKey).getEnd());
+                model.addGreaterOrEqual(allTaskTypes.get(nextKey).getStart(), allTaskTypes.get(prevKey).getEnd());
             }
         }
 
@@ -212,7 +267,7 @@ public class ProblemSolver {
             List<Task> job = alleJobs.get(jobID);
             for (int taskID = 0; taskID < job.size(); taskID++) {
                 List<Integer> key = Arrays.asList(jobID, taskID);
-                endTimes.put(alleTasks.get(key), alleTasks.get(key).getEnd());
+                endTimes.put(allTaskTypes.get(key), allTaskTypes.get(key).getEnd());
             }
 
         }
@@ -300,13 +355,13 @@ public class ProblemSolver {
                     AssignedTask assignedTask = new AssignedTask(
                             jobID,
                             taskID,
-                            (int) solver.value(alleTasks.get(key).getStart()),
-                            (int) solver.value(alleTasks.get(key).getInterval().getSizeExpr()),
+                            (int) solver.value(allTaskTypes.get(key).getStart()),
+                            (int) solver.value(allTaskTypes.get(key).getInterval().getSizeExpr()),
                             task.getName());
 
 
                     if (task.isOptional()) {
-                        int active = (int) solver.value(alleTasks.get(key).getActive());
+                        int active = (int) solver.value(allTaskTypes.get(key).getActive());
                         if (active == 1) {
                             assignedTask.setActive(true);
                         } else {

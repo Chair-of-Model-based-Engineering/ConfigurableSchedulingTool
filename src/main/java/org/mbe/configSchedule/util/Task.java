@@ -1,9 +1,7 @@
 package org.mbe.configSchedule.util;
 
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
 public class Task implements Serializable {
     private Machine machine;
@@ -11,6 +9,7 @@ public class Task implements Serializable {
     private String name;
     private boolean optional;
     private List<String> excludeTasks = new ArrayList<>();
+    private Map<Integer, List<Task>> durationCons = new HashMap<>();
 
     Task(Machine machine, int[] duration, String name, boolean optional, List<String> excludeTasks) {
         this.machine = machine;
@@ -68,5 +67,17 @@ public class Task implements Serializable {
 
     public void setExcludeTasks(List<String> excludeTasks) {
         this.excludeTasks = excludeTasks;
+    }
+
+    public Map<Integer,List<Task>> getDurationCons() {
+        return durationCons;
+    }
+
+    public void addDurationCon(int key, List<Task> value) {
+        durationCons.put(key, value);
+    }
+
+    public void addTaskToDurationCon(int key, Task task) {
+        durationCons.get(key).add(task);
     }
 }

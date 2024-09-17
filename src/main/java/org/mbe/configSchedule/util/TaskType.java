@@ -5,7 +5,9 @@ import com.google.ortools.sat.IntVar;
 import com.google.ortools.sat.IntervalVar;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class TaskType {
     private String name;
@@ -16,6 +18,7 @@ public class TaskType {
     private IntervalVar interval;
     private BoolVar active;
     private List<String> excludeTasks = new ArrayList<>();
+    private Map<Integer, List<TaskType>> durationsConstraints = new HashMap<>();
 
     public String getName() {
         return name;
@@ -63,5 +66,17 @@ public class TaskType {
 
     public void setExcludeTasks(List<String> excludeTasks) {
         this.excludeTasks = excludeTasks;
+    }
+
+    public Map<Integer, List<TaskType>> getDurationsConstraints() {
+        return durationsConstraints;
+    }
+
+    public void addDurationsConstraint(Integer key, List<TaskType> tasks) {
+        durationsConstraints.put(key, tasks);
+    }
+
+    public void addTaskTypeToDuration(Integer key, TaskType taskType) {
+        durationsConstraints.get(key).add(taskType);
     }
 }

@@ -1,14 +1,13 @@
 package org.mbe.configSchedule;
 
 import com.google.ortools.Loader;
+import com.google.protobuf.MapEntry;
 import com.opencsv.CSVWriter;
 import de.vill.model.FeatureModel;
 import org.mbe.configSchedule.generator.SPGenerator;
 import org.mbe.configSchedule.parser.FMReader;
 import org.mbe.configSchedule.parser.UVLReader;
 import org.mbe.configSchedule.solver.ProblemSolver;
-//import org.mbe.configschedule.util.SchedulingProblem;
-//import org.mbe.configschedule.util.SolverReturn;
 import org.mbe.configSchedule.util.*;
 import org.xml.sax.SAXException;
 
@@ -27,6 +26,7 @@ import java.util.*;
 
 public class Main {
 
+    /*
     public static void main(String[] args){
         try{
             FeatureModel model = UVLReader.read("src/main/modelle/J2_T5_M1(extendedUVL).uvl");
@@ -35,9 +35,10 @@ public class Main {
             throw new RuntimeException(e);
         }
     }
+    */
 
 
-        public static void tmain(String[] args) throws ParserConfigurationException, IOException, SAXException, XPathExpressionException, ClassNotFoundException {
+        public static void main(String[] args) throws ParserConfigurationException, IOException, SAXException, XPathExpressionException, ClassNotFoundException {
 
         Loader.loadNativeLibraries();
 
@@ -200,13 +201,21 @@ public class Main {
         for(List<Task> job : sp.getJobs()) {
             System.out.println("Job " + index + ": ");
             for(Task task : job) {
-                System.out.println(task.getName() + ", d: [" + task.getDuration()[0] +"," + task.getDuration()[1] + "], m: " + task.getMachine() + ", o: " + task.isOptional()
-                    + ", e: " + task.getExcludeTasks().toString());
+                System.out.print(task.getName() + ", d: [" + task.getDuration()[0] +"," + task.getDuration()[1] + "], m: " + task.getMachine().getName() + ", o: " + task.isOptional()
+                    + ", e: " + task.getExcludeTasks().toString() + ", d: ");
+                for(Map.Entry<Integer, List<Task>> item: task.getDurationCons().entrySet()) {
+                    System.out.print("[" + item.getKey() + "; ");
+                    for(Task t : item.getValue()) {
+                        System.out.print(t.getName() + ",");
+                    }
+                    System.out.print("], ");
+                }
+                System.out.println();
             }
             index++;
         }
 
-        System.out.println("*********************** \n");
+        System.out.println("\n*********************** \n");
     }
 
 

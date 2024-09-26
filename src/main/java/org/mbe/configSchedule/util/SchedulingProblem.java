@@ -5,6 +5,7 @@ import de.vill.model.FeatureModel;
 
 import java.io.Serializable;
 import java.util.List;
+
 import org.mbe.configSchedule.util.Task;
 
 public class SchedulingProblem implements Serializable {

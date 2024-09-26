@@ -49,21 +49,21 @@ public class Main {
 
         ProblemSolver pSolver = new ProblemSolver();
 
-        if(args.length == 10 || args.length == 3 || args.length == 4) {
+        if(args.length == 12 || args.length == 3 || args.length == 4) {
             switch (args[0]) {
 
                 // Wenn ein Problem durch den Generator erstellt werden soll
                 case "generate":
                     // Dafür erst die benötigten Argumente in Integer parsen, ansonsten Exception
                     try{
-                        int[] intParameter = new int[8];
+                        int[] intParameter = new int[10];
                         for(int i = 1; i < args.length-1; i++) {
                             intParameter[i-1] = Integer.parseInt(args[i]);
                             System.out.println(intParameter[i-1]);
                         }
                         SPGenerator spgenerator = new SPGenerator();
                         spgenerator.generateProblem(intParameter[0], intParameter[1], intParameter[2], intParameter[3], intParameter[4], intParameter[5],
-                                intParameter[6], intParameter[7], args[9]);
+                                intParameter[6], intParameter[7], intParameter[8], intParameter[9], args[11]);
 
                         System.out.println("Problem saved as " + args[9] + ".txt \n" +
                                 "To solve use: solve [o or f] " + args[9] + ".txt" );
@@ -149,7 +149,7 @@ public class Main {
                         }
                     // Wenn über die Instanzmenge gesucht werden soll
                     } else if (args.length == 4){
-                        try {
+                        //try {
                             String modelPath = args[2];
                             SchedulingProblem sp = FMReader.readFM(modelPath);
                             PrintProblem(sp);
@@ -164,9 +164,9 @@ public class Main {
                                 System.out.println("Searched in " + (csr.getSearchedConfigs() - 1) + " configurations \n" +
                                         "Read time: " + csr.getReadTime() + "ms, Solve time: " + csr.getTimeSolve() + "ms, Combined: " + csr.getNeededTime() + "ms");
                             }
-                        } catch (Exception e) {
-                            System.out.println("Error - Please make sure that you entered the complete path to the configurations-directory");
-                        }
+                        //} catch (Exception e) {
+                        //    System.out.println("Error - Please make sure that you entered the complete path to the configurations-directory");
+                        //}
                     }
                     break;
 
@@ -262,7 +262,8 @@ public class Main {
             fileName = fileName + "-optimum";
         }
 
-        File file = new File("src/main/schedules/" + fileName);
+        //File file = new File("src/main/schedules/" + fileName);
+        File file = new File("/home/max/Schreibtisch/Solver-Ergebnisse/" + fileName);
         FileWriter outputFile = new FileWriter(file);
         CSVWriter csvWriter = new CSVWriter(outputFile);
 

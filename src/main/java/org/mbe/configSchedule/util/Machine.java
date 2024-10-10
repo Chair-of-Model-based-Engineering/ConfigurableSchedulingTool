@@ -6,13 +6,11 @@ import java.io.Serializable;
 
 public class Machine implements Serializable {
     private String name;
-    private final int id;
     private boolean optional;
     private BoolVar active;
 
-    public Machine(String name, int id, boolean optional) {
+    public Machine(String name, boolean optional) {
         this.name = name;
-        this.id = id;
         this.optional = optional;
         this.active = null;
     }
@@ -23,10 +21,6 @@ public class Machine implements Serializable {
 
     public void setName(String name) {
         this.name = name;
-    }
-
-    public int getId() {
-        return id;
     }
 
     public boolean isOptional() {
@@ -43,9 +37,5 @@ public class Machine implements Serializable {
 
     public void setActive(BoolVar active) {
         this.active = active;
-    }
-
-    public boolean equals(Machine m) {
-        return this.id == m.id;
     }
 }

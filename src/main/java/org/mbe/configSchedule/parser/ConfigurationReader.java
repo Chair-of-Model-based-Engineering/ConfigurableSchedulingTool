@@ -48,7 +48,7 @@ public class ConfigurationReader {
 
         System.out.println("Machines: ");
         for(Machine machine : reader.machines) {
-            System.out.print(machine.getId() + " " + machine.getName() + " " + machine.isOptional() + " | ");
+            System.out.print(machine.getName() + " " + machine.isOptional() + " | ");
         }
 
     }
@@ -142,7 +142,7 @@ public class ConfigurationReader {
 
             if(currentNode.getNodeType() == Node.ELEMENT_NODE && currentNode.getAttributes().item(0).getNodeValue().equals("selected")) {
                 String name = currentNode.getAttributes().getNamedItem("name").getNodeValue();
-                Machine machine = new Machine(name, amountMachines, false);
+                Machine machine = new Machine(name, false);
                 machine.setOptional(false);
                 amountMachines++;
 

@@ -26,18 +26,6 @@ import java.util.*;
 
 public class Main {
 
-    /*
-    public static void main(String[] args){
-        try{
-            FeatureModel model = UVLReader.read("src/main/modelle/J2_T5_M1(extendedUVL).uvl");
-            SchedulingProblem problem = new SchedulingProblem(model);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
-    */
-
-
         public static void main(String[] args) throws ParserConfigurationException, IOException, SAXException, XPathExpressionException, ClassNotFoundException {
 
         Loader.loadNativeLibraries();

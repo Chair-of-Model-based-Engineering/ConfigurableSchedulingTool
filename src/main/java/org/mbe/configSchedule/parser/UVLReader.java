@@ -11,6 +11,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 public class UVLReader {
+
     public static FeatureModel read(String path) throws IOException {
         Path filePath = Paths.get(path);
         String content = new String(Files.readAllBytes(filePath));

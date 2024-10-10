@@ -27,12 +27,11 @@
             <artifactId>opencsv</artifactId>
             <version>5.9</version>
         </dependency>
+
         <dependency>
-            <groupId>de.vill</groupId>
-            <artifactId>uvl-parser</artifactId>
+            <groupId>io.github.universal-variability-language</groupId>
+            <artifactId>uvl-metamodel</artifactId>
             <version>1.0</version>
-            <scope>system</scope>
-            <systemPath>${project.basedir}/src/main/resources/uvl-parser-1.0-SNAPSHOT-jar-with-dependencies.jar</systemPath>
         </dependency>
     </dependencies>
 

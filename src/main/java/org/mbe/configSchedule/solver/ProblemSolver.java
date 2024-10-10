@@ -28,7 +28,7 @@ public class ProblemSolver {
         // Für jede optionale Maschine wird eine neue BoolVar erstellt
         for (Machine machine : machines) {
             if (machine.isOptional()) {
-                machine.setActive(model.newBoolVar("Machine" + machine.getId() + "_active"));
+                machine.setActive(model.newBoolVar("Machine_" + machine.getName() + "_active"));
             }
         }
 
@@ -230,7 +230,7 @@ public class ProblemSolver {
         // dann soll die Maschine auch aktiv sein
         for (Machine machine : optionalMachineTaskActives.keySet()) {
             if (!optionalMachineTaskActives.get(machine).isEmpty()) {
-                BoolVar atLeastOneActive = model.newBoolVar(machine.getId() + "_atLeastOneActiveTask");
+                BoolVar atLeastOneActive = model.newBoolVar(machine.getName() + "_atLeastOneActiveTask");
                 model.addMaxEquality(atLeastOneActive, optionalMachineTaskActives.get(machine));
                 model.addEquality(machine.getActive(), atLeastOneActive);
             } else {
@@ -394,7 +394,7 @@ public class ProblemSolver {
                     if(assignedJobs.get(machine) != null) {
                         Collections.sort(assignedJobs.get(machine), new SortTasks());
                     }
-                    String solLineTasks = "Machine " + machine.getId() + ": ";
+                    String solLineTasks = "Machine_" + machine.getName() + ": ";
                     String solLine = "           ";
 
                     if(assignedJobs.get(machine) != null) {

@@ -41,7 +41,7 @@ public class SPGenerator {
         // =================================
         int machineID = 1;
         for(int i = 0; i < machineCount; i++) {
-            Machine machine = new Machine("m" + machineID, i, false);
+            Machine machine = new Machine("m" + machineID, false);
             machineID++;
             machines.add(machine);
         }

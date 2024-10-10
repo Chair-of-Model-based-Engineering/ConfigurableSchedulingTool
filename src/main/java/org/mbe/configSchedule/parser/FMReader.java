@@ -104,13 +104,13 @@ public class FMReader {
                 // oder nicht optional ist
                 if (machineNodes.item(i).getAttributes().getLength() == 2) {
                     String name = machineNodes.item(i).getAttributes().getNamedItem("name").getNodeValue();
-                    Machine machine = new Machine(name, id, false);
+                    Machine machine = new Machine(name, false);
                     id++;
                     machineNameMap.put(machineNodes.item(i).getAttributes().item(1).getNodeValue(), machine);
                     machines.add(machine);
                 } else {
                     String name = machineNodes.item(i).getAttributes().getNamedItem("name").getNodeValue();
-                    Machine machine = new Machine(name, id, true);
+                    Machine machine = new Machine(name, true);
                     id++;
                     machineNameMap.put(machineNodes.item(i).getAttributes().item(0).getNodeValue(), machine);
                     machines.add(machine);

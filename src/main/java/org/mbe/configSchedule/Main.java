@@ -43,21 +43,23 @@ public class Main {
                 // Wenn ein Problem durch den Generator erstellt werden soll
                 case "generate":
                     // Dafür erst die benötigten Argumente in Integer parsen, ansonsten Exception
-                    try{
+                    // try{
                         int[] intParameter = new int[10];
                         for(int i = 1; i < args.length-1; i++) {
                             intParameter[i-1] = Integer.parseInt(args[i]);
                             System.out.println(intParameter[i-1]);
                         }
+                        System.out.print("Die intParameter sind: " +  Arrays.toString(intParameter) + "\n");
+                        System.out.print("Und Nummer 9 ist: " + intParameter[9] + "\n");
                         SPGenerator spgenerator = new SPGenerator();
                         spgenerator.generateProblem(intParameter[0], intParameter[1], intParameter[2], intParameter[3], intParameter[4], intParameter[5],
                                 intParameter[6], intParameter[7], intParameter[8], intParameter[9], args[11]);
 
-                        System.out.println("Problem saved as " + args[9] + ".txt \n" +
-                                "To solve use: solve [o or f] " + args[9] + ".txt" );
-                    }catch(Exception e) {
-                        System.out.println("Error - Please make sure that all arguments besides <name> are integers");
-                    }
+                        System.out.println("Problem saved as " + args[11] + ".txt \n" +
+                                "To solve use: solve [o or f] " + args[11] + ".txt" );
+                    // }catch(Exception e) {
+                    //    System.out.println("Error - Please make sure that all arguments besides <name> are integers");
+                    // }
                     break;
 
                 // Wenn ein Problem gelöst werden soll
@@ -172,7 +174,8 @@ public class Main {
 
 
     public static SchedulingProblem ReadProblemGen(String name) throws IOException, ClassNotFoundException {
-        FileInputStream fIn = new FileInputStream("src/main/probleme/" + name);
+        //FileInputStream fIn = new FileInputStream("src/main/probleme/" + name);
+        FileInputStream fIn = new FileInputStream("/home/max/Schreibtisch/Generierte_Probleme/" + name);
         ObjectInputStream oIn = new ObjectInputStream(fIn);
         SchedulingProblem sp = (SchedulingProblem) oIn.readObject();
         oIn.close();

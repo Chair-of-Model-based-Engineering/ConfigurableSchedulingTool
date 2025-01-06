@@ -3,6 +3,8 @@ package org.mbe.configSchedule.util;
 import java.io.Serializable;
 import java.util.*;
 
+import static java.util.Optional.ofNullable;
+
 public class Task implements Serializable {
     private Machine machine;
     private int[] duration;
@@ -79,5 +81,14 @@ public class Task implements Serializable {
 
     public void addTaskToDurationCon(int key, Task task) {
         durationCons.get(key).add(task);
+    }
+
+    @Override
+    public String toString() {
+        return String.format("p: %s/ d: %s/ m: %s/ o: %b",
+                Optional.ofNullable(this.name).orElse("-"),
+                Optional.ofNullable(this.duration).map(Arrays::toString).orElse("-"),
+                Optional.ofNullable(this.machine).map(Machine::getName).orElse("-"),
+                Optional.ofNullable(this.optional).orElse(null));
     }
 }

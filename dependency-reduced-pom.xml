@@ -33,15 +33,6 @@
       </plugin>
     </plugins>
   </build>
-  <dependencies>
-    <dependency>
-      <groupId>de.vill</groupId>
-      <artifactId>uvl-parser</artifactId>
-      <version>1.0</version>
-      <scope>system</scope>
-      <systemPath>${project.basedir}/src/main/resources/uvl-parser-1.0-SNAPSHOT-jar-with-dependencies.jar</systemPath>
-    </dependency>
-  </dependencies>
   <properties>
     <maven.compiler.target>19</maven.compiler.target>
     <maven.compiler.source>19</maven.compiler.source>

@@ -3,6 +3,7 @@ package org.mbe.configSchedule;
 import com.google.ortools.Loader;
 import com.google.protobuf.MapEntry;
 import com.opencsv.CSVWriter;
+import de.vill.main.UVLModelFactory;
 import de.vill.model.FeatureModel;
 import org.mbe.configSchedule.generator.SPGenerator;
 import org.mbe.configSchedule.parser.FMReader;
@@ -14,9 +15,12 @@ import org.xml.sax.SAXException;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.xpath.XPathExpressionException;
 import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
+import java.util.prefs.Preferences;
 
 // =======================================================================
 // Basierend auf dem Jobshop-Problem-Beispiel von Google OR-Tools
@@ -30,6 +34,8 @@ public class Main {
 
         Loader.loadNativeLibraries();
 
+        PathPreferences prefs = new PathPreferences();
+
         // 0 = Erfüllbarkeit prüfen, 1 = Optimum finden
         int mode = 1;
         // 0 = Variables FM, 1 = Mehrere Configs, 2 = "Zufälliges" Problem generieren
@@ -37,7 +43,7 @@ public class Main {
 
         ProblemSolver pSolver = new ProblemSolver();
 
-        if(args.length == 12 || args.length == 3 || args.length == 4) {
+        if(args.length == 12 || args.length == 2 || args.length == 3 || args.length == 4) {
             switch (args[0]) {
 
                 // Wenn ein Problem durch den Generator erstellt werden soll
@@ -47,10 +53,7 @@ public class Main {
                         int[] intParameter = new int[10];
                         for(int i = 1; i < args.length-1; i++) {
                             intParameter[i-1] = Integer.parseInt(args[i]);
-                            System.out.println(intParameter[i-1]);
                         }
-                        System.out.print("Die intParameter sind: " +  Arrays.toString(intParameter) + "\n");
-                        System.out.print("Und Nummer 9 ist: " + intParameter[9] + "\n");
                         SPGenerator spgenerator = new SPGenerator();
                         spgenerator.generateProblem(intParameter[0], intParameter[1], intParameter[2], intParameter[3], intParameter[4], intParameter[5],
                                 intParameter[6], intParameter[7], intParameter[8], intParameter[9], args[11]);
@@ -80,10 +83,11 @@ public class Main {
 
                     if(args.length == 3) {
                         // Wenn es ein durch den Generator erstelltes Problem ist
-                        if(args[2].endsWith(".txt")) {
+                        if(args[2].endsWith(".txt") || args[2].endsWith(".uvl")) {
                             //try {
                                 Instant readStart = Instant.now();
                                 SchedulingProblem sp = ReadProblemGen(args[2]);
+                                //SchedulingProblem sp = ReadProblemUVL(args[2]);
                                 Instant readEnd = Instant.now();
 
                                 PrintProblem(sp);
@@ -160,6 +164,19 @@ public class Main {
                     }
                     break;
 
+                case "solutionpath":
+                    prefs.setSolutionSavePath(args[1]);
+                    break;
+                case "problempath":
+                    prefs.setProblemSavePath(args[1]);
+                    System.out.printf("Path for saving generated problems set to %s", args[1]);
+                    break;
+                case "get":
+                    if(args[1].equals("solutionpath")) {
+                        System.out.println(prefs.getSolutionSavePath());
+                    } else if(args[1].equals("problempath")) {
+                        System.out.println(prefs.getProblemSavePath());
+                    }
                 default: System.out.println("Undefined command " + args[0] + "\n" +
                         "Use \"generate\" or \"solve\"");
             }
@@ -175,11 +192,27 @@ public class Main {
 
     public static SchedulingProblem ReadProblemGen(String name) throws IOException, ClassNotFoundException {
         //FileInputStream fIn = new FileInputStream("src/main/probleme/" + name);
-        FileInputStream fIn = new FileInputStream("/home/max/Schreibtisch/Generierte_Probleme/" + name);
+        PathPreferences prefs = new PathPreferences();
+        String path = prefs.getProblemSavePath();
+        FileInputStream fIn = new FileInputStream(path + name);
         ObjectInputStream oIn = new ObjectInputStream(fIn);
         SchedulingProblem sp = (SchedulingProblem) oIn.readObject();
         oIn.close();
 
+        return sp;
+    }
+
+    public static SchedulingProblem ReadProblemUVL(String name) throws IOException {
+        PathPreferences prefs = new PathPreferences();
+        String path = prefs.getProblemSavePath();
+        Path filePath = Path.of(path + name);
+        String problemUVL = Files.readString(filePath);
+
+        System.out.println("\n" + problemUVL + "\n");
+        UVLModelFactory modelFactory = new UVLModelFactory();
+        FeatureModel fm = modelFactory.parse(problemUVL);
+
+        SchedulingProblem sp = new SchedulingProblem(fm);
         return sp;
     }
 

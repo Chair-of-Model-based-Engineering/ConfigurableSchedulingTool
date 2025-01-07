@@ -18,6 +18,7 @@ public class FMReader {
 
     /**
      * Liest aus einer xml-Datei ein Scheduling-Problem aus
+     *
      * @param modelPath Pfad zur Modell-xml-Datei
      * @return Scheduling-Problem-Objekt, das die Jobs, Maschinen und die Deadline enthält
      */
@@ -71,6 +72,7 @@ public class FMReader {
 
     /**
      * Liest die Deadline aus
+     *
      * @param deadlineNode Node die die Deadline enthält
      * @return int der den Wert für die Deadline enthält
      */
@@ -87,9 +89,10 @@ public class FMReader {
 
     /**
      * Erstellt die Maschinen
-     * @param m Node für Feature M im Modell
+     *
+     * @param m              Node für Feature M im Modell
      * @param machineNameMap Map<Machine-Name, Machine>
-     * @param machines Liste mit allen Maschinen
+     * @param machines       Liste mit allen Maschinen
      */
     public static void readMachines(Node m, Map<String, Machine> machineNameMap, List<Machine> machines) {
         // Maschinen sind die Child Nodes des abstract Features M
@@ -121,9 +124,10 @@ public class FMReader {
 
     /**
      * Erstellt die Tasks
-     * @param p Node für Feature P im Modell
+     *
+     * @param p           Node für Feature P im Modell
      * @param taskNameMap Map<Task-Name, Task>
-     * @param allTasks Liste mit allen Tasks
+     * @param allTasks    Liste mit allen Tasks
      */
     public static void readTasks(Node p, Map<String, Task> taskNameMap, List<Task> allTasks) {
         //Tasks befinden sich in Childnodes des abstract Features P
@@ -192,6 +196,7 @@ public class FMReader {
 
     /**
      * Liest alle Constraints aus und erstellt die Jobs
+     *
      * @param constraints
      * @param allTasks
      * @param taskNameMap
@@ -221,7 +226,7 @@ public class FMReader {
             // Zuordnen ob es eine Reihenfolge-, Duration- oder eine Machine-Constraint ist
             if (constraintPairArr[1].startsWith("m")) {
                 machineConstraints.add(constraintPairArr);
-            } else if(constraintPairArr[0].startsWith("d")){
+            } else if (constraintPairArr[0].startsWith("d")) {
                 durationConstraints.add(constraintPairArr);
             } else {
                 orderConstraints.add(constraintPairArr);
@@ -276,9 +281,10 @@ public class FMReader {
 
     /**
      * Tasks bekommen die Maschinen zugeordnet auf denen sie ausgeführt werden
+     *
      * @param machineConstraints Liste mit den Machine-Constraints [p,m]
-     * @param machines Liste mit allen Maschinen
-     * @param allTasks Liste mit allen Tasks
+     * @param machines           Liste mit allen Maschinen
+     * @param allTasks           Liste mit allen Tasks
      */
     public static void readMachineConstraints(List<String[]> machineConstraints, List<Machine> machines, List<Task> allTasks) {
         for (String[] con : machineConstraints) {
@@ -301,8 +307,9 @@ public class FMReader {
 
     /**
      * Falls eine Task einer Alternative-Gruppe angehört, kriegen diese die anderen Tasks aus der Gruppe zugeorndet
-     * @param xPath XPath zum Finden der Constraints
-     * @param modellDoc Dokument das die xml-Datei enthält
+     *
+     * @param xPath       XPath zum Finden der Constraints
+     * @param modellDoc   Dokument das die xml-Datei enthält
      * @param taskNameMap Map<Task-Name, Task>
      */
     public static void readExcludeConstraints(XPath xPath, Document modellDoc, Map<String, Task> taskNameMap) throws XPathExpressionException {
@@ -379,7 +386,7 @@ public class FMReader {
             if (prevList != null) {
                 prevList.clear();
             }
-            for(String n : taskNames) {
+            for (String n : taskNames) {
                 prevList.add(n);
             }
 
@@ -403,11 +410,12 @@ public class FMReader {
 
     /**
      * Falls eine Duration die Ausführung einer anderen Task benötigt, wird diese Constraint der Task hinzugefügt
+     *
      * @param durationConstraints Liste mit Duration-Constraints [dp, p]
-     * @param allTasks Liste mit allen Tasks
+     * @param allTasks            Liste mit allen Tasks
      */
     public static void readDurationConstraints(List<String[]> durationConstraints, List<Task> allTasks) {
-        for(String con[] : durationConstraints) {
+        for (String con[] : durationConstraints) {
             String duration = con[0];
             // String zerlegen, sodass man zugehörige Task und Duratio herauslesen kann
             // "dp1 = 1" -> "dp1", "=", "1"
@@ -434,8 +442,8 @@ public class FMReader {
                     .findAny()
                     .orElse(null);
 
-            if(task != null && requiredTask != null && durationValue != -1) {
-                if(task.getDurationCons().get(durationValue) != null) {
+            if (task != null && requiredTask != null && durationValue != -1) {
+                if (task.getDurationCons().get(durationValue) != null) {
                     System.out.println("Die Constraint " + con[0] + ", " + con[1] + " wird einer bestehenden Liste hinzugefügt");
                     task.addTaskToDurationCon(durationValue, requiredTask);
                 } else {

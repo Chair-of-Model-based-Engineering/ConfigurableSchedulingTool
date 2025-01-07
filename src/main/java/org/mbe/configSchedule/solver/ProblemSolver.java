@@ -15,7 +15,8 @@ import java.util.*;
 
 public class ProblemSolver {
 
-    public ProblemSolver() {}
+    public ProblemSolver() {
+    }
 
     public static SolverReturn solveProblem(int mode, SchedulingProblem sp) {
         List<List<Task>> alleJobs = sp.getJobs();
@@ -58,7 +59,7 @@ public class ProblemSolver {
         // können die Constraints für die active BoolVars festgelegt werden
         List<TaskType> excludingTasks = new ArrayList<>();
 
-        Map<List<Integer>, TaskType> idToTaskTypesWithDurationConstraints= new HashMap<>();
+        Map<List<Integer>, TaskType> idToTaskTypesWithDurationConstraints = new HashMap<>();
 
         // Jede optionale Maschine hat eine Liste mit BoolVars, die dafür stehen,
         // ob die Tasks die auf ihr ausgeführt werden, auch aktiv sind
@@ -144,7 +145,7 @@ public class ProblemSolver {
                 nameToTask.put(task.getName(), task);
 
                 // Wenn die Task eine Duration hat, die nur gewählt werden darf, wenn eine andere Task ausgeführt wird
-                if(task.getDurationCons() != null && task.getDurationCons().size() > 0) {
+                if (task.getDurationCons() != null && task.getDurationCons().size() > 0) {
                     idToTaskTypesWithDurationConstraints.put(key, taskType);
                 }
 
@@ -165,14 +166,14 @@ public class ProblemSolver {
 
         // Für die TaskTypes, deren Task duration-Constraints haben die entsprechenden Constraints auch im
         // TaskType erstellen
-        for(Map.Entry<List<Integer>, TaskType> entry : idToTaskTypesWithDurationConstraints.entrySet()) {
+        for (Map.Entry<List<Integer>, TaskType> entry : idToTaskTypesWithDurationConstraints.entrySet()) {
             TaskType tt = entry.getValue();
             Task task = nameToTask.get(tt.getName());
 
-            for(Map.Entry<Integer, List<Task>> con : task.getDurationCons().entrySet()) {
+            for (Map.Entry<Integer, List<Task>> con : task.getDurationCons().entrySet()) {
                 int durationValue = con.getKey();
                 List<TaskType> conTTs = new ArrayList<>();
-                for(Task conTask : con.getValue()) {
+                for (Task conTask : con.getValue()) {
                     conTTs.add(nameToTaskType.get(conTask.getName()));
                 }
                 tt.addDurationsConstraint(durationValue, conTTs);
@@ -181,16 +182,16 @@ public class ProblemSolver {
 
 
         // Für jede Task, die mindestens eine durationConstraint hat, werden Constraints dem Model hinzugefügt
-        for(TaskType tt : idToTaskTypesWithDurationConstraints.values()) {
+        for (TaskType tt : idToTaskTypesWithDurationConstraints.values()) {
             // Über jede Constraint dieser Task iterieren
-            for(Map.Entry<Integer, List<TaskType>> con : tt.getDurationsConstraints().entrySet()) {
+            for (Map.Entry<Integer, List<TaskType>> con : tt.getDurationsConstraints().entrySet()) {
                 int durationValue = con.getKey();
                 // BoolVar soll 1 annehmen, wenn alle benötigten Tasks für diese Duration aktiv sind, ansonsten 0
                 BoolVar allRequiredTasksActive = model.newBoolVar(tt.getName() + "_durationConstraints_" + con.getKey());
 
                 // Liste mit den active-BoolVars der required TaskTypes
                 List<BoolVar> requiredBoolVars = new ArrayList<>();
-                for(TaskType requiredTT : con.getValue()) {
+                for (TaskType requiredTT : con.getValue()) {
                     requiredBoolVars.add(requiredTT.getActive());
                 }
 
@@ -313,7 +314,7 @@ public class ProblemSolver {
         CpSolver solver = new CpSolver();
 
         // Wenn auf Erfüllbarkeit geprüft wird, soll nach der ersten Lösung gestoppt werden
-        if(mode == 0){
+        if (mode == 0) {
             solver.getParameters().setStopAfterFirstSolution(true);
         }
 
@@ -391,13 +392,13 @@ public class ProblemSolver {
             for (Machine machine : machines) {
                 if (!machine.isOptional() || solver.value(machine.getActive()) == 1) {
                     // Sort by starting time.
-                    if(assignedJobs.get(machine) != null) {
+                    if (assignedJobs.get(machine) != null) {
                         Collections.sort(assignedJobs.get(machine), new SortTasks());
                     }
                     String solLineTasks = "Machine_" + machine.getName() + ": ";
                     String solLine = "           ";
 
-                    if(assignedJobs.get(machine) != null) {
+                    if (assignedJobs.get(machine) != null) {
                         for (AssignedTask assignedTask : assignedJobs.get(machine)) {
                             if (assignedTask.isActive()) {
                                 //String name = "job_" + assignedTask.jobID + "_task_" + assignedTask.taskID;
@@ -453,7 +454,6 @@ public class ProblemSolver {
     }
 
 
-
     public ConfigurationSolverReturn SolveConfigurations(int mode, String configDirectoryPath, String modelPath) throws XPathExpressionException, ParserConfigurationException, IOException, SAXException {
         File directory = new File(configDirectoryPath);
         File[] directoryFiles = directory.listFiles();
@@ -461,8 +461,8 @@ public class ProblemSolver {
         ConfigurationReader cReader = new ConfigurationReader();
 
         // mode = 0 -> feasible Schedule
-        if(mode == 0) {
-            if(directoryFiles != null) {
+        if (mode == 0) {
+            if (directoryFiles != null) {
 
                 int iteration = 1;
                 long sumTimeRead = 0;
@@ -484,8 +484,8 @@ public class ProblemSolver {
                     sumTimeRead += readTime;
                     sumTimeSolve += solveTime;
 
-                    if(sr != null && (sr.getStatus() == CpSolverStatus.OPTIMAL || sr.getStatus() == CpSolverStatus.FEASIBLE)) {
-                        ConfigurationSolverReturn csr = new ConfigurationSolverReturn(true, sr, sumTimeRead, sumTimeSolve, sumTimeRead+sumTimeSolve, iteration, iteration);
+                    if (sr != null && (sr.getStatus() == CpSolverStatus.OPTIMAL || sr.getStatus() == CpSolverStatus.FEASIBLE)) {
+                        ConfigurationSolverReturn csr = new ConfigurationSolverReturn(true, sr, sumTimeRead, sumTimeSolve, sumTimeRead + sumTimeSolve, iteration, iteration);
                         return csr;
                     }
                     iteration++;
@@ -494,7 +494,7 @@ public class ProblemSolver {
                 return csr;
             }
         } else if (mode == 1) {
-            if(directoryFiles != null) {
+            if (directoryFiles != null) {
 
                 int iteration = 1;
                 Double bestResultTime = Double.POSITIVE_INFINITY;
@@ -514,7 +514,7 @@ public class ProblemSolver {
                     SolverReturn sr = solveProblem(mode, sp);
                     Instant solveEnd = Instant.now();
 
-                    if(sr != null && (sr.getStatus() == CpSolverStatus.OPTIMAL && sr.getTime() < bestResultTime)) {
+                    if (sr != null && (sr.getStatus() == CpSolverStatus.OPTIMAL && sr.getTime() < bestResultTime)) {
                         bestResultTime = sr.getTime();
                         bestResult = sr;
                         bestIteration = iteration;
@@ -527,7 +527,7 @@ public class ProblemSolver {
                     sumTimeSolve += solveTime;
                 }
 
-                if(bestIteration != -1) {
+                if (bestIteration != -1) {
                     ConfigurationSolverReturn csr = new ConfigurationSolverReturn(true, bestResult, sumTimeRead, sumTimeSolve, sumTimeRead + sumTimeSolve, bestIteration, iteration);
                     return csr;
                 } else {

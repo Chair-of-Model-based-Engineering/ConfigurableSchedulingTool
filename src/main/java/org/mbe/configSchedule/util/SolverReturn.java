@@ -19,7 +19,10 @@ public class SolverReturn {
         this.assignedJobs = assignedJobs;
     }
 
-    public SolverReturn() {};
+    public SolverReturn() {
+    }
+
+    ;
 
     public Double getTime() {
         return time;

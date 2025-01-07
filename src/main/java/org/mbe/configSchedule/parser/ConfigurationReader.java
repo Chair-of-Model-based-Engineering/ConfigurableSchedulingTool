@@ -28,7 +28,10 @@ public class ConfigurationReader {
     Map<String, Task> nameToTask = new HashMap<>();
     Map<String, Machine> nameToMachine = new HashMap<>();
 
-    public ConfigurationReader() {};
+    public ConfigurationReader() {
+    }
+
+    ;
 
     public static void main(String[] args) throws XPathExpressionException, ParserConfigurationException, IOException, SAXException {
         String configPath = "src/main/modelle/J2_T10_M2_O2_A4Configs/01487.xml";
@@ -38,16 +41,16 @@ public class ConfigurationReader {
 
 
         System.out.println("Jobs: ");
-        for(List<Task> job : reader.jobs) {
+        for (List<Task> job : reader.jobs) {
             System.out.print("Job: ");
-            for(Task task : job) {
+            for (Task task : job) {
                 System.out.print(task.getName() + ", M: " + task.getMachine() + ", D: [" + task.getDuration()[0] + "," + task.getDuration()[1] + "], " + "O: " + task.isOptional() + "E: " + task.getExcludeTasks().size() + " | ");
             }
             System.out.print("\n");
         }
 
         System.out.println("Machines: ");
-        for(Machine machine : reader.machines) {
+        for (Machine machine : reader.machines) {
             System.out.print(machine.getName() + " " + machine.isOptional() + " | ");
         }
 
@@ -103,7 +106,7 @@ public class ConfigurationReader {
             Node taskNode = taskNodes.item(i);
 
             // Selected = angewählt, naja offensichtlich
-            if(taskNode.getNodeType() == Node.ELEMENT_NODE && taskNode.getAttributes().item(0).getNodeValue().equals("selected")) {
+            if (taskNode.getNodeType() == Node.ELEMENT_NODE && taskNode.getAttributes().item(0).getNodeValue().equals("selected")) {
                 Task task = new Task();
                 task.setName(taskNode.getAttributes().getNamedItem("name").getNodeValue());
                 // In einer instanz ist keine task optional
@@ -116,12 +119,12 @@ public class ConfigurationReader {
     }
 
     private void ReadDurations(NodeList durationNodes) {
-        for(int i = 0; i < durationNodes.getLength(); i++) {
+        for (int i = 0; i < durationNodes.getLength(); i++) {
             Node durationNode = durationNodes.item(i);
 
             // Duration Features haben ja den Tasknamen im Namen, von daher kann man sie darüber zuordnen
             // Die Duration kommt in beide Arrayplätze, sodass die Range von x bis x geht (x = gleiche Zahl)
-            if(durationNode.getNodeType() == Node.ELEMENT_NODE && durationNode.getAttributes().item(0).getNodeValue().equals("selected")) {
+            if (durationNode.getNodeType() == Node.ELEMENT_NODE && durationNode.getAttributes().item(0).getNodeValue().equals("selected")) {
                 String durationString = durationNode.getAttributes().getNamedItem("name").getNodeValue();
                 String[] subStrings = durationString.split(" ");
                 int[] durationsArr = new int[2];
@@ -137,10 +140,10 @@ public class ConfigurationReader {
 
     public void CreateMachines(NodeList machineNodes) {
         int amountMachines = 0;
-        for(int i = 0; i < machineNodes.getLength(); i++) {
+        for (int i = 0; i < machineNodes.getLength(); i++) {
             Node currentNode = machineNodes.item(i);
 
-            if(currentNode.getNodeType() == Node.ELEMENT_NODE && currentNode.getAttributes().item(0).getNodeValue().equals("selected")) {
+            if (currentNode.getNodeType() == Node.ELEMENT_NODE && currentNode.getAttributes().item(0).getNodeValue().equals("selected")) {
                 String name = currentNode.getAttributes().getNamedItem("name").getNodeValue();
                 Machine machine = new Machine(name, false);
                 machine.setOptional(false);
@@ -154,33 +157,33 @@ public class ConfigurationReader {
 
     public void CreateJobs(NodeList orderNodes) {
         List<String[]> orderPairs = new ArrayList<>();
-        for(int i = 0; i < orderNodes.getLength(); i++) {
+        for (int i = 0; i < orderNodes.getLength(); i++) {
             Node impNode = orderNodes.item(i);
             NodeList impNodeChilds = impNode.getChildNodes();
 
             String[] constrPair = new String[2];
             int index = 0;
 
-            for(int j = 0; j < impNodeChilds.getLength(); j++) {
+            for (int j = 0; j < impNodeChilds.getLength(); j++) {
                 Node currentNode = impNodeChilds.item(j);
 
-                if(currentNode.getNodeType() == Node.ELEMENT_NODE) {
+                if (currentNode.getNodeType() == Node.ELEMENT_NODE) {
                     constrPair[index] = currentNode.getTextContent();
                     index++;
                 }
             }
             // Falls der erste Constraint-String mit m Startet, ist es eine zuweisung von Task zu Machine
             // Wenn er mit p beginnt, dann eine Reihenfolgen require-Constraint
-                if (constrPair[1].startsWith("m")) {
-                    if(nameToTask.containsKey(constrPair[0]) && nameToMachine.containsKey(constrPair[1])) {
-                        Task task = nameToTask.get(constrPair[0]);
-                        task.setMachine(nameToMachine.get(constrPair[1]));
-                    }
-                } else {
-                    if(nameToTask.containsKey(constrPair[0]) && nameToTask.containsKey(constrPair[1])) {
-                        orderPairs.add(constrPair);
-                    }
+            if (constrPair[1].startsWith("m")) {
+                if (nameToTask.containsKey(constrPair[0]) && nameToMachine.containsKey(constrPair[1])) {
+                    Task task = nameToTask.get(constrPair[0]);
+                    task.setMachine(nameToMachine.get(constrPair[1]));
                 }
+            } else {
+                if (nameToTask.containsKey(constrPair[0]) && nameToTask.containsKey(constrPair[1])) {
+                    orderPairs.add(constrPair);
+                }
+            }
 
         }
 
@@ -189,7 +192,7 @@ public class ConfigurationReader {
         // weil das bedeutet, dass sie nach p2 startet
         Set<String> starterTasks = new HashSet<>(nameToTask.keySet());
         Set<String> notStarter = new HashSet<>();
-        for(String[] pair : orderPairs) {
+        for (String[] pair : orderPairs) {
             notStarter.add(pair[0]);
         }
 
@@ -198,7 +201,7 @@ public class ConfigurationReader {
         starterTasks.removeAll(notStarter);
 
         // Für jede Startertask einen Job erstellen
-        for(String taskname : starterTasks) {
+        for (String taskname : starterTasks) {
             String currentTaskname = taskname;
             List<Task> job = new ArrayList<>();
 
@@ -208,9 +211,9 @@ public class ConfigurationReader {
             // Die Orderpairs durchgehen und jedes mal, wenn eine Order, die die letzte Task des
             // aktuellen Jobs enthält, die andere Task anhängen, die Order löschen und wieder von vorne
             // die Orderpairs durchgehen
-            for(int i = 0; i < orderPairs.size(); i++) {
+            for (int i = 0; i < orderPairs.size(); i++) {
                 String[] currentPair = orderPairs.get(i);
-                if((currentPair[1].equals(currentTaskname))) {
+                if ((currentPair[1].equals(currentTaskname))) {
                     Task followTask = nameToTask.get(currentPair[0]);
                     job.add(followTask);
                     currentTaskname = currentPair[0];

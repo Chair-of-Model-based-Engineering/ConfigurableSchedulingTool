@@ -28,7 +28,8 @@ public class Task implements Serializable {
         this.optional = optional;
     }
 
-    public Task() {}
+    public Task() {
+    }
 
     public Machine getMachine() {
         return machine;
@@ -71,7 +72,7 @@ public class Task implements Serializable {
         this.excludeTasks = excludeTasks;
     }
 
-    public Map<Integer,List<Task>> getDurationCons() {
+    public Map<Integer, List<Task>> getDurationCons() {
         return durationCons;
     }
 

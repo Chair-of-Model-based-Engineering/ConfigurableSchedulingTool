@@ -8,6 +8,7 @@ import de.vill.model.FeatureModel;
 import org.mbe.configSchedule.generator.SPGenerator;
 import org.mbe.configSchedule.parser.FMReader;
 import org.mbe.configSchedule.parser.UVLReader;
+import org.mbe.configSchedule.solver.ConfigurationSolver;
 import org.mbe.configSchedule.solver.ProblemSolver;
 import org.mbe.configSchedule.util.*;
 import org.xml.sax.SAXException;
@@ -37,8 +38,6 @@ public class Main {
         int mode = 1;
         // 0 = Variables FM, 1 = Mehrere Configs, 2 = "Zufälliges" Problem generieren
         int mode2 = 0;
-
-        ProblemSolver pSolver = new ProblemSolver();
 
         if (args.length == 12 || args.length == 2 || args.length == 3 || args.length == 4) {
             switch (args[0]) {
@@ -90,7 +89,14 @@ public class Main {
                             PrintProblem(sp);
 
                             Instant solveStart = Instant.now();
-                            SolverReturn sr = pSolver.solveProblem(mode, sp);
+                            ProblemSolver problemSolver = new ProblemSolver(sp);
+                            SolverReturn sr;
+                            if (mode==0){
+                                sr = problemSolver.getFirstSolution();
+                            }else{
+                                sr = problemSolver.getBestSolution();
+                            }
+
                             Instant solveEnd = Instant.now();
 
                             long readTime = Duration.between(readStart, readEnd).toMillis();
@@ -119,7 +125,14 @@ public class Main {
                             PrintProblem(sp);
 
                             Instant solveStart = Instant.now();
-                            SolverReturn sr = pSolver.solveProblem(mode, sp);
+                            ProblemSolver problemSolver = new ProblemSolver(sp);
+                            SolverReturn sr;
+                            if (mode==0){
+                                sr = problemSolver.getFirstSolution();
+                            }else{
+                                sr = problemSolver.getBestSolution();
+                            }
+
                             Instant solveEnd = Instant.now();
 
                             long readTime = Duration.between(readStart, readEnd).toMillis();
@@ -144,8 +157,14 @@ public class Main {
                         String modelPath = args[2];
                         SchedulingProblem sp = FMReader.readFM(modelPath);
                         PrintProblem(sp);
-                        ConfigurationSolverReturn csr = pSolver.SolveConfigurations(mode, args[3], modelPath);
-                        if (csr.isHasSolution()) {
+                        ConfigurationSolverReturn csr;
+                        if (mode == 0){
+                            csr = ConfigurationSolver.getFirst(args[3], modelPath);
+                        }else{
+                            csr = ConfigurationSolver.getBest(args[3], modelPath);
+                        }
+
+                        if (csr != null && csr.isHasSolution()) {
                             PrintSolution(csr.getSolverReturn());
                             System.out.println("Found solution in iteration " + csr.getIteration() + "\n" +
                                     "Read time: " + csr.getReadTime() + "ms, Solve time: " + csr.getTimeSolve() + "ms, Combined: " + csr.getNeededTime() + "ms");

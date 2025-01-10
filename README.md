@@ -1,7 +1,7 @@
 # Solver Eingabemöglichkeiten
 
 ## Generieren von Problemen mit
-```generate <jobCount> <taskCount> <durationOutlier> <machineCount> <optionalCount> <altCount> <altGroupCount> <deadline> <name>```
+```generate <jobCount> <taskCount> <durationOutlier> <machineCount> <optionalCount> <altCount> <altGroupCount> <deadline> <durationConCount> <maxDurationConFromOneTask> <name>```
 
 ## Lösen von Problemen
 `o`: nach optimalem Schedule suchen  
@@ -28,5 +28,5 @@ get solutionpath        # solutionpath ausgeben
 Speicherort für Probleme
 ```
 problempath <path>      # Speicherort festlegen
-get problempath         #problempath ausgeben
+get problempath         # problempath ausgeben
 ```

@@ -37,6 +37,7 @@ public class FMReader {
         XPath xPath = XPathFactory.newInstance().newXPath();
         String expressionP = "//and[@name=\"P\"]";
         String expressionM = "//and[@name=\"M\"]";
+        String expressionDeadline = "//feature[starts-with(@name, 'dl')]/@name";
         String expressionCon = "//imp";
         String expressionDesc = "//description";
         String expressionExclCount = "//rule/disj";
@@ -45,7 +46,7 @@ public class FMReader {
         Node m = (Node) xPath.compile(expressionM).evaluate(modellDoc, XPathConstants.NODE);
         Node p = (Node) xPath.compile(expressionP).evaluate(modellDoc, XPathConstants.NODE);
         NodeList constraints = (NodeList) xPath.compile(expressionCon).evaluate(modellDoc, XPathConstants.NODESET);
-        Node deadlineNode = (Node) xPath.compile(expressionDesc).evaluate(modellDoc, XPathConstants.NODE);
+        String deadlineNode = (String) xPath.compile(expressionDeadline).evaluate(modellDoc, XPathConstants.STRING);
         NodeList exclConstraints = (NodeList) xPath.compile(expressionExclCount).evaluate(modellDoc, XPathConstants.NODESET);
 
         List<Task> allTasks = new ArrayList<>();
@@ -76,11 +77,13 @@ public class FMReader {
      * @param deadlineNode Node die die Deadline enthält
      * @return int der den Wert für die Deadline enthält
      */
-    public static int readDeadline(Node deadlineNode) {
-        String deadlineString;
-        deadlineString = deadlineNode.getTextContent();
+    public static int readDeadline(String deadlineNode) {
+        System.out.println(deadlineNode);
+        String deadlineString = deadlineNode;
+        // deadlineString = deadlineNode.getTextContent();
         try {
-            return Integer.parseInt(deadlineString);
+            String[] parts = deadlineString.split("=");
+            return Integer.parseInt(parts[1].strip());
         } catch (NumberFormatException e) {
             System.out.println("Deadline konnte nicht konvertiet werden, überprüfe Description von root");
             return -1;

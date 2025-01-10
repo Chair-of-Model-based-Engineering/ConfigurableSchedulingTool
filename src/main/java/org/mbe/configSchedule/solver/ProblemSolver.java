@@ -16,10 +16,10 @@ import java.util.*;
 
 public class ProblemSolver {
 
-    private CpModel model;
+    private CpModel model = new CpModel();
     // List<Integer> ist später {JobID, TaskID}, Map ist also <{JobID, TaskID}, TaskType-Objekt>
     // TaskID ist nur der Index der Task im Job, {JobID, TaskID} ist sozusagen die echte TaskID der Task
-    private Map<List<Integer>, TaskType> allTaskTypes;
+    private Map<List<Integer>, TaskType> allTaskTypes = new HashMap<>();
 
     SchedulingProblem sp;
 

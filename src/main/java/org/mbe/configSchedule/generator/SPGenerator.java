@@ -22,6 +22,21 @@ import static java.lang.Math.floor;
 
 public class SPGenerator {
 
+    /**
+     * Generates a scheduling problem with the parameters
+     * @param jobCount              Number of jobs
+     * @param taskCount             Number of mandatory tasks
+     * @param durationOutlierCount  Number of duration Outliers (tasks that take longer than usual)
+     * @param machineCount          Number of machines
+     * @param optionalCount         Number of optional tasks
+     * @param altCount              Number of alternative tasks
+     * @param altGroupCount         Number of alternative task groups
+     * @param deadline              Deadline
+     * @param durationConstraints   Number of duration constraints
+     * @param maxDurationRequires   Maximum number of duration constraints originating from one task
+     * @param name                  Name of the problem
+     * @throws IOException
+     */
     public void generateProblem(int jobCount, int taskCount,
                                 int durationOutlierCount, int machineCount, int optionalCount,
                                 int altCount, int altGroupCount, int deadline, int durationConstraints, int maxDurationRequires, String name) throws IOException {
@@ -53,7 +68,7 @@ public class SPGenerator {
         SchedulingProblem sp = new SchedulingProblem(jobs, machines, deadline);
         String problemUVL = parseToUVL(sp, name);
 
-
+/*
         PathPreferences prefs = new PathPreferences();
         String fileOutputString = prefs.getProblemSavePath() + name + ".txt";
         FileOutputStream fOut = new FileOutputStream(fileOutputString);
@@ -63,16 +78,13 @@ public class SPGenerator {
         oOut.flush();
         oOut.close();
 
-        /*
+ */
+
+
         PathPreferences prefs = new PathPreferences();
         PrintWriter out = new PrintWriter(new FileOutputStream(prefs.getProblemSavePath() + name + ".txt"));
         out.println(problemUVL);
         out.close();
-
-         */
-
-
-        //return new SchedulingProblem(jobs, machines, deadline);
     }
 
     /**
@@ -116,7 +128,7 @@ public class SPGenerator {
         for (int i = 0; i < jobCount; i++) {
             List<Task> job = new ArrayList<>();
 
-            // Falls es der erste Job ist, sollen die überschüssigen Tasks in ihm sein
+            // If this is the first job, the excess-tasks should be in this job
             if (firstJob) {
                 tasksInJob = tasksPerJob + restTasks;
                 firstJob = false;
@@ -132,20 +144,20 @@ public class SPGenerator {
                 task.setMachine(machines.get(random.nextInt(machineCount)));
                 task.setDuration(new int[2]);
 
-                // Wenn mehr durationOutlier übrig sind (oder so viele) wie noch zu erstellende Tasks gibt,
-                // soll die Task auf jeden Fall ein Outlier sein
+                // If there are equal to or more durationOutlier than tasks to be created,
+                // then the task has to be an outlier
                 if (((taskCount - taskID) == durationOutlierCount) && (durationOutlierCount > 0)) {
-                    // Soll es eine variable Dauer sein?
+                    // Should duration be variable?
                     int variableDurationChance = random.nextInt(2);
-                    // 0 = Variable Dauer, 1 = feste Dauer
+                    // 0 = Variable duration, 1 = static duration
                     if (variableDurationChance == 0) {
-                        // Zwischen 6 und 15
+                        // between 6 and 15
                         int dur1 = random.nextInt(10) + 6;
                         int dur2 = random.nextInt(10) + 6;
                         int[] duration = {dur1, dur2};
                         task.setDuration(duration);
 
-                        // Task zu den mandatory Tasks hinzufügen für Duration Constraints
+                        // Add tasks to mandatory tasks for the duration constraints
                         mandatoryTasksWithVarDuration.add(task);
                     } else {
                         int dur = random.nextInt(10) + 6;
@@ -155,15 +167,15 @@ public class SPGenerator {
                     durationOutlierCount--;
 
                 } else {
-                    // Trotzdem noch die Chance ein Outlier zu werden
+                    // Tasks duration still has the chance to be an outlier
                     int outLierChance = random.nextInt(2);
-                    // 0 = Outlier, 1 = Kein Outlier
+                    // 0 = Outlier, 1 = not an outlier
                     if (outLierChance == 0 && durationOutlierCount > 0) {
-                        // Soll es eine variable Dauer sein?
+                        // Should it be a variable duration?
                         int variableDurationChance = random.nextInt(2);
-                        // 0 = Variable Dauer, 1 = feste Dauer
+                        // 0 = Variable duration, 1 = Static duration
                         if (variableDurationChance == 0) {
-                            // Zwischen 6 und 15
+                            // Between 6 and 15
                             int dur1 = random.nextInt(10) + 6;
                             int dur2 = random.nextInt(10) + 6;
                             int[] duration = {dur1, dur2};
@@ -177,13 +189,13 @@ public class SPGenerator {
                         }
                         durationOutlierCount--;
 
-                        // Kein Outlier
+                        // No outlier
                     } else {
-                        // Soll es eine variable Dauer sein?
+                        // Should it be a variable duration?
                         int variableDurationChance = random.nextInt(2);
-                        // 0 = Variable Dauer, 1 = feste Dauer
+                        // 0 = Variable duration, 1 = Static duration
                         if (variableDurationChance == 0) {
-                            // Zwischen 1 und 5
+                            // Between 1 and 5
                             int dur1 = random.nextInt(5) + 1;
                             int dur2 = random.nextInt(5) + 1;
                             int[] duration = {dur1, dur2};
@@ -423,11 +435,18 @@ public class SPGenerator {
     }
 
 
+    /**
+     * Parses the given scheduling problem to the UVL-format
+     * @param sp    SchedulingProblem-Object for which the UVL-file is to be created
+     * @param name  Name of the problemm
+     * @return      String in the format of a UVL-file
+     */
     private static String parseToUVL(SchedulingProblem sp, String name) {
         StringBuilder uvlString = new StringBuilder();
         uvlString.append("features\n");
         uvlString.append("\t" + name + " {featuredescription__ \'" + sp.getDeadline() + "\', abstract true}\n");
         uvlString.append("\t\tmandatory\n");
+        uvlString.append("\t\t\t\"dl = " + sp.getDeadline() + "\"\n");
 
         List<String>[] cons = parseTasks(sp.getJobs(), uvlString);
         parseMachines(sp.getMachines(), uvlString);
@@ -436,6 +455,12 @@ public class SPGenerator {
         return uvlString.toString();
     }
 
+    /**
+     * Parses the tasks of the jobs with their characterisitics, e.g. duration. Appends the features to the String started in parseToUVL
+     * @param jobs      Contains every job and task of the problem
+     * @param uvlString The UVL-string to be appended
+     * @return          Returns constraints for task order, excluding tasks, durations and machine
+     */
     private static List<String>[] parseTasks(List<List<Task>> jobs, StringBuilder uvlString) {
         uvlString.append("\t\t\tP {abstract true}\n");
 
@@ -555,6 +580,11 @@ public class SPGenerator {
         return cons;
     }
 
+    /**
+     * Appends the features for the machines to the UVL-string
+     * @param machines  List of machines
+     * @param uvlString The UVL-String to be appended
+     */
     private static void parseMachines(List<Machine> machines, StringBuilder uvlString) {
         uvlString.append("\t\t\tM {abstract true}\n");
         uvlString.append("\t\t\t\tmandatory\n");
@@ -564,6 +594,11 @@ public class SPGenerator {
         }
     }
 
+    /**
+     * Appends the constraints to the UVL-String
+     * @param cons      List of constraints
+     * @param uvlString The UVL-String to be appended
+     */
     private static void parseConstraints(List<String>[] cons, StringBuilder uvlString) {
         uvlString.append("constraints\n");
         for (List<String> conType : cons) {

@@ -82,8 +82,8 @@ public class Main {
                         if (args[2].endsWith(".txt") || args[2].endsWith(".uvl")) {
                             //try {
                             Instant readStart = Instant.now();
-                            SchedulingProblem sp = ReadProblemGen(args[2]);
-                            //SchedulingProblem sp = ReadProblemUVL(args[2]);
+                            //SchedulingProblem sp = ReadProblemGen(args[2]);
+                            SchedulingProblem sp = ReadProblemUVL(args[2]);
                             Instant readEnd = Instant.now();
 
                             PrintProblem(sp);
@@ -193,6 +193,7 @@ public class Main {
                     } else if (args[1].equals("problempath")) {
                         System.out.println(prefs.getProblemSavePath());
                     }
+                    break;
                 default:
                     System.out.println("Undefined command " + args[0] + "\n" +
                             "Use \"generate\" or \"solve\"");

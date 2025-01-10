@@ -29,9 +29,7 @@ public class ConfigurationReader {
     Map<String, Machine> nameToMachine = new HashMap<>();
 
     public ConfigurationReader() {
-    }
-
-    ;
+    };
 
     public static void main(String[] args) throws XPathExpressionException, ParserConfigurationException, IOException, SAXException {
         String configPath = "src/main/modelle/J2_T10_M2_O2_A4Configs/01487.xml";
@@ -56,6 +54,16 @@ public class ConfigurationReader {
 
     }
 
+    /**
+     * Creates a scheduling problem from an xml-configuration-file (and from the model-file)
+     * @param configPath    The file-path to the configuration-file
+     * @param modelPath     The file-path to the model-file
+     * @return              A SchedulingProblem-object
+     * @throws ParserConfigurationException
+     * @throws IOException
+     * @throws SAXException
+     * @throws XPathExpressionException
+     */
     public SchedulingProblem ReadConfig(String configPath, String modelPath) throws ParserConfigurationException, IOException, SAXException, XPathExpressionException {
         jobs.clear();
         machines.clear();
@@ -73,15 +81,17 @@ public class ConfigurationReader {
         String exprTask = "//feature[starts-with(@name, 'p')]";
         String exprMachine = "//feature[starts-with(@name, 'm')]";
         String exprDuration = "//feature[starts-with(@name, 'd')]";
+        String expressionDeadline = "//feature[starts-with(@name, 'dl')]/@name";
 
-        // Expressions evaluieren und Nodes/ Nodelisten bekommen
+        // Evaluate expressions to retrieve Nodes and NodeLists
         Node rootDescription = (Node) xPath.compile(exprRoot).evaluate(modelDoc, XPathConstants.NODE);
         NodeList orderNodes = (NodeList) xPath.compile(exprOrder).evaluate(modelDoc, XPathConstants.NODESET);
         NodeList taskNodes = (NodeList) xPath.compile(exprTask).evaluate(configDoc, XPathConstants.NODESET);
         NodeList machineNodes = (NodeList) xPath.compile(exprMachine).evaluate(configDoc, XPathConstants.NODESET);
         NodeList durationNodes = (NodeList) xPath.compile(exprDuration).evaluate(configDoc, XPathConstants.NODESET);
+        String deadlineString = (String) xPath.compile(expressionDeadline).evaluate(modelDoc, XPathConstants.STRING);
 
-        ReadDeadline(rootDescription);
+        ReadDeadline(deadlineString);
         CreateTasks(taskNodes);
         ReadDurations(durationNodes);
         CreateMachines(machineNodes);
@@ -91,25 +101,32 @@ public class ConfigurationReader {
         return sp;
     }
 
-    private void ReadDeadline(Node root) {
-        String deadlineString;
-        deadlineString = root.getTextContent();
+    /**
+     * Sets the deadline from a String in the form of "dl = x" with x being an integer value
+     * @param deadlineString    The String from which the deadline should be determined
+     */
+    private void ReadDeadline(String deadlineString) {
         try {
-            deadline = Integer.parseInt(deadlineString);
+            String[] parts = deadlineString.split("=");
+            deadline = Integer.parseInt(parts[1].strip());
         } catch (NumberFormatException e) {
             System.out.println("Deadline konnte nicht konvertiet werden, überprüfe Description von root");
         }
     }
 
+    /**
+     * Creates tasks from the NodeList, sets their name, optional and exclude-tasks
+     * @param taskNodes NodeList containing Nodes for the tasks
+     */
     private void CreateTasks(NodeList taskNodes) {
         for (int i = 0; i < taskNodes.getLength(); i++) {
             Node taskNode = taskNodes.item(i);
 
-            // Selected = angewählt, naja offensichtlich
+            // If selected, then tasks exists in configuration
             if (taskNode.getNodeType() == Node.ELEMENT_NODE && taskNode.getAttributes().item(0).getNodeValue().equals("selected")) {
                 Task task = new Task();
                 task.setName(taskNode.getAttributes().getNamedItem("name").getNodeValue());
-                // In einer instanz ist keine task optional
+                // There are no optional tasks in an instance
                 task.setOptional(false);
                 task.setExcludeTasks(new ArrayList<>());
 
@@ -118,12 +135,16 @@ public class ConfigurationReader {
         }
     }
 
+    /**
+     * Sets the duration of the tasks
+     * @param durationNodes NodeList containing Nodes with the durations
+     */
     private void ReadDurations(NodeList durationNodes) {
         for (int i = 0; i < durationNodes.getLength(); i++) {
             Node durationNode = durationNodes.item(i);
 
-            // Duration Features haben ja den Tasknamen im Namen, von daher kann man sie darüber zuordnen
-            // Die Duration kommt in beide Arrayplätze, sodass die Range von x bis x geht (x = gleiche Zahl)
+            // Since duration-features contain the task name, they can be assigned over that string
+            // Same duration in both array elements, so that the duration ranges from x to x (same value)
             if (durationNode.getNodeType() == Node.ELEMENT_NODE && durationNode.getAttributes().item(0).getNodeValue().equals("selected")) {
                 String durationString = durationNode.getAttributes().getNamedItem("name").getNodeValue();
                 String[] subStrings = durationString.split(" ");
@@ -138,6 +159,10 @@ public class ConfigurationReader {
         }
     }
 
+    /**
+     * Creates the machines
+     * @param machineNodes  NodeList containing Nodes for the machines
+     */
     public void CreateMachines(NodeList machineNodes) {
         int amountMachines = 0;
         for (int i = 0; i < machineNodes.getLength(); i++) {
@@ -155,6 +180,10 @@ public class ConfigurationReader {
         }
     }
 
+    /**
+     * Creates jobs and orders the tasks in these
+     * @param orderNodes    NodeList containing the constraints for the ordering of tasks
+     */
     public void CreateJobs(NodeList orderNodes) {
         List<String[]> orderPairs = new ArrayList<>();
         for (int i = 0; i < orderNodes.getLength(); i++) {
@@ -172,8 +201,8 @@ public class ConfigurationReader {
                     index++;
                 }
             }
-            // Falls der erste Constraint-String mit m Startet, ist es eine zuweisung von Task zu Machine
-            // Wenn er mit p beginnt, dann eine Reihenfolgen require-Constraint
+            // If the first constraint string begins with "m", the constraint is an assignment from task to machine
+            // If it begins with "p", then it is an task order constraint
             if (constrPair[1].startsWith("m")) {
                 if (nameToTask.containsKey(constrPair[0]) && nameToMachine.containsKey(constrPair[1])) {
                     Task task = nameToTask.get(constrPair[0]);
@@ -187,20 +216,20 @@ public class ConfigurationReader {
 
         }
 
-        // Nicht-Startertasks finden
-        // Wenn eine Task auf der linken Seite einer Relation (p1, p2) steht, dann kann sie kein Starter sein,
-        // weil das bedeutet, dass sie nach p2 startet
+        // Find the not-start-tasks
+        // If a task is on the left side of a relation (p1, p2), then it can't be a starter
+        // Here: p1 is not a starter, because it starts after p2
         Set<String> starterTasks = new HashSet<>(nameToTask.keySet());
         Set<String> notStarter = new HashSet<>();
         for (String[] pair : orderPairs) {
             notStarter.add(pair[0]);
         }
 
-        // Enthält jetzt nur noch Starter-Tasks
-        // Enthält auch immer noch optionale Tasks, da diese ja ein eigener Job sind
+        // Now only contains starter-tasks
+        // Also contains optional tasks, since these are their own job
         starterTasks.removeAll(notStarter);
 
-        // Für jede Startertask einen Job erstellen
+        // Create a job for every starter-task
         for (String taskname : starterTasks) {
             String currentTaskname = taskname;
             List<Task> job = new ArrayList<>();
@@ -208,9 +237,8 @@ public class ConfigurationReader {
             Task task = nameToTask.get(taskname);
             job.add(task);
 
-            // Die Orderpairs durchgehen und jedes mal, wenn eine Order, die die letzte Task des
-            // aktuellen Jobs enthält, die andere Task anhängen, die Order löschen und wieder von vorne
-            // die Orderpairs durchgehen
+            // Every time an order pair contains the last task of the current job, append the other task
+            // and delete the order pair and start the iteration from the beginning
             for (int i = 0; i < orderPairs.size(); i++) {
                 String[] currentPair = orderPairs.get(i);
                 if ((currentPair[1].equals(currentTaskname))) {

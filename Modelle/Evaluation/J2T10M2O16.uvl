@@ -1,0 +1,144 @@
+namespace J2T10M2O16
+
+features
+	J2T10M2O16 {featureDescription__ '30', abstract true}
+		mandatory
+			P {abstract true}
+				mandatory
+					p1
+						mandatory
+							"dp1 = 2"
+					p2
+						alternative
+							"dp2 = 1"
+							"dp2 = 2"
+							"dp2 = 3"
+					p3
+						mandatory
+							"dp3 = 2"
+					p4
+						alternative
+							"dp4 = 2"
+							"dp4 = 3"
+							"dp4 = 4"
+					p5
+						mandatory
+							"dp5 = 1"
+					p6
+						mandatory
+							"dp6 = 3"
+					p7
+						alternative
+							"dp7 = 2"
+							"dp7 = 3"
+					p8
+						mandatory
+							"dp8 = 4"
+					p9
+						alternative
+							"dp9 = 4"
+							"dp9 = 5"
+							"dp9 = 6"
+					p10
+						mandatory
+							"dp10 = 2"
+				optional
+					po1
+						mandatory
+							"dpo1 = 2"
+					po2
+						alternative
+							"dpo2 = 1"
+							"dpo2 = 2"
+					po3
+						alternative
+							"dpo3 = 3"
+							"dpo3 = 4"
+					po4
+						mandatory
+							"dpo4 = 3"
+					po5
+						mandatory
+							"dpo5 = 1"
+					po6
+						mandatory
+							"dpo6 = 3"
+					po7
+						alternative
+							"dpo7 = 4"
+							"dpo7 = 5"
+							"dpo7 = 6"
+					po8
+						mandatory
+							"dpo8 = 2"
+					po9
+						mandatory
+							"dpo9 = 1"
+					po10
+						alternative
+							"dpo10 = 1"
+							"dpo10 = 2"
+					po11
+						alternative
+							"dpo11 = 4"
+							"dpo11 = 5"
+					po12
+						mandatory
+							"dpo12 = 3"
+					po13
+						mandatory
+							"dpo13 = 1"
+					po14
+						alternative
+							"dpo14 = 1"
+							"dpo14 = 2"
+							"dpo14 = 3"
+					po15
+						mandatory
+							"dpo15 = 2"
+					po16
+						mandatory
+							"dpo16 = 2"
+		optional
+			"dl = 30"
+		mandatory
+			M {abstract true}
+				mandatory
+					m1
+					m2
+
+constraints
+	p5 => p4
+	p4 => p3
+	p3 => p2
+	p2 => p1
+	p10 => p9
+	p9 => p8
+	p8 => p7
+	p7 => p6
+	p1 => m1
+	p2 => m1
+	p3 => m2
+	p4 => m1
+	p5 => m2
+	p7 => m1
+	p8 => m2
+	p9 => m2
+	p10 => m1
+	po1 => m1
+	po2 => m2
+	po3 => m1
+	po4 => m2
+	po5 => m2
+	po6 => m1
+	po7 => m1
+	po8 => m2
+	po9 => m2
+	po10 => m2
+	po11 => m2
+	po12 => m1
+	po13 => m1
+	po14 => m1
+	po15 => m2
+	po16 => m1
+	p6 => m2

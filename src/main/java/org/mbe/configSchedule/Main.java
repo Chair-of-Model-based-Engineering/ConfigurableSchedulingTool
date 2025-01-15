@@ -91,9 +91,9 @@ public class Main {
                             Instant solveStart = Instant.now();
                             ProblemSolver problemSolver = new ProblemSolver(sp);
                             SolverReturn sr;
-                            if (mode==0){
+                            if (mode == 0) {
                                 sr = problemSolver.getFirstSolution();
-                            }else{
+                            } else {
                                 sr = problemSolver.getBestSolution();
                             }
 
@@ -127,9 +127,9 @@ public class Main {
                             Instant solveStart = Instant.now();
                             ProblemSolver problemSolver = new ProblemSolver(sp);
                             SolverReturn sr;
-                            if (mode==0){
+                            if (mode == 0) {
                                 sr = problemSolver.getFirstSolution();
-                            }else{
+                            } else {
                                 sr = problemSolver.getBestSolution();
                             }
 
@@ -158,9 +158,9 @@ public class Main {
                         SchedulingProblem sp = FMReader.readFM(modelPath);
                         PrintProblem(sp);
                         ConfigurationSolverReturn csr;
-                        if (mode == 0){
+                        if (mode == 0) {
                             csr = ConfigurationSolver.getFirst(args[3], modelPath);
-                        }else{
+                        } else {
                             csr = ConfigurationSolver.getBest(args[3], modelPath);
                         }
 
@@ -224,12 +224,8 @@ public class Main {
         PathPreferences prefs = new PathPreferences();
         String path = prefs.getProblemSavePath();
         Path filePath = Path.of(path + name);
-        String problemUVL = Files.readString(filePath);
-
-        System.out.println("\n" + problemUVL + "\n");
-        UVLModelFactory modelFactory = new UVLModelFactory();
-        FeatureModel fm = modelFactory.parse(problemUVL);
-
+        System.out.println("\n" + name + "\n");
+        FeatureModel fm = UVLReader.read(filePath);
         SchedulingProblem sp = new SchedulingProblem(fm);
         return sp;
     }

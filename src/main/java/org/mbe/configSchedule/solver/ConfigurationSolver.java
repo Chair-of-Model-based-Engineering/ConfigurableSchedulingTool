@@ -15,7 +15,21 @@ import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
 
+
 public class ConfigurationSolver {
+    /**
+     * Given a list of configurations, this method iterates over each configuration and calls the
+     * {@link org.mbe.configSchedule.solver.ProblemSolver ProblemSolver} for each configuration separately
+     * and returns the first feasible schedule.
+     *
+     * @param configDirectoryPath Path to the directory on which the configuration files are stored.
+     * @param modelPath           Path to model of the scheduling problem.
+     * @return Object of type {@link org.mbe.configSchedule.util.ConfigurationSolverReturn ConfigurationSolverReturn}
+     * @throws XPathExpressionException
+     * @throws ParserConfigurationException
+     * @throws IOException
+     * @throws SAXException
+     */
     public static ConfigurationSolverReturn getFirst(String configDirectoryPath, String modelPath) throws XPathExpressionException, ParserConfigurationException, IOException, SAXException {
         File directory = new File(configDirectoryPath);
         File[] directoryFiles = directory.listFiles();
@@ -60,6 +74,19 @@ public class ConfigurationSolver {
         return null;
     }
 
+    /**
+     * Given a list of configurations, this method iterates over each configuration and calls the
+     * {@link org.mbe.configSchedule.solver.ProblemSolver ProblemSolver} for each configuration separately
+     * and returns the optimal schedule.
+     *
+     * @param configDirectoryPath Path to the directory on which the configuration files are stored.
+     * @param modelPath           Path to model of the scheduling problem.
+     * @return Object of type {@link org.mbe.configSchedule.util.ConfigurationSolverReturn ConfigurationSolverReturn}
+     * @throws XPathExpressionException
+     * @throws ParserConfigurationException
+     * @throws IOException
+     * @throws SAXException
+     */
     public static ConfigurationSolverReturn getBest(String configDirectoryPath, String modelPath) throws XPathExpressionException, ParserConfigurationException, IOException, SAXException {
         File directory = new File(configDirectoryPath);
         File[] directoryFiles = directory.listFiles();

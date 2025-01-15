@@ -24,17 +24,18 @@ public class SPGenerator {
 
     /**
      * Generates a scheduling problem with the parameters
-     * @param jobCount              Number of jobs
-     * @param taskCount             Number of mandatory tasks
-     * @param durationOutlierCount  Number of duration Outliers (tasks that take longer than usual)
-     * @param machineCount          Number of machines
-     * @param optionalCount         Number of optional tasks
-     * @param altCount              Number of alternative tasks
-     * @param altGroupCount         Number of alternative task groups
-     * @param deadline              Deadline
-     * @param durationConstraints   Number of duration constraints
-     * @param maxDurationRequires   Maximum number of duration constraints originating from one task
-     * @param name                  Name of the problem
+     *
+     * @param jobCount             Number of jobs
+     * @param taskCount            Number of mandatory tasks
+     * @param durationOutlierCount Number of duration Outliers (tasks that take longer than usual)
+     * @param machineCount         Number of machines
+     * @param optionalCount        Number of optional tasks
+     * @param altCount             Number of alternative tasks
+     * @param altGroupCount        Number of alternative task groups
+     * @param deadline             Deadline
+     * @param durationConstraints  Number of duration constraints
+     * @param maxDurationRequires  Maximum number of duration constraints originating from one task
+     * @param name                 Name of the problem
      * @throws IOException
      */
     public void generateProblem(int jobCount, int taskCount,
@@ -437,9 +438,10 @@ public class SPGenerator {
 
     /**
      * Parses the given scheduling problem to the UVL-format
-     * @param sp    SchedulingProblem-Object for which the UVL-file is to be created
-     * @param name  Name of the problemm
-     * @return      String in the format of a UVL-file
+     *
+     * @param sp   SchedulingProblem-Object for which the UVL-file is to be created
+     * @param name Name of the problemm
+     * @return String in the format of a UVL-file
      */
     private static String parseToUVL(SchedulingProblem sp, String name) {
         StringBuilder uvlString = new StringBuilder();
@@ -457,9 +459,10 @@ public class SPGenerator {
 
     /**
      * Parses the tasks of the jobs with their characterisitics, e.g. duration. Appends the features to the String started in parseToUVL
+     *
      * @param jobs      Contains every job and task of the problem
      * @param uvlString The UVL-string to be appended
-     * @return          Returns constraints for task order, excluding tasks, durations and machine
+     * @return Returns constraints for task order, excluding tasks, durations and machine
      */
     private static List<String>[] parseTasks(List<List<Task>> jobs, StringBuilder uvlString) {
         uvlString.append("\t\t\tP {abstract true}\n");
@@ -582,6 +585,7 @@ public class SPGenerator {
 
     /**
      * Appends the features for the machines to the UVL-string
+     *
      * @param machines  List of machines
      * @param uvlString The UVL-String to be appended
      */
@@ -596,6 +600,7 @@ public class SPGenerator {
 
     /**
      * Appends the constraints to the UVL-String
+     *
      * @param cons      List of constraints
      * @param uvlString The UVL-String to be appended
      */

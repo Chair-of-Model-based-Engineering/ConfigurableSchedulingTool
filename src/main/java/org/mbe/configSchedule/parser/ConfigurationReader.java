@@ -29,7 +29,9 @@ public class ConfigurationReader {
     Map<String, Machine> nameToMachine = new HashMap<>();
 
     public ConfigurationReader() {
-    };
+    }
+
+    ;
 
     public static void main(String[] args) throws XPathExpressionException, ParserConfigurationException, IOException, SAXException {
         String configPath = "src/main/modelle/J2_T10_M2_O2_A4Configs/01487.xml";
@@ -56,9 +58,10 @@ public class ConfigurationReader {
 
     /**
      * Creates a scheduling problem from an xml-configuration-file (and from the model-file)
-     * @param configPath    The file-path to the configuration-file
-     * @param modelPath     The file-path to the model-file
-     * @return              A SchedulingProblem-object
+     *
+     * @param configPath The file-path to the configuration-file
+     * @param modelPath  The file-path to the model-file
+     * @return A SchedulingProblem-object
      * @throws ParserConfigurationException
      * @throws IOException
      * @throws SAXException
@@ -103,7 +106,8 @@ public class ConfigurationReader {
 
     /**
      * Sets the deadline from a String in the form of "dl = x" with x being an integer value
-     * @param deadlineString    The String from which the deadline should be determined
+     *
+     * @param deadlineString The String from which the deadline should be determined
      */
     private void ReadDeadline(String deadlineString) {
         try {
@@ -116,6 +120,7 @@ public class ConfigurationReader {
 
     /**
      * Creates tasks from the NodeList, sets their name, optional and exclude-tasks
+     *
      * @param taskNodes NodeList containing Nodes for the tasks
      */
     private void CreateTasks(NodeList taskNodes) {
@@ -137,6 +142,7 @@ public class ConfigurationReader {
 
     /**
      * Sets the duration of the tasks
+     *
      * @param durationNodes NodeList containing Nodes with the durations
      */
     private void ReadDurations(NodeList durationNodes) {
@@ -161,7 +167,8 @@ public class ConfigurationReader {
 
     /**
      * Creates the machines
-     * @param machineNodes  NodeList containing Nodes for the machines
+     *
+     * @param machineNodes NodeList containing Nodes for the machines
      */
     public void CreateMachines(NodeList machineNodes) {
         int amountMachines = 0;
@@ -182,7 +189,8 @@ public class ConfigurationReader {
 
     /**
      * Creates jobs and orders the tasks in these
-     * @param orderNodes    NodeList containing the constraints for the ordering of tasks
+     *
+     * @param orderNodes NodeList containing the constraints for the ordering of tasks
      */
     public void CreateJobs(NodeList orderNodes) {
         List<String[]> orderPairs = new ArrayList<>();

@@ -26,21 +26,22 @@ public final class UVLReader {
 
     /**
      * Creates a feature model from the contents of the file provided by the path
-     * @param path  File-path to the UVL-file
-     * @return      A FeatureModel-Object
+     *
+     * @param path File-path to the UVL-file
+     * @return A FeatureModel-Object
      * @throws IOException
      */
-    public static FeatureModel read(String path) throws IOException {
-        Path filePath = Paths.get(path);
-        String content = new String(Files.readAllBytes(filePath));
+    public static FeatureModel read(Path path) throws IOException {
+        String content = new String(Files.readAllBytes(path));
         UVLModelFactory uvlModelFactory = new UVLModelFactory();
         return uvlModelFactory.parse(content);
     }
 
     /**
      * Writes the feature model to a file
-     * @param path          File-path to where the file should be written
-     * @param featureModel  The feature model to be written
+     *
+     * @param path         File-path to where the file should be written
+     * @param featureModel The feature model to be written
      * @throws IOException
      */
     public static void write(String path, FeatureModel featureModel) throws IOException {
@@ -51,8 +52,9 @@ public final class UVLReader {
 
     /**
      * Parses the deadline from the feature model
-     * @param featureModel  The feature model from which the deadline should be retrieved
-     * @return              the deadline value
+     *
+     * @param featureModel The feature model from which the deadline should be retrieved
+     * @return the deadline value
      */
     public static int parseDeadline(FeatureModel featureModel) {
         int deadline = -1;
@@ -70,8 +72,9 @@ public final class UVLReader {
 
     /**
      * Parses the list of machines from the feature model
-     * @param featureModel  The feature model representing the scheduling problem
-     * @return              The list of machines existing in the scheduling problem
+     *
+     * @param featureModel The feature model representing the scheduling problem
+     * @return The list of machines existing in the scheduling problem
      */
     public static List<Machine> parseMachines(FeatureModel featureModel) {
         List<Machine> machines = new ArrayList<>();
@@ -108,9 +111,10 @@ public final class UVLReader {
 
     /**
      * Parses the jobs and tasks from the feature model
-     * @param featureModel  The feature model repreenting the scheduling problem
-     * @param machines      The list of machines existing in the scheduling problem
-     * @return              The tasks, divided into jobs, existing in the scheduling problem
+     *
+     * @param featureModel The feature model repreenting the scheduling problem
+     * @param machines     The list of machines existing in the scheduling problem
+     * @return The tasks, divided into jobs, existing in the scheduling problem
      */
     public static List<List<Task>> parseJobs(FeatureModel featureModel, List<Machine> machines) {
         List<List<Task>> jobs = new ArrayList<>();
@@ -174,22 +178,22 @@ public final class UVLReader {
 
         // Parse the constraints for excluding tasks and duration constraints
         List<String[]> excludeConstraintStrings = excludeConstraintsToString(excludeConstraints);
-        Map<String,Map<Integer,List<String>>> TaskToDurationToRequiredTask = durationConstraintsToString(durationConstraints);
+        Map<String, Map<Integer, List<String>>> TaskToDurationToRequiredTask = durationConstraintsToString(durationConstraints);
 
         // Assign machines to tasks
         // and complete the alternative groups
-        for(List<Task> job : jobs) {
-            for(Task task : job) {
+        for (List<Task> job : jobs) {
+            for (Task task : job) {
                 // Find name of corresponding machine
                 String machineName = null;
-                for(String[] constraint : machineConstraintsStrings) {
-                    if(constraint[0].equals(task.getName())) {
+                for (String[] constraint : machineConstraintsStrings) {
+                    if (constraint[0].equals(task.getName())) {
                         machineName = constraint[1];
                         break;
                     }
                 }
 
-                if(machineName != null) {
+                if (machineName != null) {
                     // Find machine corresponding to machineName
                     Machine machine;
                     for (Machine m : machines) {
@@ -205,23 +209,23 @@ public final class UVLReader {
 
                 // Add the excluded tasks of the alternative group to the excludeTask-List
                 // Only optional tasks can exclude other optional tasks
-                if(task.isOptional()) {
+                if (task.isOptional()) {
                     // Iterate over every exclude constraint
-                    for(String[] constraint : excludeConstraintStrings) {
+                    for (String[] constraint : excludeConstraintStrings) {
                         // Boolean for if the task is in the exclude group
                         // Only if the boolean is true the exclude group gets added to the task,
                         // otherwise its discarded
                         boolean containsTask = false;
                         List<String> excludedTasks = new ArrayList<>();
-                        for(String p : constraint) {
-                            if(p.equals(task.getName())) {
+                        for (String p : constraint) {
+                            if (p.equals(task.getName())) {
                                 containsTask = true;
                             } else {
                                 excludedTasks.add(p);
                             }
                         }
 
-                        if(containsTask) {
+                        if (containsTask) {
                             task.getExcludeTasks().addAll(excludedTasks);
                         }
                     }
@@ -229,9 +233,9 @@ public final class UVLReader {
 
 
                 // Add duration constraints
-                if(TaskToDurationToRequiredTask.keySet().contains(task.getName())) {
+                if (TaskToDurationToRequiredTask.keySet().contains(task.getName())) {
                     Map<Integer, List<String>> entry = TaskToDurationToRequiredTask.get(task.getName());
-                    for(Integer duration : entry.keySet()) {
+                    for (Integer duration : entry.keySet()) {
                         List<Task> requiredTasks = allTasks
                                 .stream()
                                 .filter(p -> entry.get(duration).contains(p.getName()))
@@ -243,15 +247,15 @@ public final class UVLReader {
         }
 
 
-
         return jobs;
 
     }
 
     /**
      * Gets the Duration from the feature wihh a name in the format "dp = x"
-     * @param featureName   Name of the feature
-     * @return              Integer value of the duration
+     *
+     * @param featureName Name of the feature
+     * @return Integer value of the duration
      */
     private static int getDuration(String featureName) {
         try {
@@ -265,9 +269,10 @@ public final class UVLReader {
 
     /**
      * Parses the mandatory jobs/ tasks. Also orders them in the correct order
-     * @param orderConstraints  List containing the task-order-constraints
-     * @param mandatoryTasks    List containing the features for the mandatory tasks
-     * @return                  The mandatory tasks, divided into their jobs
+     *
+     * @param orderConstraints List containing the task-order-constraints
+     * @param mandatoryTasks   List containing the features for the mandatory tasks
+     * @return The mandatory tasks, divided into their jobs
      */
     private static List<List<Task>> parseMandatoryJobs(List<Constraint> orderConstraints, List<Feature> mandatoryTasks) {
         Set<String[]> orderPairs = new HashSet<>();
@@ -298,8 +303,8 @@ public final class UVLReader {
             job.add(task);
             allTasks.add(task);
 
-            for(Feature feature : mandatoryTasks) {
-                if(task.getName().equals(feature.getFeatureName())) {
+            for (Feature feature : mandatoryTasks) {
+                if (task.getName().equals(feature.getFeatureName())) {
                     setTaskDuration(feature, task);
                     break;
                 }
@@ -317,8 +322,8 @@ public final class UVLReader {
                     Task followTask = new Task();
                     followTask.setName(l);
 
-                    for(Feature feature : mandatoryTasks) {
-                        if(followTask.getName().equals(feature.getFeatureName())) {
+                    for (Feature feature : mandatoryTasks) {
+                        if (followTask.getName().equals(feature.getFeatureName())) {
                             setTaskDuration(feature, followTask);
                             break;
                         }
@@ -341,10 +346,11 @@ public final class UVLReader {
 
     /**
      * Parses the optional jobs/ tasks
-     * @param optionalTasks         List containing the features for the optional tasks
-     * @param machineConstraints    List of the constraints assigning the tasks to machines in the style of [p,m]
-     * @param machines              List of machines
-     * @return                      The optional tasks, each in their own job
+     *
+     * @param optionalTasks      List containing the features for the optional tasks
+     * @param machineConstraints List of the constraints assigning the tasks to machines in the style of [p,m]
+     * @param machines           List of machines
+     * @return The optional tasks, each in their own job
      */
     private static List<List<Task>> parseOptionalJobs(List<Feature> optionalTasks, List<String[]> machineConstraints, List<Machine> machines) {
         List<List<Task>> jobs = new ArrayList<>();
@@ -400,8 +406,9 @@ public final class UVLReader {
 
     /**
      * Parses the machine constraints to a List of String-arrays in the style of [p,m]
-     * @param machineConstraints    List of machine constraints
-     * @return                      A List containing the machine-constraint-pairs as String-arrays
+     *
+     * @param machineConstraints List of machine constraints
+     * @return A List containing the machine-constraint-pairs as String-arrays
      */
     private static List<String[]> machineConstraintsToString(List<Constraint> machineConstraints) {
         List<String[]> constraintStrings = new ArrayList<>();
@@ -422,15 +429,16 @@ public final class UVLReader {
     /**
      * Parses the exclude constraints to a List of String-arrays, so that each array contains the names
      * of the tasks of the group, e.g. [p1,p2,p3]
-     * @param excludeConstraints    List of exclude constraints
-     * @return                      A List containing the exclude constraints as String-arrays
+     *
+     * @param excludeConstraints List of exclude constraints
+     * @return A List containing the exclude constraints as String-arrays
      */
     private static List<String[]> excludeConstraintsToString(List<Constraint> excludeConstraints) {
 
         List<String[]> constraintStrings = new ArrayList<>();
 
         // pa1 & !pa2 & !pa3 | !pa1 & pa2 & pa3 | !pa1 & !pa2 & pa3
-        for(Constraint constraint : excludeConstraints) {
+        for (Constraint constraint : excludeConstraints) {
             constraintStrings.add(findAndClause(constraint));
         }
 
@@ -439,8 +447,9 @@ public final class UVLReader {
 
     /**
      * Helper function that strips a constraint of all its characters, except the task names
-     * @param constraint    The constraint to be processed
-     * @return              A String array containing the task names featured in the constraint
+     *
+     * @param constraint The constraint to be processed
+     * @return A String array containing the task names featured in the constraint
      */
     private static String[] findAndClause(Constraint constraint) {
 
@@ -458,8 +467,9 @@ public final class UVLReader {
 
     /**
      * Set the duration of a task
-     * @param feature   The feature containing the duration
-     * @param task      The Task-Object for which the duration should be set
+     *
+     * @param feature The feature containing the duration
+     * @param task    The Task-Object for which the duration should be set
      */
     private static void setTaskDuration(Feature feature, Task task) {
         List<Group> durations = feature.getChildren();
@@ -477,11 +487,12 @@ public final class UVLReader {
 
     /**
      * Parses the duration constraints to a Map containing the task names, the duration of a task and its required tasks for that duration
-     * @param durationConstraints   The List of duration constraints
-     * @return                      A Map<String,Map<Integer, List<String>>> in the style of <taskname,<durationOfTask,requiredTasksForDuration>>>
+     *
+     * @param durationConstraints The List of duration constraints
+     * @return A Map<String,Map<Integer, List<String>>> in the style of <taskname,<durationOfTask,requiredTasksForDuration>>>
      */
-    private static Map<String,Map<Integer,List<String>>> durationConstraintsToString(List<Constraint> durationConstraints) {
-        Map<String,Map<Integer, List<String>>> TaskToDurationToRequiredTask = new HashMap<>();
+    private static Map<String, Map<Integer, List<String>>> durationConstraintsToString(List<Constraint> durationConstraints) {
+        Map<String, Map<Integer, List<String>>> TaskToDurationToRequiredTask = new HashMap<>();
 
         for (Constraint constraint : durationConstraints) {
             LiteralConstraint d = (LiteralConstraint) constraint.getConstraintSubParts().get(0);
@@ -498,11 +509,11 @@ public final class UVLReader {
                 int duration = Integer.parseInt(dSubstrings[2]);
                 String requiredTaskName = pString;
 
-                if(!TaskToDurationToRequiredTask.containsKey(taskName)) {
+                if (!TaskToDurationToRequiredTask.containsKey(taskName)) {
                     TaskToDurationToRequiredTask.put(taskName, new HashMap<>());
                 }
 
-                if(!TaskToDurationToRequiredTask.get(taskName).containsKey(duration)) {
+                if (!TaskToDurationToRequiredTask.get(taskName).containsKey(duration)) {
                     TaskToDurationToRequiredTask.get(taskName).put(duration, new ArrayList<>());
                 }
 

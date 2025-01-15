@@ -24,10 +24,20 @@ features
 					p5
 						mandatory
 							"dp5 = 3"
+					optional
+					    p6
+					        mandatory
+					            "dp6 = 1"
+					            "dp6 = 2"
+					    p7
+					        mandatory
+					            "dp7 = 5"
+					            "dp7 = 6"
 			M {abstract true}
 				mandatory
 					m1
-
+				optional
+				    m2
 constraints
 	p3 => p2
 	p2 => p1

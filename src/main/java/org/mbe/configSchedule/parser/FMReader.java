@@ -1,8 +1,8 @@
-package org.mbe.configschedule.parser;
+package org.mbe.configSchedule.parser;
 
-import org.mbe.configschedule.util.Machine;
-import org.mbe.configschedule.util.SchedulingProblem;
-import org.mbe.configschedule.util.Task;
+import org.mbe.configSchedule.util.Machine;
+import org.mbe.configSchedule.util.SchedulingProblem;
+import org.mbe.configSchedule.util.Task;
 import org.w3c.dom.*;
 import org.xml.sax.SAXException;
 
@@ -16,7 +16,14 @@ import java.util.*;
 
 public class FMReader {
 
-    public static SchedulingProblem readFM(String modelPath) throws ParserConfigurationException, IOException, SAXException, XPathExpressionException {
+    /**
+     * Liest aus einer xml-Datei ein Scheduling-Problem aus
+     *
+     * @param modelPath Pfad zur Modell-xml-Datei
+     * @return Scheduling-Problem-Objekt, das die Jobs, Maschinen und die Deadline enthält
+     */
+    public static SchedulingProblem readFM(String modelPath) throws ParserConfigurationException,
+            IOException, SAXException, XPathExpressionException {
         String modellpfad = modelPath;
 
         List<List<Task>> jobs = new ArrayList<>();
@@ -30,6 +37,7 @@ public class FMReader {
         XPath xPath = XPathFactory.newInstance().newXPath();
         String expressionP = "//and[@name=\"P\"]";
         String expressionM = "//and[@name=\"M\"]";
+        String expressionDeadline = "//feature[starts-with(@name, 'dl')]/@name";
         String expressionCon = "//imp";
         String expressionDesc = "//description";
         String expressionExclCount = "//rule/disj";
@@ -38,7 +46,7 @@ public class FMReader {
         Node m = (Node) xPath.compile(expressionM).evaluate(modellDoc, XPathConstants.NODE);
         Node p = (Node) xPath.compile(expressionP).evaluate(modellDoc, XPathConstants.NODE);
         NodeList constraints = (NodeList) xPath.compile(expressionCon).evaluate(modellDoc, XPathConstants.NODESET);
-        Node deadlineNode = (Node) xPath.compile(expressionDesc).evaluate(modellDoc, XPathConstants.NODE);
+        String deadlineNode = (String) xPath.compile(expressionDeadline).evaluate(modellDoc, XPathConstants.STRING);
         NodeList exclConstraints = (NodeList) xPath.compile(expressionExclCount).evaluate(modellDoc, XPathConstants.NODESET);
 
         List<Task> allTasks = new ArrayList<>();
@@ -46,21 +54,50 @@ public class FMReader {
         Map<String, Task> taskNameMap = new HashMap<>();
         Map<String, Machine> machineNameMap = new HashMap<>();
 
-        // =====================================================================
-        // Deadline auslesen
-        // =====================================================================
-        String deadlineString;
-        deadlineString = deadlineNode.getTextContent();
+
+        deadline = readDeadline(deadlineNode);
+        readMachines(m, machineNameMap, machines);
+        readTasks(p, taskNameMap, allTasks);
+        List<String[]>[] tempConstraints = readConstraints(constraints, allTasks, taskNameMap, jobs);
+
+        List<String[]> machineConstraints = tempConstraints[0];
+        List<String[]> durationConstraints = tempConstraints[1];
+
+        readMachineConstraints(machineConstraints, machines, allTasks);
+        readExcludeConstraints(xPath, modellDoc, taskNameMap);
+        readDurationConstraints(durationConstraints, allTasks);
+
+        SchedulingProblem sp = new SchedulingProblem(jobs, machines, deadline);
+        return sp;
+    }
+
+    /**
+     * Liest die Deadline aus
+     *
+     * @param deadlineNode Node die die Deadline enthält
+     * @return int der den Wert für die Deadline enthält
+     */
+    public static int readDeadline(String deadlineNode) {
+        System.out.println(deadlineNode);
+        String deadlineString = deadlineNode;
+        // deadlineString = deadlineNode.getTextContent();
         try {
-            deadline = Integer.parseInt(deadlineString);
+            String[] parts = deadlineString.split("=");
+            return Integer.parseInt(parts[1].strip());
         } catch (NumberFormatException e) {
             System.out.println("Deadline konnte nicht konvertiet werden, überprüfe Description von root");
+            return -1;
         }
+    }
 
-        // ======================================================================
-        // Maschinen
-        // ======================================================================
-
+    /**
+     * Erstellt die Maschinen
+     *
+     * @param m              Node für Feature M im Modell
+     * @param machineNameMap Map<Machine-Name, Machine>
+     * @param machines       Liste mit allen Maschinen
+     */
+    public static void readMachines(Node m, Map<String, Machine> machineNameMap, List<Machine> machines) {
         // Maschinen sind die Child Nodes des abstract Features M
         NodeList machineNodes = m.getChildNodes();
 
@@ -73,24 +110,29 @@ public class FMReader {
                 // oder nicht optional ist
                 if (machineNodes.item(i).getAttributes().getLength() == 2) {
                     String name = machineNodes.item(i).getAttributes().getNamedItem("name").getNodeValue();
-                    Machine machine = new Machine(name, id, false);
+                    Machine machine = new Machine(name, false);
                     id++;
                     machineNameMap.put(machineNodes.item(i).getAttributes().item(1).getNodeValue(), machine);
                     machines.add(machine);
                 } else {
                     String name = machineNodes.item(i).getAttributes().getNamedItem("name").getNodeValue();
-                    Machine machine = new Machine(name, id, true);
+                    Machine machine = new Machine(name, true);
                     id++;
                     machineNameMap.put(machineNodes.item(i).getAttributes().item(0).getNodeValue(), machine);
                     machines.add(machine);
                 }
             }
         }
+    }
 
-        // ======================================================================
-        // Tasks
-        // ======================================================================
-
+    /**
+     * Erstellt die Tasks
+     *
+     * @param p           Node für Feature P im Modell
+     * @param taskNameMap Map<Task-Name, Task>
+     * @param allTasks    Liste mit allen Tasks
+     */
+    public static void readTasks(Node p, Map<String, Task> taskNameMap, List<Task> allTasks) {
         //Tasks befinden sich in Childnodes des abstract Features P
         NodeList taskNodes = p.getChildNodes();
 
@@ -126,11 +168,11 @@ public class FMReader {
                             String[] subStrings = durationString.split(" ");
                             durationsArr[0] = Integer.parseInt(subStrings[2]);
                             durationsArr[1] = Integer.parseInt(subStrings[2]);
-                        // Wenn es nur ein Attribut hat, ist es eine alternative Group, deswegen alle
-                        // möglichen Durations in eine Liste packen, danach sortieren und die min und max Werte
-                        // in das Durations-Array der Task packen
-                        // Wird nur gemacht, wenn durationsAlreadySet = false, was hier gesetzt wird. Normalerweise
-                        // ist er true
+                            // Wenn es nur ein Attribut hat, ist es eine alternative Group, deswegen alle
+                            // möglichen Durations in eine Liste packen, danach sortieren und die min und max Werte
+                            // in das Durations-Array der Task packen
+                            // Wird nur gemacht, wenn durationsAlreadySet = false, was hier gesetzt wird. Normalerweise
+                            // ist er true
                         } else if (currentDuration.getAttributes().getLength() == 1) {
                             durationsAlreadySet = false;
                             String durationString = currentDuration.getAttributes().item(0).getNodeValue();
@@ -153,13 +195,21 @@ public class FMReader {
                 allTasks.add(task);
             }
         }
+    }
 
-        // =============================================================
-        // Req. Constraints
-        // ==============================================================
-
+    /**
+     * Liest alle Constraints aus und erstellt die Jobs
+     *
+     * @param constraints
+     * @param allTasks
+     * @param taskNameMap
+     * @param jobs
+     * @return Array in dem in [0] die machineConstraints und in [1] die durationConstraints sind
+     */
+    public static List<String[]>[] readConstraints(NodeList constraints, List<Task> allTasks, Map<String, Task> taskNameMap, List<List<Task>> jobs) {
         List<String[]> orderConstraints = new ArrayList<>();
         List<String[]> machineConstraints = new ArrayList<>();
+        List<String[]> durationConstraints = new ArrayList<>();
         for (int i = 0; i < constraints.getLength(); i++) {
             Node currentConstraint = constraints.item(i);
             NodeList constraintPair = currentConstraint.getChildNodes();
@@ -176,9 +226,11 @@ public class FMReader {
                 }
             }
 
-            // Zuordnen ob es eine Reihenfolge-Constraint oder eine Machine-Constraint ist
+            // Zuordnen ob es eine Reihenfolge-, Duration- oder eine Machine-Constraint ist
             if (constraintPairArr[1].startsWith("m")) {
                 machineConstraints.add(constraintPairArr);
+            } else if (constraintPairArr[0].startsWith("d")) {
+                durationConstraints.add(constraintPairArr);
             } else {
                 orderConstraints.add(constraintPairArr);
             }
@@ -227,10 +279,17 @@ public class FMReader {
             jobs.add(job);
         }
 
-        // ==============================
-        // Machine Constraints
-        // ==============================
+        return new List[]{machineConstraints, durationConstraints};
+    }
 
+    /**
+     * Tasks bekommen die Maschinen zugeordnet auf denen sie ausgeführt werden
+     *
+     * @param machineConstraints Liste mit den Machine-Constraints [p,m]
+     * @param machines           Liste mit allen Maschinen
+     * @param allTasks           Liste mit allen Tasks
+     */
+    public static void readMachineConstraints(List<String[]> machineConstraints, List<Machine> machines, List<Task> allTasks) {
         for (String[] con : machineConstraints) {
             // Maschine und Tasken Finden die den selben Namen hat wie die Maschine/ Task in der Constraint
             // und zuordnen
@@ -247,11 +306,16 @@ public class FMReader {
                 task.setMachine(machine);
             }
         }
+    }
 
-        // ==============================
-        // Exclude Constraints
-        // ==============================
-
+    /**
+     * Falls eine Task einer Alternative-Gruppe angehört, kriegen diese die anderen Tasks aus der Gruppe zugeorndet
+     *
+     * @param xPath       XPath zum Finden der Constraints
+     * @param modellDoc   Dokument das die xml-Datei enthält
+     * @param taskNameMap Map<Task-Name, Task>
+     */
+    public static void readExcludeConstraints(XPath xPath, Document modellDoc, Map<String, Task> taskNameMap) throws XPathExpressionException {
         // Man hätte es wahrscheinlich auch rekursiv machen können, aber so funtkioniert es auch
         // Uns wurde auch mal beigebracht dass rekursive Funktionen sehr schlecht performen, deswegen
         // habe ich es mal ein bisschen umständlicher gemacht, aber ob meine Version WIRKLICH performanter ist,
@@ -325,7 +389,7 @@ public class FMReader {
             if (prevList != null) {
                 prevList.clear();
             }
-            for(String n : taskNames) {
+            for (String n : taskNames) {
                 prevList.add(n);
             }
 
@@ -345,8 +409,53 @@ public class FMReader {
             }
             listSize = taskNames.size();
         }
+    }
 
-        SchedulingProblem sp = new SchedulingProblem(jobs, machines, deadline);
-        return sp;
+    /**
+     * Falls eine Duration die Ausführung einer anderen Task benötigt, wird diese Constraint der Task hinzugefügt
+     *
+     * @param durationConstraints Liste mit Duration-Constraints [dp, p]
+     * @param allTasks            Liste mit allen Tasks
+     */
+    public static void readDurationConstraints(List<String[]> durationConstraints, List<Task> allTasks) {
+        for (String con[] : durationConstraints) {
+            String duration = con[0];
+            // String zerlegen, sodass man zugehörige Task und Duratio herauslesen kann
+            // "dp1 = 1" -> "dp1", "=", "1"
+            String[] subStrings = duration.split(" ");
+            String taskDurationString = subStrings[0].substring(1);
+            int durationValue = -1;
+            try {
+                durationValue = Integer.valueOf(subStrings[2]);
+            } catch (Exception e) {
+                System.out.println("Cannot read a duration value from " + duration);
+            }
+
+            // Die Task, welche ausgeführt werden muss, damit die oben gewählte Duration genutzt werden kann
+            String requiredTaskString = con[1];
+
+            // Die beiden Tasks suchen
+            Task task = allTasks.stream()
+                    .filter(t -> taskDurationString.equals(t.getName()))
+                    .findAny()
+                    .orElse(null);
+
+            Task requiredTask = allTasks.stream()
+                    .filter(t -> requiredTaskString.equals(t.getName()))
+                    .findAny()
+                    .orElse(null);
+
+            if (task != null && requiredTask != null && durationValue != -1) {
+                if (task.getDurationCons().get(durationValue) != null) {
+                    System.out.println("Die Constraint " + con[0] + ", " + con[1] + " wird einer bestehenden Liste hinzugefügt");
+                    task.addTaskToDurationCon(durationValue, requiredTask);
+                } else {
+                    System.out.println("Für die Constraint " + con[0] + ", " + con[1] + " wir eine neue Liste erstellt");
+                    List<Task> taskList = new ArrayList<>();
+                    taskList.add(requiredTask);
+                    task.addDurationCon(durationValue, taskList);
+                }
+            }
+        }
     }
 }

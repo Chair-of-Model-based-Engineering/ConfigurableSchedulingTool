@@ -1,18 +1,23 @@
-package org.mbe.configschedule;
+package org.mbe.configSchedule;
 
 import com.google.ortools.Loader;
+import com.google.protobuf.MapEntry;
 import com.opencsv.CSVWriter;
+import de.vill.main.UVLModelFactory;
 import de.vill.model.FeatureModel;
-import org.mbe.configschedule.generator.SPGenerator;
-import org.mbe.configschedule.parser.FMReader;
-import org.mbe.configschedule.parser.UVLReader;
-import org.mbe.configschedule.solver.ProblemSolver;
-import org.mbe.configschedule.util.*;
+import org.mbe.configSchedule.generator.SPGenerator;
+import org.mbe.configSchedule.parser.FMReader;
+import org.mbe.configSchedule.parser.UVLReader;
+import org.mbe.configSchedule.solver.ConfigurationSolver;
+import org.mbe.configSchedule.solver.ProblemSolver;
+import org.mbe.configSchedule.util.*;
 import org.xml.sax.SAXException;
 
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.xpath.XPathExpressionException;
 import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
@@ -25,48 +30,35 @@ import java.util.*;
 
 public class Main {
 
-    public static void main(String[] args){
-        try{
-            FeatureModel model = UVLReader.read("src/main/modelle/J2_T5_M1(extendedUVL).uvl");
-            SchedulingProblem problem = new SchedulingProblem(model);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-
-        public static void tmain(String[] args) throws ParserConfigurationException, IOException, SAXException, XPathExpressionException, ClassNotFoundException {
-
+    public static void main(String[] args) throws ParserConfigurationException, IOException, SAXException, XPathExpressionException, ClassNotFoundException {
         Loader.loadNativeLibraries();
+        PathPreferences prefs = new PathPreferences();
 
         // 0 = Erfüllbarkeit prüfen, 1 = Optimum finden
         int mode = 1;
         // 0 = Variables FM, 1 = Mehrere Configs, 2 = "Zufälliges" Problem generieren
         int mode2 = 0;
 
-        ProblemSolver pSolver = new ProblemSolver();
-
-        if(args.length == 10 || args.length == 3 || args.length == 4) {
+        if (args.length == 12 || args.length == 2 || args.length == 3 || args.length == 4) {
             switch (args[0]) {
 
                 // Wenn ein Problem durch den Generator erstellt werden soll
                 case "generate":
                     // Dafür erst die benötigten Argumente in Integer parsen, ansonsten Exception
-                    try{
-                        int[] intParameter = new int[8];
-                        for(int i = 1; i < args.length-1; i++) {
-                            intParameter[i-1] = Integer.parseInt(args[i]);
-                            System.out.println(intParameter[i-1]);
-                        }
-                        SPGenerator spgenerator = new SPGenerator();
-                        spgenerator.generateProblem(intParameter[0], intParameter[1], intParameter[2], intParameter[3], intParameter[4], intParameter[5],
-                                intParameter[6], intParameter[7], args[9]);
-
-                        System.out.println("Problem saved as " + args[9] + ".txt \n" +
-                                "To solve use: solve [o or f] " + args[9] + ".txt" );
-                    }catch(Exception e) {
-                        System.out.println("Error - Please make sure that all arguments besides <name> are integers");
+                    // try{
+                    int[] intParameter = new int[10];
+                    for (int i = 1; i < args.length - 1; i++) {
+                        intParameter[i - 1] = Integer.parseInt(args[i]);
                     }
+                    SPGenerator spgenerator = new SPGenerator();
+                    spgenerator.generateProblem(intParameter[0], intParameter[1], intParameter[2], intParameter[3], intParameter[4], intParameter[5],
+                            intParameter[6], intParameter[7], intParameter[8], intParameter[9], args[11]);
+
+                    System.out.println("Problem saved as " + args[11] + ".txt \n" +
+                            "To solve use: solve [o or f] " + args[11] + ".txt");
+                    // }catch(Exception e) {
+                    //    System.out.println("Error - Please make sure that all arguments besides <name> are integers");
+                    // }
                     break;
 
                 // Wenn ein Problem gelöst werden soll
@@ -80,95 +72,131 @@ public class Main {
                             mode = 0;
                             break;
                         default:
-                            System.out.println("Undefinded argument " + args[1] +"\n" +
+                            System.out.println("Undefinded argument " + args[1] + "\n" +
                                     "Please use \"o\" to search for an optimal schedule or \"f\" to search for a feasible schedule");
                             break;
                     }
 
-                    if(args.length == 3) {
+                    if (args.length == 3) {
                         // Wenn es ein durch den Generator erstelltes Problem ist
-                        if(args[2].endsWith(".txt")) {
+                        if (args[2].endsWith(".txt") || args[2].endsWith(".uvl")) {
                             //try {
-                                Instant readStart = Instant.now();
-                                SchedulingProblem sp = ReadProblemGen(args[2]);
-                                Instant readEnd = Instant.now();
+                            Instant readStart = Instant.now();
+                            //SchedulingProblem sp = ReadProblemGen(args[2]);
+                            SchedulingProblem sp = ReadProblemUVL(args[2]);
+                            Instant readEnd = Instant.now();
 
-                                PrintProblem(sp);
+                            PrintProblem(sp);
 
-                                Instant solveStart = Instant.now();
-                                SolverReturn sr = pSolver.solveProblem(mode, sp);
-                                Instant solveEnd = Instant.now();
+                            Instant solveStart = Instant.now();
+                            ProblemSolver problemSolver = new ProblemSolver(sp);
+                            SolverReturn sr;
+                            if (mode == 0) {
+                                sr = problemSolver.getFirstSolution();
+                            } else {
+                                sr = problemSolver.getBestSolution();
+                            }
 
-                                long readTime = Duration.between(readStart, readEnd).toMillis();
-                                long solveTime = Duration.between(solveStart, solveEnd).toMillis();
-                                long combinedTime = readTime + solveTime;
+                            Instant solveEnd = Instant.now();
 
-                                if(sr != null) {
-                                    PrintSolution(sr);
-                                    System.out.println("Read Time: " + readTime + "ms, Solve Time: " + solveTime + "ms, Combined: " + combinedTime + "ms");
-                                    WriteCSV(sr, mode, args[2]);
-                                } else {
-                                    System.out.println("No solution found");
-                                    System.out.println("Read Time: " + readTime + "ms, Solve Time: " + solveTime + "ms, Combined: " + combinedTime + "ms");
-                                }
+                            long readTime = Duration.between(readStart, readEnd).toMillis();
+                            long solveTime = Duration.between(solveStart, solveEnd).toMillis();
+                            long combinedTime = readTime + solveTime;
+
+                            if (sr != null) {
+                                PrintSolution(sr);
+                                System.out.println("Read Time: " + readTime + "ms, Solve Time: " + solveTime + "ms, Combined: " + combinedTime + "ms");
+                                WriteCSV(sr, mode, args[2]);
+                            } else {
+                                System.out.println("No solution found");
+                                System.out.println("Read Time: " + readTime + "ms, Solve Time: " + solveTime + "ms, Combined: " + combinedTime + "ms");
+                            }
                             //} catch (Exception e) {
                             //    System.out.println("Error - Please make sure that a problem with the name " + args[2] + " exists");
                             //}
                         }
                         // Wenn es die Problemfamilie ist (XML-Datei)
-                        else if(args[2].endsWith(".xml")) {
+                        else if (args[2].endsWith(".xml")) {
                             //try {
-                                Instant readStart = Instant.now();
-                                SchedulingProblem sp = FMReader.readFM(args[2]);
-                                Instant readEnd = Instant.now();
+                            Instant readStart = Instant.now();
+                            SchedulingProblem sp = FMReader.readFM(args[2]);
+                            Instant readEnd = Instant.now();
 
-                                PrintProblem(sp);
+                            PrintProblem(sp);
 
-                                Instant solveStart = Instant.now();
-                                SolverReturn sr = pSolver.solveProblem(mode, sp);
-                                Instant solveEnd = Instant.now();
+                            Instant solveStart = Instant.now();
+                            ProblemSolver problemSolver = new ProblemSolver(sp);
+                            SolverReturn sr;
+                            if (mode == 0) {
+                                sr = problemSolver.getFirstSolution();
+                            } else {
+                                sr = problemSolver.getBestSolution();
+                            }
 
-                                long readTime = Duration.between(readStart, readEnd).toMillis();
-                                long solveTime = Duration.between(solveStart, solveEnd).toMillis();
-                                long combinedTime = readTime + solveTime;
+                            Instant solveEnd = Instant.now();
 
-                                if(sr != null) {
-                                    PrintSolution(sr);
-                                    System.out.println("Read Time: " + readTime + "ms, Solve Time: " + solveTime + "ms, Combined: " + combinedTime + "ms");
-                                    WriteCSV(sr, mode, args[2]);
-                                } else {
-                                    System.out.println("No solution found");
-                                    System.out.println("Read Time: " + readTime + "ms, Solve Time: " + solveTime + "ms, Combined: " + combinedTime + "ms");
-                                }
+                            long readTime = Duration.between(readStart, readEnd).toMillis();
+                            long solveTime = Duration.between(solveStart, solveEnd).toMillis();
+                            long combinedTime = readTime + solveTime;
+
+                            if (sr != null) {
+                                PrintSolution(sr);
+                                System.out.println("Read Time: " + readTime + "ms, Solve Time: " + solveTime + "ms, Combined: " + combinedTime + "ms");
+                                WriteCSV(sr, mode, args[2]);
+                            } else {
+                                System.out.println("No solution found");
+                                System.out.println("Read Time: " + readTime + "ms, Solve Time: " + solveTime + "ms, Combined: " + combinedTime + "ms");
+                            }
                             //} catch (Exception e) {
                             //    System.out.println("Error - Please make sure that you entered the complete file-path and your model follows the correct structure");
                             //}
                         }
-                    // Wenn über die Instanzmenge gesucht werden soll
-                    } else if (args.length == 4){
-                        try {
-                            String modelPath = args[2];
-                            SchedulingProblem sp = FMReader.readFM(modelPath);
-                            PrintProblem(sp);
-                            ConfigurationSolverReturn csr = pSolver.SolveConfigurations(mode, args[3], modelPath);
-                            if(csr.isHasSolution()) {
-                                PrintSolution(csr.getSolverReturn());
-                                System.out.println("Found solution in iteration " + csr.getIteration() + "\n" +
-                                        "Read time: " + csr.getReadTime() + "ms, Solve time: " + csr.getTimeSolve() + "ms, Combined: " + csr.getNeededTime() + "ms");
-                                WriteCSV(csr.getSolverReturn(), mode, args[2]);
-                            } else {
-                                System.out.println("No solution found");
-                                System.out.println("Searched in " + (csr.getSearchedConfigs() - 1) + " configurations \n" +
-                                        "Read time: " + csr.getReadTime() + "ms, Solve time: " + csr.getTimeSolve() + "ms, Combined: " + csr.getNeededTime() + "ms");
-                            }
-                        } catch (Exception e) {
-                            System.out.println("Error - Please make sure that you entered the complete path to the configurations-directory");
+                        // Wenn über die Instanzmenge gesucht werden soll
+                    } else if (args.length == 4) {
+                        //try {
+                        String modelPath = args[2];
+                        SchedulingProblem sp = FMReader.readFM(modelPath);
+                        PrintProblem(sp);
+                        ConfigurationSolverReturn csr;
+                        if (mode == 0) {
+                            csr = ConfigurationSolver.getFirst(args[3], modelPath);
+                        } else {
+                            csr = ConfigurationSolver.getBest(args[3], modelPath);
                         }
+
+                        if (csr != null && csr.isHasSolution()) {
+                            PrintSolution(csr.getSolverReturn());
+                            System.out.println("Found solution in iteration " + csr.getIteration() + "\n" +
+                                    "Read time: " + csr.getReadTime() + "ms, Solve time: " + csr.getTimeSolve() + "ms, Combined: " + csr.getNeededTime() + "ms");
+                            WriteCSV(csr.getSolverReturn(), mode, args[2]);
+                        } else {
+                            System.out.println("No solution found");
+                            System.out.println("Searched in " + (csr.getSearchedConfigs() - 1) + " configurations \n" +
+                                    "Read time: " + csr.getReadTime() + "ms, Solve time: " + csr.getTimeSolve() + "ms, Combined: " + csr.getNeededTime() + "ms");
+                        }
+                        //} catch (Exception e) {
+                        //    System.out.println("Error - Please make sure that you entered the complete path to the configurations-directory");
+                        //}
                     }
                     break;
 
-                default: System.out.println("Undefined command " + args[0] + "\n" +
-                        "Use \"generate\" or \"solve\"");
+                case "solutionpath":
+                    prefs.setSolutionSavePath(args[1]);
+                    break;
+                case "problempath":
+                    prefs.setProblemSavePath(args[1]);
+                    System.out.printf("Path for saving generated problems set to %s", args[1]);
+                    break;
+                case "get":
+                    if (args[1].equals("solutionpath")) {
+                        System.out.println(prefs.getSolutionSavePath());
+                    } else if (args[1].equals("problempath")) {
+                        System.out.println(prefs.getProblemSavePath());
+                    }
+                    break;
+                default:
+                    System.out.println("Undefined command " + args[0] + "\n" +
+                            "Use \"generate\" or \"solve\"");
             }
         } else {
             System.out.println("Wrong command or wrong amount of arguments \n" +
@@ -181,7 +209,10 @@ public class Main {
 
 
     public static SchedulingProblem ReadProblemGen(String name) throws IOException, ClassNotFoundException {
-        FileInputStream fIn = new FileInputStream("src/main/probleme/" + name);
+        //FileInputStream fIn = new FileInputStream("src/main/probleme/" + name);
+        PathPreferences prefs = new PathPreferences();
+        String path = prefs.getProblemSavePath();
+        FileInputStream fIn = new FileInputStream(path + name);
         ObjectInputStream oIn = new ObjectInputStream(fIn);
         SchedulingProblem sp = (SchedulingProblem) oIn.readObject();
         oIn.close();
@@ -189,22 +220,40 @@ public class Main {
         return sp;
     }
 
+    public static SchedulingProblem ReadProblemUVL(String name) throws IOException {
+        PathPreferences prefs = new PathPreferences();
+        String path = prefs.getProblemSavePath();
+        Path filePath = Path.of(path + name);
+        System.out.println("\n" + name + "\n");
+        FeatureModel fm = UVLReader.read(filePath);
+        SchedulingProblem sp = new SchedulingProblem(fm);
+        return sp;
+    }
+
 
     public static void PrintProblem(SchedulingProblem sp) {
         System.out.println("*********************** \n" +
-            "Scheduling problem:");
+                "Scheduling problem:");
         System.out.println("Deadline: " + sp.getDeadline());
         int index = 0;
-        for(List<Task> job : sp.getJobs()) {
+        for (List<Task> job : sp.getJobs()) {
             System.out.println("Job " + index + ": ");
-            for(Task task : job) {
-                System.out.println(task.getName() + ", d: [" + task.getDuration()[0] +"," + task.getDuration()[1] + "], m: " + task.getMachine() + ", o: " + task.isOptional()
-                    + ", e: " + task.getExcludeTasks().toString());
+            for (Task task : job) {
+                System.out.print(task.getName() + ", d: [" + task.getDuration()[0] + "," + task.getDuration()[1] + "], m: " + task.getMachine().getName() + ", o: " + task.isOptional()
+                        + ", e: " + task.getExcludeTasks().toString() + ", d: ");
+                for (Map.Entry<Integer, List<Task>> item : task.getDurationCons().entrySet()) {
+                    System.out.print("[" + item.getKey() + "; ");
+                    for (Task t : item.getValue()) {
+                        System.out.print(t.getName() + ",");
+                    }
+                    System.out.print("], ");
+                }
+                System.out.println();
             }
             index++;
         }
 
-        System.out.println("*********************** \n");
+        System.out.println("\n*********************** \n");
     }
 
 
@@ -218,15 +267,15 @@ public class Main {
         Map<Machine, List<AssignedTask>> assignedJobs = new HashMap<>(sr.getAssignedJobs());
         List<String[]> resultString = new ArrayList<>();
 
-        for(Machine m : assignedJobs.keySet()) {
+        for (Machine m : assignedJobs.keySet()) {
             String[] mLine = new String[assignedJobs.get(m).size() + 1];
             String[] iLine = new String[assignedJobs.get(m).size() + 1];
             mLine[0] = m.getName();
             iLine[0] = m.getName() + "Intervals";
 
             int index = 1;
-            for(AssignedTask t : assignedJobs.get(m)) {
-                if(t.isActive()) {
+            for (AssignedTask t : assignedJobs.get(m)) {
+                if (t.isActive()) {
                     mLine[index] = t.getName();
                     iLine[index] = t.getStart() + "," + (t.getStart() + t.getDuration());
                     index++;
@@ -247,15 +296,16 @@ public class Main {
 
         if (mode == 0) {
             fileName = fileName + "-feasible";
-        } else if(mode == 1) {
+        } else if (mode == 1) {
             fileName = fileName + "-optimum";
         }
 
-        File file = new File("src/main/schedules/" + fileName);
+        //File file = new File("src/main/schedules/" + fileName);
+        File file = new File("/home/max/Schreibtisch/Solver-Ergebnisse/" + fileName);
         FileWriter outputFile = new FileWriter(file);
         CSVWriter csvWriter = new CSVWriter(outputFile);
 
-        for(String[] line : data) {
+        for (String[] line : data) {
             csvWriter.writeNext(line);
         }
 

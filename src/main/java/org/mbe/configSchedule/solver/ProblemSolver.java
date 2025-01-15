@@ -1,8 +1,9 @@
-package org.mbe.configschedule.solver;
+package org.mbe.configSchedule.solver;
 
+import com.google.ortools.constraintsolver.Solver;
 import com.google.ortools.sat.*;
-import org.mbe.configschedule.parser.ConfigurationReader;
-import org.mbe.configschedule.util.*;
+import org.mbe.configSchedule.parser.ConfigurationReader;
+import org.mbe.configSchedule.util.*;
 import org.xml.sax.SAXException;
 
 import javax.xml.parsers.ParserConfigurationException;
@@ -15,37 +16,164 @@ import java.util.*;
 
 public class ProblemSolver {
 
-    public ProblemSolver() {}
+    private CpModel model = new CpModel();
+    // List<Integer> ist später {JobID, TaskID}, Map ist also <{JobID, TaskID}, TaskType-Objekt>
+    // TaskID ist nur der Index der Task im Job, {JobID, TaskID} ist sozusagen die echte TaskID der Task
+    private Map<List<Integer>, TaskType> allTaskTypes = new HashMap<>();
 
-    public static SolverReturn solveProblem(int mode, SchedulingProblem sp) {
-        List<List<Task>> alleJobs = sp.getJobs();
-        List<Machine> machines = sp.getMachines();
-        int deadline = sp.getDeadline();
+    SchedulingProblem sp;
 
-        // Model
-        CpModel model = new CpModel();
+    public ProblemSolver(SchedulingProblem sp) {
+        this.sp = sp;
+        buildModel(sp);
+    }
+
+    public SolverReturn getFirstSolution() {
+        CpSolver solver = new CpSolver();
+
+        // Wenn auf Erfüllbarkeit geprüft wird, soll nach der ersten Lösung gestoppt werden
+        solver.getParameters().setStopAfterFirstSolution(true);
+
+        // Solven
+        return getSolverReturn(sp, solver);
+    }
+
+    public SolverReturn getBestSolution() {
+        CpSolver solver = new CpSolver();
+
+        // Solven
+        return getSolverReturn(sp, solver);
+    }
+
+    private SolverReturn getSolverReturn(SchedulingProblem sp, CpSolver solver) {
+        CpSolverStatus status = solver.solve(model);
+        if (status == CpSolverStatus.OPTIMAL || status == CpSolverStatus.FEASIBLE) {
+            Map<Machine, List<AssignedTask>> assignedJobs = getAssignedJobs(sp, solver);
+            String outputString = generateOutputString(sp, solver, assignedJobs);
+            return new SolverReturn(solver.objectiveValue(), status, outputString, assignedJobs);
+        } else {
+            return null;
+        }
+    }
+
+    private String generateOutputString(SchedulingProblem sp, CpSolver solver, Map<Machine, List<AssignedTask>> assignedJobs) {
+        class SortTasks implements Comparator<AssignedTask> {
+            @Override
+            public int compare(AssignedTask a, AssignedTask b) {
+                if (a.getStart() != b.getStart()) {
+                    return a.getStart() - b.getStart();
+                } else {
+                    return a.getDuration() - b.getDuration();
+                }
+            }
+        }
+        // Create per machine output lines.
+        String output = "";
+        for (Machine machine : sp.getMachines()) {
+            if (!machine.isOptional() || solver.value(machine.getActive()) == 1) {
+                // Sort by starting time.
+                if (assignedJobs.get(machine) != null) {
+                    Collections.sort(assignedJobs.get(machine), new SortTasks());
+                }
+                String solLineTasks = "Machine_" + machine.getName() + ": ";
+                String solLine = "           ";
+
+                if (assignedJobs.get(machine) != null) {
+                    for (AssignedTask assignedTask : assignedJobs.get(machine)) {
+                        if (assignedTask.isActive()) {
+                            //String name = "job_" + assignedTask.jobID + "_task_" + assignedTask.taskID;
+                            String name = assignedTask.getName();
+                            // Add spaces to output to align columns.
+                            solLineTasks += String.format("%-15s", name);
+
+                            String solTmp = "[" + assignedTask.getStart() + "," + (assignedTask.getStart() + assignedTask.getDuration()) + "]";
+                            // Add spaces to output to align columns.
+                            solLine += String.format("%-15s", solTmp);
+                        }
+
+                    }
+                }
+                output += solLineTasks + "%n";
+                output += solLine + "%n";
+            }
+
+        }
+        return output;
+    }
+
+    private Map<Machine, List<AssignedTask>> getAssignedJobs(SchedulingProblem sp, CpSolver solver) {
+        Map<Machine, List<AssignedTask>> assignedJobs = new HashMap<>();
+
+        //System.out.println("Solution:");
+
+        // Create one list of assigned tasks per machine.
+        //Map<Machine, List<AssignedTask>> assignedJobs = new HashMap<>();
+        // Über jede Task iterieren
+        for (int jobID = 0; jobID < sp.getJobs().size(); ++jobID) {
+            List<Task> job = sp.getJobs().get(jobID);
+            for (int taskID = 0; taskID < job.size(); ++taskID) {
+                Task task = job.get(taskID);
+                List<Integer> key = Arrays.asList(jobID, taskID);
+
+                AssignedTask assignedTask = new AssignedTask(
+                        jobID,
+                        taskID,
+                        (int) solver.value(allTaskTypes.get(key).getStart()),
+                        (int) solver.value(allTaskTypes.get(key).getInterval().getSizeExpr()),
+                        task.getName());
+
+
+                if (task.isOptional()) {
+                    int active = (int) solver.value(allTaskTypes.get(key).getActive());
+                    if (active == 1) {
+                        assignedTask.setActive(true);
+                    } else {
+                        assignedTask.setActive(false);
+                    }
+                } else {
+                    assignedTask.setActive(true);
+                }
+
+                //assignedJobs.computeIfAbsent(task.machine, (Integer k) -> new ArrayList<>());
+                //assignedJobs.get(task.machine).add(assignedTask);
+                Machine machine = null;
+                for (Machine machine1 : sp.getMachines()) {
+                    if (machine1 == task.getMachine()) {
+                        machine = machine1;
+                    }
+                }
+
+                assignedJobs.computeIfAbsent(machine, (Machine m) -> new ArrayList<>());
+                assignedJobs.get(machine).add(assignedTask);
+
+            }
+        }
+        return assignedJobs;
+    }
+
+    private void buildModel(SchedulingProblem sp) {
 
         // Für jede optionale Maschine wird eine neue BoolVar erstellt
-        for (Machine machine : machines) {
+        for (Machine machine : sp.getMachines()) {
             if (machine.isOptional()) {
-                machine.setActive(model.newBoolVar("Machine" + machine.getId() + "_active"));
+                machine.setActive(model.newBoolVar("Machine_" + machine.getName() + "_active"));
             }
         }
 
         // Setzt fest wie viele Maschinen es gibt
-        int numMachines = machines.size();
+        int numMachines = sp.getMachines().size();
 
         // Berechnet wie lange es dauern würde, wenn alle Tasks einzeln nacheinander laufen würden
         int maxDuration = 0;
-        for (List<Task> job : alleJobs) {
+        for (List<Task> job : sp.getJobs()) {
             for (Task task : job) {
                 maxDuration += task.getDuration()[1];
             }
         }
 
-        // List<Integer> ist später {JobID, TaskID}, Map ist also <{JobID, TaskID}, TaskType-Objekt>
-        // TaskID ist nur der Index der Task im Job, {JobID, TaskID} ist sozusagen die echte TaskID der Task
-        Map<List<Integer>, TaskType> alleTasks = new HashMap<>();
+        // Map mit Tasknamen als Key, genutzt für die Duration Constraints
+        Map<String, TaskType> nameToTaskType = new HashMap<>();
+        Map<String, Task> nameToTask = new HashMap<>();
 
         // Jede Maschine hat eine Liste mit Intervallen (Tasks) die sich nicht überlappen dürfen
         Map<Machine, List<IntervalVar>> machineToIntervals = new HashMap<>();
@@ -54,19 +182,22 @@ public class ProblemSolver {
         // können die Constraints für die active BoolVars festgelegt werden
         List<TaskType> excludingTasks = new ArrayList<>();
 
+        Map<List<Integer>, TaskType> idToTaskTypesWithDurationConstraints = new HashMap<>();
+
         // Jede optionale Maschine hat eine Liste mit BoolVars, die dafür stehen,
         // ob die Tasks die auf ihr ausgeführt werden, auch aktiv sind
         // Wenn alle false sind, kann die Maschine "deaktiviert" werden
         Map<Machine, List<BoolVar>> optionalMachineTaskActives = new HashMap<>();
-        for (Machine machine : machines) {
+        for (Machine machine : sp.getMachines()) {
             if (machine.isOptional()) {
                 optionalMachineTaskActives.put(machine, new ArrayList<>());
             }
         }
 
+        // Erstellen der TaskTypes
         // Iteriert durch Jobs
-        for (int jobID = 0; jobID < alleJobs.size(); ++jobID) {
-            List<Task> job = alleJobs.get(jobID);
+        for (int jobID = 0; jobID < sp.getJobs().size(); ++jobID) {
+            List<Task> job = sp.getJobs().get(jobID);
             // Iteriert durch Tasks des aktuellen Jobs
             for (int taskID = 0; taskID < job.size(); ++taskID) {
                 Task task = job.get(taskID);
@@ -98,7 +229,7 @@ public class ProblemSolver {
 
                     // Wenn die optionale Task auf einer optionalen Maschine ausgeführt wird,
                     // Wird ein BoolVar für die Maschine zu optionalMachineTaskActives hinzugefügt
-                    for (Machine machine : machines) {
+                    for (Machine machine : sp.getMachines()) {
                         if (task.getMachine() == machine && machine.isOptional()) {
                             optionalMachineTaskActives.get(machine).add(taskType.getActive());
                         }
@@ -123,7 +254,7 @@ public class ProblemSolver {
                     // wird optionalMachineTaskActives der Maschine ein BoolVar hinzugefügt der immer true ist
                     // Dadurch kann die Maschine nicht mehr deaktiviert werden
                     model.addEquality(active, 1);
-                    for (Machine machine : machines) {
+                    for (Machine machine : sp.getMachines()) {
                         if (task.getMachine() == machine && machine.isOptional()) {
                             optionalMachineTaskActives.get(machine).add(active);
                         }
@@ -132,12 +263,19 @@ public class ProblemSolver {
 
                 // Packt die Task mit (jobID, taskID) in die AlleTasks Map
                 List<Integer> key = Arrays.asList(jobID, taskID);
-                alleTasks.put(key, taskType);
+                allTaskTypes.put(key, taskType);
+                nameToTaskType.put(task.getName(), taskType);
+                nameToTask.put(task.getName(), task);
+
+                // Wenn die Task eine Duration hat, die nur gewählt werden darf, wenn eine andere Task ausgeführt wird
+                if (task.getDurationCons() != null && task.getDurationCons().size() > 0) {
+                    idToTaskTypesWithDurationConstraints.put(key, taskType);
+                }
 
                 // Die Maschine finden, auf der die Task ausgeführt wird, und ihr in
                 // machineToIntervals das Interval der Task hinzufügen
                 Machine machine = null;
-                for (Machine machine1 : machines) {
+                for (Machine machine1 : sp.getMachines()) {
                     if (machine1 == task.getMachine()) {
                         machine = machine1;
                     }
@@ -146,6 +284,47 @@ public class ProblemSolver {
                 machineToIntervals.computeIfAbsent(machine, (Machine m) -> new ArrayList<>());
                 machineToIntervals.get(machine).add(taskType.getInterval());
             }
+        }
+
+
+        // Für die TaskTypes, deren Task duration-Constraints haben die entsprechenden Constraints auch im
+        // TaskType erstellen
+        for (Map.Entry<List<Integer>, TaskType> entry : idToTaskTypesWithDurationConstraints.entrySet()) {
+            TaskType tt = entry.getValue();
+            Task task = nameToTask.get(tt.getName());
+
+            for (Map.Entry<Integer, List<Task>> con : task.getDurationCons().entrySet()) {
+                int durationValue = con.getKey();
+                List<TaskType> conTTs = new ArrayList<>();
+                for (Task conTask : con.getValue()) {
+                    conTTs.add(nameToTaskType.get(conTask.getName()));
+                }
+                tt.addDurationsConstraint(durationValue, conTTs);
+            }
+        }
+
+
+        // Für jede Task, die mindestens eine durationConstraint hat, werden Constraints dem Model hinzugefügt
+        for (TaskType tt : idToTaskTypesWithDurationConstraints.values()) {
+            // Über jede Constraint dieser Task iterieren
+            for (Map.Entry<Integer, List<TaskType>> con : tt.getDurationsConstraints().entrySet()) {
+                int durationValue = con.getKey();
+                // BoolVar soll 1 annehmen, wenn alle benötigten Tasks für diese Duration aktiv sind, ansonsten 0
+                BoolVar allRequiredTasksActive = model.newBoolVar(tt.getName() + "_durationConstraints_" + con.getKey());
+
+                // Liste mit den active-BoolVars der required TaskTypes
+                List<BoolVar> requiredBoolVars = new ArrayList<>();
+                for (TaskType requiredTT : con.getValue()) {
+                    requiredBoolVars.add(requiredTT.getActive());
+                }
+
+                model.addMinEquality(allRequiredTasksActive, requiredBoolVars);
+
+                // Falls eine der required Tasks nicht aktiv ist, darf die zugehörie Dauer auch nicht für
+                // die Task gewählt werden
+                model.addDifferent(tt.getInterval().getSizeExpr(), durationValue).onlyEnforceIf(allRequiredTasksActive.not());
+            }
+
         }
 
 
@@ -175,7 +354,7 @@ public class ProblemSolver {
         // dann soll die Maschine auch aktiv sein
         for (Machine machine : optionalMachineTaskActives.keySet()) {
             if (!optionalMachineTaskActives.get(machine).isEmpty()) {
-                BoolVar atLeastOneActive = model.newBoolVar(machine.getId() + "_atLeastOneActiveTask");
+                BoolVar atLeastOneActive = model.newBoolVar(machine.getName() + "_atLeastOneActiveTask");
                 model.addMaxEquality(atLeastOneActive, optionalMachineTaskActives.get(machine));
                 model.addEquality(machine.getActive(), atLeastOneActive);
             } else {
@@ -191,14 +370,14 @@ public class ProblemSolver {
 
         // Tasks innerhalb eines Jobs dürfen nur nacheinander starten
         // Über alle Jobs
-        for (int jobID = 0; jobID < alleJobs.size(); ++jobID) {
-            List<Task> job = alleJobs.get(jobID);
+        for (int jobID = 0; jobID < sp.getJobs().size(); ++jobID) {
+            List<Task> job = sp.getJobs().get(jobID);
             // Über alle Tasks
             for (int taskID = 0; taskID < job.size() - 1; ++taskID) {
                 List<Integer> prevKey = Arrays.asList(jobID, taskID);
                 List<Integer> nextKey = Arrays.asList(jobID, taskID + 1);
                 // Einschränkung, dass Task 2 aus Job 1 erst nach Beendigung von Task 1 aus Job 1 startet (Beispiel)
-                model.addGreaterOrEqual(alleTasks.get(nextKey).getStart(), alleTasks.get(prevKey).getEnd());
+                model.addGreaterOrEqual(allTaskTypes.get(nextKey).getStart(), allTaskTypes.get(prevKey).getEnd());
             }
         }
 
@@ -208,11 +387,11 @@ public class ProblemSolver {
 
         // Map die für jede Task (TaskType) die Endzeit der Task beinhaltet
         Map<TaskType, IntVar> endTimes = new HashMap<>();
-        for (int jobID = 0; jobID < alleJobs.size(); jobID++) {
-            List<Task> job = alleJobs.get(jobID);
+        for (int jobID = 0; jobID < sp.getJobs().size(); jobID++) {
+            List<Task> job = sp.getJobs().get(jobID);
             for (int taskID = 0; taskID < job.size(); taskID++) {
                 List<Integer> key = Arrays.asList(jobID, taskID);
-                endTimes.put(alleTasks.get(key), alleTasks.get(key).getEnd());
+                endTimes.put(allTaskTypes.get(key), allTaskTypes.get(key).getEnd());
             }
 
         }
@@ -252,236 +431,10 @@ public class ProblemSolver {
 
         // objVar darf höchstens so groß wie die Deadline sein
         // und soll den selben Wert wie die  maximale Endtime haben (Endzeitpunkt der letzten Task)
-        model.addLessOrEqual(objVar, deadline);
+        model.addLessOrEqual(objVar, sp.getDeadline());
         model.addMaxEquality(objVar, possibleMaxEndtimes);
-
-        CpSolver solver = new CpSolver();
-
-        // Wenn auf Erfüllbarkeit geprüft wird, soll nach der ersten Lösung gestoppt werden
-        if(mode == 0){
-            solver.getParameters().setStopAfterFirstSolution(true);
-        }
 
         // objVar soll so klein wie möglich gehalten werden
         model.minimize(objVar);
-
-        // Solven
-        CpSolverStatus status = solver.solve(model);
-
-
-        //==============================================================================================================
-        //Output
-        //==============================================================================================================
-        String outputString = "";
-        Map<Machine, List<AssignedTask>> assignedJobs = new HashMap<>();
-        if (status == CpSolverStatus.OPTIMAL || status == CpSolverStatus.FEASIBLE) {
-
-            class SortTasks implements Comparator<AssignedTask> {
-                @Override
-                public int compare(AssignedTask a, AssignedTask b) {
-                    if (a.getStart() != b.getStart()) {
-                        return a.getStart() - b.getStart();
-                    } else {
-                        return a.getDuration() - b.getDuration();
-                    }
-                }
-            }
-            //System.out.println("Solution:");
-
-            // Create one list of assigned tasks per machine.
-            //Map<Machine, List<AssignedTask>> assignedJobs = new HashMap<>();
-            // Über jede Task iterieren
-            for (int jobID = 0; jobID < alleJobs.size(); ++jobID) {
-                List<Task> job = alleJobs.get(jobID);
-                for (int taskID = 0; taskID < job.size(); ++taskID) {
-                    Task task = job.get(taskID);
-                    List<Integer> key = Arrays.asList(jobID, taskID);
-
-                    AssignedTask assignedTask = new AssignedTask(
-                            jobID,
-                            taskID,
-                            (int) solver.value(alleTasks.get(key).getStart()),
-                            (int) solver.value(alleTasks.get(key).getInterval().getSizeExpr()),
-                            task.getName());
-
-
-                    if (task.isOptional()) {
-                        int active = (int) solver.value(alleTasks.get(key).getActive());
-                        if (active == 1) {
-                            assignedTask.setActive(true);
-                        } else {
-                            assignedTask.setActive(false);
-                        }
-                    } else {
-                        assignedTask.setActive(true);
-                    }
-
-                    //assignedJobs.computeIfAbsent(task.machine, (Integer k) -> new ArrayList<>());
-                    //assignedJobs.get(task.machine).add(assignedTask);
-                    Machine machine = null;
-                    for (Machine machine1 : machines) {
-                        if (machine1 == task.getMachine()) {
-                            machine = machine1;
-                        }
-                    }
-
-                    assignedJobs.computeIfAbsent(machine, (Machine m) -> new ArrayList<>());
-                    assignedJobs.get(machine).add(assignedTask);
-
-                }
-            }
-
-            // Create per machine output lines.
-            String output = "";
-            for (Machine machine : machines) {
-                if (!machine.isOptional() || solver.value(machine.getActive()) == 1) {
-                    // Sort by starting time.
-                    if(assignedJobs.get(machine) != null) {
-                        Collections.sort(assignedJobs.get(machine), new SortTasks());
-                    }
-                    String solLineTasks = "Machine " + machine.getId() + ": ";
-                    String solLine = "           ";
-
-                    if(assignedJobs.get(machine) != null) {
-                        for (AssignedTask assignedTask : assignedJobs.get(machine)) {
-                            if (assignedTask.isActive()) {
-                                //String name = "job_" + assignedTask.jobID + "_task_" + assignedTask.taskID;
-                                String name = assignedTask.getName();
-                                // Add spaces to output to align columns.
-                                solLineTasks += String.format("%-15s", name);
-
-                                String solTmp = "[" + assignedTask.getStart() + "," + (assignedTask.getStart() + assignedTask.getDuration()) + "]";
-                                // Add spaces to output to align columns.
-                                solLine += String.format("%-15s", solTmp);
-                            }
-
-                        }
-                    }
-                    output += solLineTasks + "%n";
-                    output += solLine + "%n";
-                }
-
-            }
-            //System.out.printf("Schedule Length: %f%n", solver.objectiveValue());
-            //System.out.printf(output);
-            outputString = output;
-
-            /*
-            for (Machine machine : machines) {
-                if (machine.optional) {
-                    System.out.println("Machine_" + machine.id + " ist aktiv? " + solver.value(machine.active));
-                } else {
-                    System.out.println("Machine_" + machine.id + " ist aktiv? true");
-                }
-                if (assignedJobs.get(machine) != null) {
-                    for (AssignedTask assignedTask : assignedJobs.get(machine)) {
-                        System.out.println("Task " + assignedTask.taskID + " ist aktiv? " + assignedTask.isActive);
-                        System.out.println("Task " + assignedTask.taskID + " startet bei " + assignedTask.start + " und dauert " + assignedTask.duration);
-                    }
-                }
-            }
-
-            for (Machine machine : optionalMachineTaskActives.keySet()) {
-                System.out.println("\n" + "Machine_" + machine.id + "ist optional und enhält BoolVars:");
-                for (BoolVar b : optionalMachineTaskActives.get(machine)) {
-                    System.out.println(solver.value(b));
-                }
-            }
-
-             */
-        } else {
-            return null;
-            //System.out.println("No solution found.");
-        }
-        SolverReturn result = new SolverReturn(solver.objectiveValue(), status, outputString, assignedJobs);
-        return result;
-    }
-
-
-
-    public ConfigurationSolverReturn SolveConfigurations(int mode, String configDirectoryPath, String modelPath) throws XPathExpressionException, ParserConfigurationException, IOException, SAXException {
-        File directory = new File(configDirectoryPath);
-        File[] directoryFiles = directory.listFiles();
-
-        ConfigurationReader cReader = new ConfigurationReader();
-
-        // mode = 0 -> feasible Schedule
-        if(mode == 0) {
-            if(directoryFiles != null) {
-
-                int iteration = 1;
-                long sumTimeRead = 0;
-                long sumTimeSolve = 0;
-
-                for (File file : directoryFiles) {
-                    String filePath = file.getPath();
-
-                    Instant readStart = Instant.now();
-                    SchedulingProblem sp = cReader.ReadConfig(filePath, modelPath);
-                    Instant readEnd = Instant.now();
-
-                    Instant solveStart = Instant.now();
-                    SolverReturn sr = solveProblem(mode, sp);
-                    Instant solveEnd = Instant.now();
-
-                    long readTime = Duration.between(readStart, readEnd).toMillis();
-                    long solveTime = Duration.between(solveStart, solveEnd).toMillis();
-                    sumTimeRead += readTime;
-                    sumTimeSolve += solveTime;
-
-                    if(sr != null && (sr.getStatus() == CpSolverStatus.OPTIMAL || sr.getStatus() == CpSolverStatus.FEASIBLE)) {
-                        ConfigurationSolverReturn csr = new ConfigurationSolverReturn(true, sr, sumTimeRead, sumTimeSolve, sumTimeRead+sumTimeSolve, iteration, iteration);
-                        return csr;
-                    }
-                    iteration++;
-                }
-                ConfigurationSolverReturn csr = new ConfigurationSolverReturn(false, null, sumTimeRead, sumTimeSolve, sumTimeRead + sumTimeSolve, iteration, iteration);
-                return csr;
-            }
-        } else if (mode == 1) {
-            if(directoryFiles != null) {
-
-                int iteration = 1;
-                Double bestResultTime = Double.POSITIVE_INFINITY;
-                SolverReturn bestResult = new SolverReturn();
-                long sumTimeRead = 0;
-                long sumTimeSolve = 0;
-                int bestIteration = -1;
-
-                for (File file : directoryFiles) {
-                    String filePath = file.getPath();
-
-                    Instant readStart = Instant.now();
-                    SchedulingProblem sp = cReader.ReadConfig(filePath, modelPath);
-                    Instant readEnd = Instant.now();
-
-                    Instant solveStart = Instant.now();
-                    SolverReturn sr = solveProblem(mode, sp);
-                    Instant solveEnd = Instant.now();
-
-                    if(sr != null && (sr.getStatus() == CpSolverStatus.OPTIMAL && sr.getTime() < bestResultTime)) {
-                        bestResultTime = sr.getTime();
-                        bestResult = sr;
-                        bestIteration = iteration;
-                    }
-                    iteration++;
-
-                    long readTime = Duration.between(readStart, readEnd).toMillis();
-                    long solveTime = Duration.between(solveStart, solveEnd).toMillis();
-                    sumTimeRead += readTime;
-                    sumTimeSolve += solveTime;
-                }
-
-                if(bestIteration != -1) {
-                    ConfigurationSolverReturn csr = new ConfigurationSolverReturn(true, bestResult, sumTimeRead, sumTimeSolve, sumTimeRead + sumTimeSolve, bestIteration, iteration);
-                    return csr;
-                } else {
-                    ConfigurationSolverReturn csr = new ConfigurationSolverReturn(false, bestResult, sumTimeRead, sumTimeSolve, sumTimeRead + sumTimeSolve, bestIteration, iteration);
-                    return csr;
-                }
-            }
-        }
-
-        return null;
     }
 }

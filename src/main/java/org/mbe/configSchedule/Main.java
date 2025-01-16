@@ -300,8 +300,9 @@ public class Main {
             fileName = fileName + "-optimum";
         }
 
-        //File file = new File("src/main/schedules/" + fileName);
-        File file = new File("/home/max/Schreibtisch/Solver-Ergebnisse/" + fileName);
+        PathPreferences prefs = new PathPreferences();
+        String path = prefs.getSolutionSavePath();
+        File file = new File(path + fileName);
         FileWriter outputFile = new FileWriter(file);
         CSVWriter csvWriter = new CSVWriter(outputFile);
 

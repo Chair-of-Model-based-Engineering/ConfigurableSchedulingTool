@@ -162,6 +162,7 @@ public class Main {
                 // Working with the path preferences
                 case "solutionpath":
                     prefs.setSolutionSavePath(args[1]);
+                    System.out.printf("Path for saving solutions problems set to %s", args[1]);
                     break;
                 case "problempath":
                     prefs.setProblemSavePath(args[1]);

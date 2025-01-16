@@ -1,6 +1,7 @@
 package org.mbe.configSchedule.parser;
 
 import org.mbe.configSchedule.util.Machine;
+import org.mbe.configSchedule.util.PathPreferences;
 import org.mbe.configSchedule.util.SchedulingProblem;
 import org.mbe.configSchedule.util.Task;
 import org.w3c.dom.*;
@@ -12,6 +13,7 @@ import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.xpath.*;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.*;
 
 public class FMReader {
@@ -23,7 +25,16 @@ public class FMReader {
      */
     public static SchedulingProblem readFM(String modelPath) throws ParserConfigurationException,
             IOException, SAXException, XPathExpressionException {
-        String modellpfad = modelPath;
+        String modellpfad = "";
+
+        if(!modelPath.contains("/")) {
+            PathPreferences prefs = new PathPreferences();
+            Path path = Path.of(prefs.getProblemSavePath());
+            Path filePath = path.resolve(modelPath);
+            modellpfad = filePath.toString();
+        } else {
+            modellpfad = modelPath;
+        }
 
         List<List<Task>> jobs = new ArrayList<>();
         List<Machine> machines = new ArrayList<>();

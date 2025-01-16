@@ -159,8 +159,10 @@ public class ConfigurationReader {
                 durationsArr[1] = Integer.parseInt(subStrings[2]);
 
                 String nameString = subStrings[0].substring(1);
-                Task task = nameToTask.get(nameString);
-                task.setDuration(durationsArr);
+                if(!nameString.equals("l")) {
+                    Task task = nameToTask.get(nameString);
+                    task.setDuration(durationsArr);
+                }
             }
         }
     }

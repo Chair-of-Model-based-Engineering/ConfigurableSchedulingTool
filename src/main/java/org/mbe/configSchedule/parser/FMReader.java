@@ -87,7 +87,6 @@ public class FMReader {
      * @return {@link Integer} value of deadline
      */
     public static int readDeadline(String deadlineNode) {
-        System.out.println(deadlineNode);
         String deadlineString = deadlineNode;
         try {
             String[] parts = deadlineString.split("=");
@@ -331,7 +330,6 @@ public class FMReader {
             for (int j = 0; j < list.getLength(); j++) {
                 String text = list.item(j).getNodeValue().trim();
                 if (!text.isEmpty()) {
-                    System.out.println(text);
                     taskNames.add(text);
                 }
             }
@@ -391,7 +389,6 @@ public class FMReader {
                 for (int j = 0; j < list.getLength(); j++) {
                     String text = list.item(j).getNodeValue().trim();
                     if (!text.isEmpty()) {
-                        System.out.println(text);
                         taskNames.add(text);
                     }
                 }

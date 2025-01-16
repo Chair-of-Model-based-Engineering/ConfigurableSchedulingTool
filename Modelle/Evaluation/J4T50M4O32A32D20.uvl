@@ -1,0 +1,681 @@
+features
+	J4T50M4O32A32D20 {featuredescription__ '150', abstract true}
+		mandatory
+			"dl = 150"
+			P {abstract true}
+				mandatory
+					p1
+						alternative
+							"dp1 = 7"
+							"dp1 = 8"
+							"dp1 = 9"
+							"dp1 = 10"
+							"dp1 = 11"
+							"dp1 = 12"
+							"dp1 = 13"
+							"dp1 = 14"
+							"dp1 = 15"
+					p2
+						mandatory
+							"dp2 = 4"
+					p3
+						alternative
+							"dp3 = 7"
+							"dp3 = 8"
+							"dp3 = 9"
+							"dp3 = 10"
+							"dp3 = 11"
+							"dp3 = 12"
+							"dp3 = 13"
+					p4
+						mandatory
+							"dp4 = 3"
+					p5
+						alternative
+							"dp5 = 8"
+							"dp5 = 9"
+							"dp5 = 10"
+							"dp5 = 11"
+							"dp5 = 12"
+							"dp5 = 13"
+							"dp5 = 14"
+					p6
+						mandatory
+							"dp6 = 7"
+					p7
+						mandatory
+							"dp7 = 9"
+					p8
+						mandatory
+							"dp8 = 2"
+					p9
+						alternative
+							"dp9 = 10"
+							"dp9 = 11"
+							"dp9 = 12"
+							"dp9 = 13"
+							"dp9 = 14"
+					p10
+						mandatory
+							"dp10 = 3"
+					p11
+						mandatory
+							"dp11 = 4"
+					p12
+						mandatory
+							"dp12 = 1"
+					p13
+						alternative
+							"dp13 = 9"
+							"dp13 = 10"
+							"dp13 = 11"
+							"dp13 = 12"
+							"dp13 = 13"
+							"dp13 = 14"
+					p14
+						alternative
+							"dp14 = 2"
+							"dp14 = 3"
+							"dp14 = 4"
+					p15
+						alternative
+							"dp15 = 8"
+							"dp15 = 9"
+					p16
+						mandatory
+							"dp16 = 3"
+					p17
+						mandatory
+							"dp17 = 2"
+					p18
+						mandatory
+							"dp18 = 2"
+					p19
+						alternative
+							"dp19 = 2"
+							"dp19 = 3"
+					p20
+						alternative
+							"dp20 = 1"
+							"dp20 = 2"
+							"dp20 = 3"
+					p21
+						alternative
+							"dp21 = 1"
+							"dp21 = 2"
+							"dp21 = 3"
+							"dp21 = 4"
+							"dp21 = 5"
+					p22
+						mandatory
+							"dp22 = 2"
+					p23
+						alternative
+							"dp23 = 2"
+							"dp23 = 3"
+					p24
+						alternative
+							"dp24 = 3"
+							"dp24 = 4"
+					p25
+						mandatory
+							"dp25 = 2"
+					p26
+						mandatory
+							"dp26 = 1"
+					p27
+						alternative
+							"dp27 = 4"
+							"dp27 = 5"
+					p28
+						alternative
+							"dp28 = 2"
+							"dp28 = 3"
+							"dp28 = 4"
+							"dp28 = 5"
+					p29
+						mandatory
+							"dp29 = 2"
+					p30
+						alternative
+							"dp30 = 4"
+							"dp30 = 5"
+					p31
+						alternative
+							"dp31 = 1"
+							"dp31 = 2"
+							"dp31 = 3"
+							"dp31 = 4"
+					p32
+						alternative
+							"dp32 = 2"
+							"dp32 = 3"
+							"dp32 = 4"
+							"dp32 = 5"
+					p33
+						mandatory
+							"dp33 = 5"
+					p34
+						mandatory
+							"dp34 = 4"
+					p35
+						mandatory
+							"dp35 = 1"
+					p36
+						mandatory
+							"dp36 = 2"
+					p37
+						mandatory
+							"dp37 = 2"
+					p38
+						mandatory
+							"dp38 = 2"
+					p39
+						mandatory
+							"dp39 = 3"
+					p40
+						alternative
+							"dp40 = 1"
+							"dp40 = 2"
+							"dp40 = 3"
+					p41
+						mandatory
+							"dp41 = 2"
+					p42
+						mandatory
+							"dp42 = 3"
+					p43
+						alternative
+							"dp43 = 2"
+							"dp43 = 3"
+					p44
+						mandatory
+							"dp44 = 5"
+					p45
+						mandatory
+							"dp45 = 2"
+					p46
+						mandatory
+							"dp46 = 3"
+					p47
+						mandatory
+							"dp47 = 3"
+					p48
+						alternative
+							"dp48 = 3"
+							"dp48 = 4"
+					p49
+						alternative
+							"dp49 = 1"
+							"dp49 = 2"
+							"dp49 = 3"
+							"dp49 = 4"
+							"dp49 = 5"
+					p50
+						mandatory
+							"dp50 = 5"
+				optional
+					po1
+						alternative
+							"dpo1 = 1"
+							"dpo1 = 2"
+					po2
+						mandatory
+							"dpo2 = 5"
+					po3
+						mandatory
+							"dpo3 = 1"
+					po4
+						mandatory
+							"dpo4 = 5"
+					po5
+						mandatory
+							"dpo5 = 2"
+					po6
+						mandatory
+							"dpo6 = 5"
+					po7
+						mandatory
+							"dpo7 = 4"
+					po8
+						alternative
+							"dpo8 = 1"
+							"dpo8 = 2"
+							"dpo8 = 3"
+					po9
+						mandatory
+							"dpo9 = 1"
+					po10
+						mandatory
+							"dpo10 = 4"
+					po11
+						alternative
+							"dpo11 = 1"
+							"dpo11 = 2"
+							"dpo11 = 3"
+							"dpo11 = 4"
+					po12
+						alternative
+							"dpo12 = 1"
+							"dpo12 = 2"
+							"dpo12 = 3"
+					po13
+						alternative
+							"dpo13 = 1"
+							"dpo13 = 2"
+							"dpo13 = 3"
+							"dpo13 = 4"
+							"dpo13 = 5"
+					po14
+						mandatory
+							"dpo14 = 1"
+					po15
+						mandatory
+							"dpo15 = 5"
+					po16
+						mandatory
+							"dpo16 = 3"
+					po17
+						alternative
+							"dpo17 = 3"
+							"dpo17 = 4"
+					po18
+						mandatory
+							"dpo18 = 3"
+					po19
+						alternative
+							"dpo19 = 2"
+							"dpo19 = 3"
+					po20
+						mandatory
+							"dpo20 = 3"
+					po21
+						mandatory
+							"dpo21 = 4"
+					po22
+						alternative
+							"dpo22 = 2"
+							"dpo22 = 3"
+							"dpo22 = 4"
+					po23
+						mandatory
+							"dpo23 = 5"
+					po24
+						alternative
+							"dpo24 = 1"
+							"dpo24 = 2"
+					po25
+						mandatory
+							"dpo25 = 2"
+					po26
+						alternative
+							"dpo26 = 1"
+							"dpo26 = 2"
+							"dpo26 = 3"
+					po27
+						mandatory
+							"dpo27 = 2"
+					po28
+						mandatory
+							"dpo28 = 2"
+					po29
+						mandatory
+							"dpo29 = 4"
+					po30
+						alternative
+							"dpo30 = 3"
+							"dpo30 = 4"
+					po31
+						alternative
+							"dpo31 = 1"
+							"dpo31 = 2"
+							"dpo31 = 3"
+							"dpo31 = 4"
+							"dpo31 = 5"
+					po32
+						mandatory
+							"dpo32 = 4"
+					pa1
+						mandatory
+							"dpa1 = 5"
+					pa2
+						mandatory
+							"dpa2 = 4"
+					pa3
+						mandatory
+							"dpa3 = 3"
+					pa4
+						mandatory
+							"dpa4 = 2"
+					pa5
+						alternative
+							"dpa5 = 3"
+							"dpa5 = 4"
+					pa6
+						mandatory
+							"dpa6 = 4"
+					pa7
+						alternative
+							"dpa7 = 1"
+							"dpa7 = 2"
+							"dpa7 = 3"
+							"dpa7 = 4"
+					pa8
+						alternative
+							"dpa8 = 2"
+							"dpa8 = 3"
+							"dpa8 = 4"
+							"dpa8 = 5"
+					pa9
+						mandatory
+							"dpa9 = 2"
+					pa10
+						mandatory
+							"dpa10 = 4"
+					pa11
+						mandatory
+							"dpa11 = 1"
+					pa12
+						alternative
+							"dpa12 = 3"
+							"dpa12 = 4"
+							"dpa12 = 5"
+					pa13
+						alternative
+							"dpa13 = 1"
+							"dpa13 = 2"
+							"dpa13 = 3"
+							"dpa13 = 4"
+							"dpa13 = 5"
+					pa14
+						mandatory
+							"dpa14 = 2"
+					pa15
+						alternative
+							"dpa15 = 1"
+							"dpa15 = 2"
+							"dpa15 = 3"
+					pa16
+						alternative
+							"dpa16 = 1"
+							"dpa16 = 2"
+							"dpa16 = 3"
+							"dpa16 = 4"
+					pa17
+						alternative
+							"dpa17 = 3"
+							"dpa17 = 4"
+							"dpa17 = 5"
+					pa18
+						alternative
+							"dpa18 = 1"
+							"dpa18 = 2"
+							"dpa18 = 3"
+							"dpa18 = 4"
+					pa19
+						mandatory
+							"dpa19 = 2"
+					pa20
+						alternative
+							"dpa20 = 1"
+							"dpa20 = 2"
+							"dpa20 = 3"
+					pa21
+						mandatory
+							"dpa21 = 3"
+					pa22
+						mandatory
+							"dpa22 = 1"
+					pa23
+						mandatory
+							"dpa23 = 1"
+					pa24
+						alternative
+							"dpa24 = 3"
+							"dpa24 = 4"
+							"dpa24 = 5"
+					pa25
+						mandatory
+							"dpa25 = 2"
+					pa26
+						mandatory
+							"dpa26 = 2"
+					pa27
+						alternative
+							"dpa27 = 1"
+							"dpa27 = 2"
+							"dpa27 = 3"
+							"dpa27 = 4"
+					pa28
+						alternative
+							"dpa28 = 3"
+							"dpa28 = 4"
+					pa29
+						mandatory
+							"dpa29 = 3"
+					pa30
+						alternative
+							"dpa30 = 3"
+							"dpa30 = 4"
+					pa31
+						mandatory
+							"dpa31 = 2"
+					pa32
+						mandatory
+							"dpa32 = 1"
+			M {abstract true}
+				mandatory
+					m1
+					m2
+					m3
+					m4
+constraints
+	p2 => p1
+	p3 => p2
+	p4 => p3
+	p5 => p4
+	p6 => p5
+	p7 => p6
+	p8 => p7
+	p9 => p8
+	p10 => p9
+	p11 => p10
+	p12 => p11
+	p13 => p12
+	p14 => p13
+	p16 => p15
+	p17 => p16
+	p18 => p17
+	p19 => p18
+	p20 => p19
+	p21 => p20
+	p22 => p21
+	p23 => p22
+	p24 => p23
+	p25 => p24
+	p26 => p25
+	p28 => p27
+	p29 => p28
+	p30 => p29
+	p31 => p30
+	p32 => p31
+	p33 => p32
+	p34 => p33
+	p35 => p34
+	p36 => p35
+	p37 => p36
+	p38 => p37
+	p40 => p39
+	p41 => p40
+	p42 => p41
+	p43 => p42
+	p44 => p43
+	p45 => p44
+	p46 => p45
+	p47 => p46
+	p48 => p47
+	p49 => p48
+	p50 => p49
+	(pa2 & !pa3 & !pa4 & !pa1) | (!pa2 & pa3 & !pa4 & !pa1) | (!pa2 & !pa3 & pa4 & !pa1) | (!pa2 & !pa3 & !pa4 & pa1)
+	(pa6 & !pa7 & !pa8 & !pa5) | (!pa6 & pa7 & !pa8 & !pa5) | (!pa6 & !pa7 & pa8 & !pa5) | (!pa6 & !pa7 & !pa8 & pa5)
+	(pa10 & !pa11 & !pa12 & !pa9) | (!pa10 & pa11 & !pa12 & !pa9) | (!pa10 & !pa11 & pa12 & !pa9) | (!pa10 & !pa11 & !pa12 & pa9)
+	(pa14 & !pa15 & !pa16 & !pa13) | (!pa14 & pa15 & !pa16 & !pa13) | (!pa14 & !pa15 & pa16 & !pa13) | (!pa14 & !pa15 & !pa16 & pa13)
+	(pa18 & !pa19 & !pa20 & !pa17) | (!pa18 & pa19 & !pa20 & !pa17) | (!pa18 & !pa19 & pa20 & !pa17) | (!pa18 & !pa19 & !pa20 & pa17)
+	(pa22 & !pa23 & !pa24 & !pa21) | (!pa22 & pa23 & !pa24 & !pa21) | (!pa22 & !pa23 & pa24 & !pa21) | (!pa22 & !pa23 & !pa24 & pa21)
+	(pa26 & !pa27 & !pa28 & !pa25) | (!pa26 & pa27 & !pa28 & !pa25) | (!pa26 & !pa27 & pa28 & !pa25) | (!pa26 & !pa27 & !pa28 & pa25)
+	(pa30 & !pa31 & !pa32 & !pa29) | (!pa30 & pa31 & !pa32 & !pa29) | (!pa30 & !pa31 & pa32 & !pa29) | (!pa30 & !pa31 & !pa32 & pa29)
+	"dp1 = 12" => po17
+	"dp1 = 12" => pa19
+	"dp3 = 7" => po24
+	"dp3 = 7" => po4
+	"dp5 = 11" => po21
+	"dp5 = 11" => po24
+	"dp9 = 11" => po25
+	"dp9 = 11" => pa14
+	"dp13 = 14" => po8
+	"dp13 = 14" => po25
+	"dp14 = 4" => pa2
+	"dp14 = 4" => po12
+	"dp15 = 9" => po10
+	"dp15 = 9" => po25
+	"dp19 = 2" => po9
+	"dp19 = 2" => po16
+	"dp20 = 1" => po28
+	"dp20 = 1" => po19
+	"dp21 = 3" => po6
+	"dp21 = 3" => po8
+	"dp23 = 3" => po26
+	"dp23 = 3" => po27
+	"dp24 = 4" => po15
+	"dp24 = 4" => po3
+	"dp25 = 2" => po22
+	"dp25 = 2" => po29
+	"dp27 = 4" => po20
+	"dp27 = 4" => pa29
+	"dp28 = 3" => po6
+	"dp28 = 3" => po3
+	"dp29 = 2" => po4
+	"dp29 = 2" => po21
+	"dp30 = 5" => po27
+	"dp30 = 5" => po31
+	"dp31 = 2" => po14
+	"dp31 = 2" => po4
+	"dp32 = 5" => po21
+	"dp32 = 5" => po13
+	"dp38 = 2" => po2
+	"dp38 = 2" => po8
+	p1 => m4
+	p2 => m1
+	p3 => m3
+	p4 => m4
+	p5 => m4
+	p6 => m3
+	p7 => m1
+	p8 => m3
+	p9 => m2
+	p10 => m1
+	p11 => m1
+	p12 => m4
+	p13 => m1
+	p14 => m1
+	p15 => m1
+	p16 => m2
+	p17 => m1
+	p18 => m4
+	p19 => m4
+	p20 => m3
+	p21 => m3
+	p22 => m4
+	p23 => m2
+	p24 => m3
+	p25 => m4
+	p26 => m4
+	p27 => m4
+	p28 => m3
+	p29 => m3
+	p30 => m2
+	p31 => m4
+	p32 => m2
+	p33 => m4
+	p34 => m4
+	p35 => m1
+	p36 => m3
+	p37 => m2
+	p38 => m2
+	p39 => m3
+	p40 => m2
+	p41 => m1
+	p42 => m2
+	p43 => m3
+	p44 => m3
+	p45 => m1
+	p46 => m2
+	p47 => m4
+	p48 => m2
+	p49 => m2
+	p50 => m2
+	po1 => m2
+	po2 => m1
+	po3 => m2
+	po4 => m4
+	po5 => m3
+	po6 => m4
+	po7 => m3
+	po8 => m3
+	po9 => m3
+	po10 => m1
+	po11 => m2
+	po12 => m1
+	po13 => m1
+	po14 => m3
+	po15 => m2
+	po16 => m3
+	po17 => m1
+	po18 => m2
+	po19 => m2
+	po20 => m1
+	po21 => m3
+	po22 => m1
+	po23 => m3
+	po24 => m1
+	po25 => m2
+	po26 => m1
+	po27 => m2
+	po28 => m2
+	po29 => m2
+	po30 => m2
+	po31 => m3
+	po32 => m3
+	pa1 => m1
+	pa2 => m3
+	pa3 => m1
+	pa4 => m4
+	pa5 => m1
+	pa6 => m1
+	pa7 => m3
+	pa8 => m3
+	pa9 => m3
+	pa10 => m1
+	pa11 => m4
+	pa12 => m3
+	pa13 => m4
+	pa14 => m1
+	pa15 => m3
+	pa16 => m1
+	pa17 => m4
+	pa18 => m4
+	pa19 => m3
+	pa20 => m3
+	pa21 => m2
+	pa22 => m3
+	pa23 => m2
+	pa24 => m1
+	pa25 => m1
+	pa26 => m3
+	pa27 => m4
+	pa28 => m1
+	pa29 => m2
+	pa30 => m3
+	pa31 => m4
+	pa32 => m2
+

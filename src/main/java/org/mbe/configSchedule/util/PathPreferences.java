@@ -24,7 +24,7 @@ public class PathPreferences {
      * @return path preference.
      */
     public String getSolutionSavePath() {
-        return prefs.get("solutionSave", "");
+        return prefs.get("solutionSave", "src/main/schedules");
     }
 
     /**
@@ -42,6 +42,6 @@ public class PathPreferences {
      * @return path preference.
      */
     public String getProblemSavePath() {
-        return prefs.get("problemSave", "");
+        return prefs.get("problemSave", "src/main/problems");
     }
 }

@@ -1,17 +1,8 @@
 package org.mbe.configSchedule.solver;
 
-import com.google.ortools.constraintsolver.Solver;
 import com.google.ortools.sat.*;
-import org.mbe.configSchedule.parser.ConfigurationReader;
 import org.mbe.configSchedule.util.*;
-import org.xml.sax.SAXException;
 
-import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.xpath.XPathExpressionException;
-import java.io.File;
-import java.io.IOException;
-import java.time.Duration;
-import java.time.Instant;
 import java.util.*;
 
 public class ProblemSolver {

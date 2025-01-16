@@ -1,8 +1,17 @@
 package org.mbe.configSchedule.util;
 
 import java.util.prefs.Preferences;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 public class PathPreferences {
+
+    String workingDir = System.getProperty("user.dir");
+    Path relativeProblemPath = Paths.get(workingDir,"problems");
+    Path relativeSchedulePath = Paths.get(workingDir, "schedules");
+
+    Path absoluteProblemPath = relativeProblemPath.toAbsolutePath().resolve("");
+    Path absoluteSchedulePath = relativeSchedulePath.toAbsolutePath().resolve("");
 
     /**
      * Holds Path Preferences
@@ -24,7 +33,7 @@ public class PathPreferences {
      * @return path preference.
      */
     public String getSolutionSavePath() {
-        return prefs.get("solutionSave", "src/main/schedules");
+        return prefs.get("solutionSave", absoluteSchedulePath.toString());
     }
 
     /**
@@ -42,6 +51,14 @@ public class PathPreferences {
      * @return path preference.
      */
     public String getProblemSavePath() {
-        return prefs.get("problemSave", "src/main/problems");
+        return prefs.get("problemSave", absoluteProblemPath.toString());
+    }
+
+    public void removeSolutionSavePath() {
+        prefs.remove("solutionSave");
+    }
+
+    public void removeProblemSavePath() {
+        prefs.remove("problemSave");
     }
 }

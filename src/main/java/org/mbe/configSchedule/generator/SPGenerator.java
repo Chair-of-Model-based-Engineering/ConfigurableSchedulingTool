@@ -1,8 +1,5 @@
 package org.mbe.configSchedule.generator;
 
-import de.vill.model.Feature;
-import de.vill.model.FeatureModel;
-import de.vill.model.Group;
 import org.mbe.configSchedule.util.Machine;
 import org.mbe.configSchedule.util.PathPreferences;
 import org.mbe.configSchedule.util.SchedulingProblem;
@@ -10,8 +7,9 @@ import org.mbe.configSchedule.util.Task;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.ObjectOutputStream;
 import java.io.PrintWriter;
+import java.nio.file.Path;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -69,23 +67,15 @@ public class SPGenerator {
         SchedulingProblem sp = new SchedulingProblem(jobs, machines, deadline);
         String problemUVL = parseToUVL(sp, name);
 
-/*
         PathPreferences prefs = new PathPreferences();
-        String fileOutputString = prefs.getProblemSavePath() + name + ".txt";
-        FileOutputStream fOut = new FileOutputStream(fileOutputString);
-        ObjectOutputStream oOut = new ObjectOutputStream(fOut);
+        Path path = Path.of(prefs.getProblemSavePath());
 
-        oOut.writeObject(sp);
-        oOut.flush();
-        oOut.close();
+        if(!Files.exists(path)) {
+            Files.createDirectories(path);
+        }
 
- */
-
-
-        PathPreferences prefs = new PathPreferences();
-        PrintWriter out = new PrintWriter(new FileOutputStream(prefs.getProblemSavePath() + name + ".txt"));
-        out.println(problemUVL);
-        out.close();
+        Path filepath = path.resolve(name + ".uvl");
+        Files.writeString(filepath, problemUVL);
     }
 
     /**

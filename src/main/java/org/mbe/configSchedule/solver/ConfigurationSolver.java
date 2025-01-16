@@ -1,6 +1,5 @@
 package org.mbe.configSchedule.solver;
 
-import com.google.ortools.constraintsolver.Solver;
 import com.google.ortools.sat.CpSolverStatus;
 import org.mbe.configSchedule.parser.ConfigurationReader;
 import org.mbe.configSchedule.util.ConfigurationSolverReturn;

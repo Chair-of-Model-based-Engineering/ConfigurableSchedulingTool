@@ -14,6 +14,7 @@ import org.xml.sax.SAXException;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.xpath.XPathExpressionException;
 import java.io.*;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
@@ -51,8 +52,8 @@ public class Main {
                     spgenerator.generateProblem(intParameter[0], intParameter[1], intParameter[2], intParameter[3], intParameter[4], intParameter[5],
                             intParameter[6], intParameter[7], intParameter[8], intParameter[9], args[11]);
 
-                    System.out.println("Problem saved as " + args[11] + ".txt \n" +
-                            "To solve use: solve [o or f] " + args[11] + ".txt");
+                    System.out.println("Problem saved as " + args[11] + ".uvl \n" +
+                            "To solve use: solve [o or f] " + args[11] + ".uvl");
                     // }catch(Exception e) {
                     //    System.out.println("Error - Please make sure that all arguments besides <name> are integers");
                     // }
@@ -191,6 +192,15 @@ public class Main {
                         System.out.println(prefs.getProblemSavePath());
                     }
                     break;
+                case "delete":
+                    if(args[1].equals("solutionpath")) {
+                        prefs.removeSolutionSavePath();
+                        System.out.println("Deleted path for saving solutions");
+                    } else if(args[1].equals("problempath")) {
+                        prefs.removeProblemSavePath();
+                        System.out.println("Deleted path for saving problems");
+                    }
+                    break;
                 default:
                     System.out.println("Undefined command " + args[0] + "\n" +
                             "Use \"generate\" or \"solve\"");
@@ -218,15 +228,15 @@ public class Main {
     }
 
     public static SchedulingProblem ReadProblemUVL(String name) throws IOException {
-        String path = "";
+        Path path = Path.of("");
         Path filePath = Path.of("");
         if(name.contains("/")) {
-            path = name;
+            path = Path.of(name);
             filePath = Path.of(name);
         } else {
             PathPreferences prefs = new PathPreferences();
-            path = prefs.getProblemSavePath();
-            filePath = Path.of(path + name);
+            path = Path.of(prefs.getProblemSavePath());
+            filePath = path.resolve(name);
         }
 
         System.out.println("\n" + name + "\n");
@@ -306,8 +316,15 @@ public class Main {
         }
 
         PathPreferences prefs = new PathPreferences();
-        String path = prefs.getSolutionSavePath();
-        File file = new File(path + fileName);
+
+        Path path = Path.of(prefs.getSolutionSavePath());
+        if(!Files.exists(path)) {
+            Files.createDirectories(path);
+        }
+
+        Path filePath = path.resolve(fileName);
+
+        File file = new File(String.valueOf(filePath));
         FileWriter outputFile = new FileWriter(file);
         CSVWriter csvWriter = new CSVWriter(outputFile);
 

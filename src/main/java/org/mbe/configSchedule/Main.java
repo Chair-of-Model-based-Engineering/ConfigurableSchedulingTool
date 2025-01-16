@@ -1,9 +1,7 @@
 package org.mbe.configSchedule;
 
 import com.google.ortools.Loader;
-import com.google.protobuf.MapEntry;
 import com.opencsv.CSVWriter;
-import de.vill.main.UVLModelFactory;
 import de.vill.model.FeatureModel;
 import org.mbe.configSchedule.generator.SPGenerator;
 import org.mbe.configSchedule.parser.FMReader;
@@ -16,7 +14,6 @@ import org.xml.sax.SAXException;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.xpath.XPathExpressionException;
 import java.io.*;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
@@ -221,9 +218,17 @@ public class Main {
     }
 
     public static SchedulingProblem ReadProblemUVL(String name) throws IOException {
-        PathPreferences prefs = new PathPreferences();
-        String path = prefs.getProblemSavePath();
-        Path filePath = Path.of(path + name);
+        String path = "";
+        Path filePath = Path.of("");
+        if(name.contains("/")) {
+            path = name;
+            filePath = Path.of(name);
+        } else {
+            PathPreferences prefs = new PathPreferences();
+            path = prefs.getProblemSavePath();
+            filePath = Path.of(path + name);
+        }
+
         System.out.println("\n" + name + "\n");
         FeatureModel fm = UVLReader.read(filePath);
         SchedulingProblem sp = new SchedulingProblem(fm);

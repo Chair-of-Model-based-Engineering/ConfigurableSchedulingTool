@@ -1,3 +1,6 @@
+
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.14677465.svg)](https://doi.org/10.5281/zenodo.14677465)
+
 # Creating a runnable Jar
 To create a Jar for this project, you need Java, as well as Maven.
 With Maven installed and this repository downloaded, open a terminal and navigate to the folder `ConfigurableSchedulingTool`, in which the pom.xml is located.

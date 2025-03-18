@@ -191,7 +191,7 @@ public class Main {
         } else {
             System.out.println("Wrong command or wrong amount of arguments \n" +
                     "To generate a problem: generate <jobCount> <taskCount> <durationOutlier> " +
-                    "<machineCount> <optionalCount> <altCount> <altGroupCount> <deadline> <name> \n" +
+                    "<machineCount> <optionalCount> <altCount> <altGroupCount> <deadline> <durationConstraints> <maxDurationRequires> <name> \n" +
                     "To solve a problem: solve [o or f] <name>");
         }
 

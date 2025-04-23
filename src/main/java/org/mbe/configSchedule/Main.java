@@ -37,131 +37,127 @@ public class Main {
         Loader.loadNativeLibraries();
         PathPreferences prefs = new PathPreferences();
 
-        if (args.length == 12 || args.length == 2 || args.length == 3 || args.length == 4) {
-            switch (args[0]) {
+        if (!(args.length == 12 || args.length == 2 || args.length == 3 || args.length == 4)) {
+            System.err.println("""
+                    Wrong command or wrong amount of arguments\s
+                    To generate a problem: generate <jobCount> <taskCount> <durationOutlier> \
+                    <machineCount> <optionalCount> <altCount> <altGroupCount> <deadline> <durationConstraints> <maxDurationRequires> <name>\s
+                    To solve a problem: solve [o or f] <name>""");
+            return;
+        }
 
-                // Generate a problem via the programm
-                case "generate":
-                    // Parse some arguments to integers
-                    int[] intParameter = new int[10];
-                    for (int i = 1; i < args.length - 1; i++) {
-                        intParameter[i - 1] = Integer.parseInt(args[i]);
-                    }
-                    SPGenerator spgenerator = new SPGenerator();
-                    spgenerator.generateProblem(intParameter[0], intParameter[1], intParameter[2], intParameter[3], intParameter[4], intParameter[5],
-                            intParameter[6], intParameter[7], intParameter[8], intParameter[9], args[11]);
+        switch (args[0]) {
+            case "generate" -> {
+                // Parse some arguments to integers
+                int[] intParameter = new int[10];
+                for (int i = 1; i < args.length - 1; i++) {
+                    intParameter[i - 1] = Integer.parseInt(args[i]);
+                }
+                SPGenerator spgenerator = new SPGenerator();
+                spgenerator.generateProblem(intParameter[0], intParameter[1], intParameter[2], intParameter[3], intParameter[4], intParameter[5],
+                        intParameter[6], intParameter[7], intParameter[8], intParameter[9], args[11]);
 
-                    System.out.println("Problem saved as " + args[11] + ".uvl \n" +
-                            "To solve use: solve [o or f] " + args[11] + ".uvl");
-                    break;
-
-                // Solve a problem
-                case "solve":
-                    SolveComplexity solveMode;
-                    // set mode (search for feasible or optimal solution?)
-                    if ("o".equals(args[1])) {
-                        solveMode = SolveComplexity.OPTIMAL;
-                    } else if ("f".equals(args[1])) {
-                        solveMode = SolveComplexity.FEASIBLE;
-                    } else {
-                            System.err.println("Undefinded argument \"" + args[1] + "\"\n" +
-                                    "Please use \"o\" to search for an optimal schedule or \"f\" to search for a feasible schedule");
-                            break;
-                    }
-
-                    if (args.length == 3 && args[2].endsWith(".uvl")) {
-                        Instant readStart = Instant.now();
-                        SchedulingProblem sp = ReadProblemUVL(args[2]);
-                        Instant readEnd = Instant.now();
-
-                        PrintProblem(sp);
-
-                        Instant solveStart = Instant.now();
-                        ProblemSolver problemSolver = new ProblemSolver(sp);
-                        SolverReturn sr;
-                        if (solveMode == SolveComplexity.FEASIBLE) {
-                            sr = problemSolver.getFirstSolution();
-                        } else {
-                            sr = problemSolver.getBestSolution();
-                        }
-
-                        Instant solveEnd = Instant.now();
-
-                        long readTime = Duration.between(readStart, readEnd).toMillis();
-                        long solveTime = Duration.between(solveStart, solveEnd).toMillis();
-                        long combinedTime = readTime + solveTime;
-
-                        if (sr != null) {
-                            PrintSolution(sr);
-                            System.out.println("Read Time: " + readTime + "ms, Solve Time: " + solveTime + "ms, Combined: " + combinedTime + "ms");
-                            WriteCSV(sr, solveMode, args[2]);
-                        } else {
-                            System.out.println("No solution found");
-                            System.out.println("Read Time: " + readTime + "ms, Solve Time: " + solveTime + "ms, Combined: " + combinedTime + "ms");
-                        }
-                    // For searching over the set of instances
-                    } else if (args.length == 4) {
-                        String modelPath = args[2];
-                        // TODO: Remove XML support for instance-based solving
-                        SchedulingProblem sp = FMReader.readFM(modelPath);
-                        PrintProblem(sp);
-                        ConfigurationSolverReturn csr;
-                        if (solveMode == SolveComplexity.FEASIBLE) {
-                            csr = ConfigurationSolver.getFirst(args[3], modelPath);
-                        } else {
-                            csr = ConfigurationSolver.getBest(args[3], modelPath);
-                        }
-
-                        if (csr != null && csr.isHasSolution()) {
-                            PrintSolution(csr.getSolverReturn());
-                            System.out.println("Found solution in iteration " + csr.getIteration() + "\n" +
-                                    "Read time: " + csr.getReadTime() + "ms, Solve time: " + csr.getTimeSolve() + "ms, Combined: " + csr.getNeededTime() + "ms");
-                            WriteCSV(csr.getSolverReturn(), solveMode, args[2]);
-                        } else {
-                            System.out.println("No solution found");
-                            System.out.println("Searched in " + (csr.getSearchedConfigs() - 1) + " configurations \n" +
-                                    "Read time: " + csr.getReadTime() + "ms, Solve time: " + csr.getTimeSolve() + "ms, Combined: " + csr.getNeededTime() + "ms");
-                        }
-                    } else {
-                        System.err.println("Incorrect amount or type of arguments.");
-                        break;
-                    }
-                    break;
-
-                // Working with the path preferences
-                case "solutionpath":
-                    prefs.setSolutionSavePath(args[1]);
-                    System.out.printf("Path for saving solutions problems set to %s", args[1]);
-                    break;
-                case "problempath":
-                    prefs.setProblemSavePath(args[1]);
-                    System.out.printf("Path for saving generated problems set to %s", args[1]);
-                    break;
-                case "get":
-                    if (args[1].equals("solutionpath")) {
-                        System.out.println(prefs.getSolutionSavePath());
-                    } else if (args[1].equals("problempath")) {
-                        System.out.println(prefs.getProblemSavePath());
-                    }
-                    break;
-                case "delete":
-                    if(args[1].equals("solutionpath")) {
-                        prefs.removeSolutionSavePath();
-                        System.out.println("Deleted path for saving solutions");
-                    } else if(args[1].equals("problempath")) {
-                        prefs.removeProblemSavePath();
-                        System.out.println("Deleted path for saving problems");
-                    }
-                    break;
-                default:
-                    System.out.println("Undefined command " + args[0] + "\n" +
-                            "Use \"generate\" or \"solve\"");
+                System.out.println("Problem saved as " + args[11] + ".uvl \n" +
+                        "To solve use: solve [o or f] " + args[11] + ".uvl");
             }
-        } else {
-            System.out.println("Wrong command or wrong amount of arguments \n" +
-                    "To generate a problem: generate <jobCount> <taskCount> <durationOutlier> " +
-                    "<machineCount> <optionalCount> <altCount> <altGroupCount> <deadline> <durationConstraints> <maxDurationRequires> <name> \n" +
-                    "To solve a problem: solve [o or f] <name>");
+            case "solve" -> {
+                SolveComplexity solveMode;
+                // set mode (search for feasible or optimal solution?)
+                if ("o".equals(args[1])) {
+                    solveMode = SolveComplexity.OPTIMAL;
+                } else if ("f".equals(args[1])) {
+                    solveMode = SolveComplexity.FEASIBLE;
+                } else {
+                    System.err.println("Undefinded argument \"" + args[1] + "\"\n" +
+                            "Please use \"o\" to search for an optimal schedule or \"f\" to search for a feasible schedule");
+                    break;
+                }
+
+                if (args.length == 3 && args[2].endsWith(".uvl")) {
+                    Instant readStart = Instant.now();
+                    SchedulingProblem sp = ReadProblemUVL(args[2]);
+                    Instant readEnd = Instant.now();
+
+                    PrintProblem(sp);
+
+                    Instant solveStart = Instant.now();
+                    ProblemSolver problemSolver = new ProblemSolver(sp);
+                    SolverReturn sr;
+                    if (solveMode == SolveComplexity.FEASIBLE) {
+                        sr = problemSolver.getFirstSolution();
+                    } else {
+                        sr = problemSolver.getBestSolution();
+                    }
+
+                    Instant solveEnd = Instant.now();
+
+                    long readTime = Duration.between(readStart, readEnd).toMillis();
+                    long solveTime = Duration.between(solveStart, solveEnd).toMillis();
+                    long combinedTime = readTime + solveTime;
+
+                    if (sr != null) {
+                        PrintSolution(sr);
+                        System.out.println("Read Time: " + readTime + "ms, Solve Time: " + solveTime + "ms, Combined: " + combinedTime + "ms");
+                        WriteCSV(sr, solveMode, args[2]);
+                    } else {
+                        System.out.println("No solution found");
+                        System.out.println("Read Time: " + readTime + "ms, Solve Time: " + solveTime + "ms, Combined: " + combinedTime + "ms");
+                    }
+                    // For searching over the set of instances
+                } else if (args.length == 4) {
+                    String modelPath = args[2];
+                    // TODO: Remove XML support for instance-based solving
+                    SchedulingProblem sp = FMReader.readFM(modelPath);
+                    PrintProblem(sp);
+                    ConfigurationSolverReturn csr;
+                    if (solveMode == SolveComplexity.FEASIBLE) {
+                        csr = ConfigurationSolver.getFirst(args[3], modelPath);
+                    } else {
+                        csr = ConfigurationSolver.getBest(args[3], modelPath);
+                    }
+
+                    if (csr != null && csr.isHasSolution()) {
+                        PrintSolution(csr.getSolverReturn());
+                        System.out.println("Found solution in iteration " + csr.getIteration() + "\n" +
+                                "Read time: " + csr.getReadTime() + "ms, Solve time: " + csr.getTimeSolve() + "ms, Combined: " + csr.getNeededTime() + "ms");
+                        WriteCSV(csr.getSolverReturn(), solveMode, args[2]);
+                    } else {
+                        System.out.println("No solution found");
+                        System.out.println("Searched in " + (csr.getSearchedConfigs() - 1) + " configurations \n" +
+                                "Read time: " + csr.getReadTime() + "ms, Solve time: " + csr.getTimeSolve() + "ms, Combined: " + csr.getNeededTime() + "ms");
+                    }
+                } else {
+                    System.err.println("Incorrect amount or type of arguments.");
+                }
+            }
+
+            // Working with the path preferences
+            case "solutionpath" -> {
+                prefs.setSolutionSavePath(args[1]);
+                System.out.printf("Path for saving solutions problems set to %s", args[1]);
+            }
+            case "problempath" -> {
+                prefs.setProblemSavePath(args[1]);
+                System.out.printf("Path for saving generated problems set to %s", args[1]);
+            }
+            case "get" -> {
+                if (args[1].equals("solutionpath")) {
+                    System.out.println(prefs.getSolutionSavePath());
+                } else if (args[1].equals("problempath")) {
+                    System.out.println(prefs.getProblemSavePath());
+                }
+            }
+            case "delete" -> {
+                if (args[1].equals("solutionpath")) {
+                    prefs.removeSolutionSavePath();
+                    System.out.println("Deleted path for saving solutions");
+                } else if (args[1].equals("problempath")) {
+                    prefs.removeProblemSavePath();
+                    System.out.println("Deleted path for saving problems");
+                }
+            }
+            default -> System.out.println("Undefined command " + args[0] + "\n" +
+                    "Use \"generate\" or \"solve\"");
         }
 
     }

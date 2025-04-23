@@ -74,64 +74,13 @@ public class Main {
                 }
 
                 if (args.length == 3 && args[2].endsWith(".uvl")) {
-                    Instant readStart = Instant.now();
-                    SchedulingProblem sp = ReadProblemUVL(args[2]);
-                    Instant readEnd = Instant.now();
-
-                    PrintProblem(sp);
-
-                    Instant solveStart = Instant.now();
-                    ProblemSolver problemSolver = new ProblemSolver(sp);
-                    SolverReturn sr;
-                    if (solveMode == SolveComplexity.FEASIBLE) {
-                        sr = problemSolver.getFirstSolution();
-                    } else {
-                        sr = problemSolver.getBestSolution();
-                    }
-
-                    Instant solveEnd = Instant.now();
-
-                    long readTime = Duration.between(readStart, readEnd).toMillis();
-                    long solveTime = Duration.between(solveStart, solveEnd).toMillis();
-                    long combinedTime = readTime + solveTime;
-
-                    if (sr != null) {
-                        PrintSolution(sr);
-                        System.out.println("Read Time: " + readTime + "ms, Solve Time: " + solveTime + "ms, Combined: " + combinedTime + "ms");
-                        WriteCSV(sr, solveMode, args[2]);
-                    } else {
-                        System.out.println("No solution found");
-                        System.out.println("Read Time: " + readTime + "ms, Solve Time: " + solveTime + "ms, Combined: " + combinedTime + "ms");
-                    }
-                    // For searching over the set of instances
+                    solveFamilyBased(args[2], solveMode);
                 } else if (args.length == 4) {
-                    String modelPath = args[2];
-                    // TODO: Remove XML support for instance-based solving
-                    SchedulingProblem sp = FMReader.readFM(modelPath);
-                    PrintProblem(sp);
-                    ConfigurationSolverReturn csr;
-                    if (solveMode == SolveComplexity.FEASIBLE) {
-                        csr = ConfigurationSolver.getFirst(args[3], modelPath);
-                    } else {
-                        csr = ConfigurationSolver.getBest(args[3], modelPath);
-                    }
-
-                    if (csr != null && csr.isHasSolution()) {
-                        PrintSolution(csr.getSolverReturn());
-                        System.out.println("Found solution in iteration " + csr.getIteration() + "\n" +
-                                "Read time: " + csr.getReadTime() + "ms, Solve time: " + csr.getTimeSolve() + "ms, Combined: " + csr.getNeededTime() + "ms");
-                        WriteCSV(csr.getSolverReturn(), solveMode, args[2]);
-                    } else {
-                        System.out.println("No solution found");
-                        System.out.println("Searched in " + (csr.getSearchedConfigs() - 1) + " configurations \n" +
-                                "Read time: " + csr.getReadTime() + "ms, Solve time: " + csr.getTimeSolve() + "ms, Combined: " + csr.getNeededTime() + "ms");
-                    }
+                    solveInstanceBased(args[2], args[3], solveMode);
                 } else {
                     System.err.println("Incorrect amount or type of arguments.");
                 }
             }
-
-            // Working with the path preferences
             case "solutionpath" -> {
                 prefs.setSolutionSavePath(args[1]);
                 System.out.printf("Path for saving solutions problems set to %s", args[1]);
@@ -160,6 +109,74 @@ public class Main {
                     "Use \"generate\" or \"solve\"");
         }
 
+    }
+
+    /**
+     * Use a family-based approach to search for a solution to the given problem.
+     * @param fileName  The name of the given problem.
+     * @param solveMode The mode (feasible/optimal) of the search.
+     * @throws IOException if the problem file cannot be read or the result file cannot be written.
+     */
+    private static void solveFamilyBased(String fileName, SolveComplexity solveMode) throws IOException {
+        Instant readStart = Instant.now();
+        SchedulingProblem sp = ReadProblemUVL(fileName);
+        Instant readEnd = Instant.now();
+
+        PrintProblem(sp);
+
+        Instant solveStart = Instant.now();
+        ProblemSolver problemSolver = new ProblemSolver(sp);
+        SolverReturn sr;
+        if (solveMode == SolveComplexity.FEASIBLE) {
+            sr = problemSolver.getFirstSolution();
+        } else {
+            sr = problemSolver.getBestSolution();
+        }
+
+        Instant solveEnd = Instant.now();
+
+        long readTime = Duration.between(readStart, readEnd).toMillis();
+        long solveTime = Duration.between(solveStart, solveEnd).toMillis();
+        long combinedTime = readTime + solveTime;
+
+        if (sr != null) {
+            PrintSolution(sr);
+            System.out.println("Read Time: " + readTime + "ms, Solve Time: " + solveTime + "ms, Combined: " + combinedTime + "ms");
+            WriteCSV(sr, solveMode, fileName);
+        } else {
+            System.out.println("No solution found");
+            System.out.println("Read Time: " + readTime + "ms, Solve Time: " + solveTime + "ms, Combined: " + combinedTime + "ms");
+        }
+    }
+
+    /**
+     * Use an instance-based approach to search for a solution to the given problem.
+     * @param modelPath     The path to the model describing the problem.
+     * @param configDirPath The path to the directory containing valid instances/configurations to the problem.
+     * @param solveMode The mode (feasible/optimal) of the search.
+     * @throws IOException if the problem file cannot be read or the result file cannot be written.
+     */
+    private static void solveInstanceBased(String modelPath, String configDirPath, SolveComplexity solveMode) throws ParserConfigurationException, IOException, SAXException, XPathExpressionException {
+        // TODO: Make instance-based solving work with UVL
+        SchedulingProblem sp = FMReader.readFM(modelPath);
+        PrintProblem(sp);
+        ConfigurationSolverReturn csr;
+        if (solveMode == SolveComplexity.FEASIBLE) {
+            csr = ConfigurationSolver.getFirst(configDirPath, modelPath);
+        } else {
+            csr = ConfigurationSolver.getBest(configDirPath, modelPath);
+        }
+
+        if (csr != null && csr.isHasSolution()) {
+            PrintSolution(csr.getSolverReturn());
+            System.out.println("Found solution in iteration " + csr.getIteration() + "\n" +
+                    "Read time: " + csr.getReadTime() + "ms, Solve time: " + csr.getTimeSolve() + "ms, Combined: " + csr.getNeededTime() + "ms");
+            WriteCSV(csr.getSolverReturn(), solveMode, modelPath);
+        } else {
+            System.out.println("No solution found");
+            System.out.println("Searched in " + (csr.getSearchedConfigs() - 1) + " configurations \n" +
+                    "Read time: " + csr.getReadTime() + "ms, Solve time: " + csr.getTimeSolve() + "ms, Combined: " + csr.getNeededTime() + "ms");
+        }
     }
 
 

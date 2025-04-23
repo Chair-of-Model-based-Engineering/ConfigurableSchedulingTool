@@ -72,6 +72,7 @@ public class ConfigurationReader {
         machines.clear();
         deadline = -1;
 
+        // TODO: Replace with UVL
         DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
         Document modelDoc = builder.parse(new File(modelPath));
         Document configDoc = builder.parse(new File(configPath));

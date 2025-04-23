@@ -102,6 +102,7 @@ public class Main {
                     // For searching over the set of instances
                     } else if (args.length == 4) {
                         String modelPath = args[2];
+                        // TODO: Remove XML support for instance-based solving
                         SchedulingProblem sp = FMReader.readFM(modelPath);
                         PrintProblem(sp);
                         ConfigurationSolverReturn csr;

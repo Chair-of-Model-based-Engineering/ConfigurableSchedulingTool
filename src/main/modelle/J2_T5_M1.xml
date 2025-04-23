@@ -12,7 +12,6 @@
     </properties>
     <struct>
         <and abstract="true" mandatory="true" name="J2_T5_M1">
-            <description>14</description>
             <and abstract="true" mandatory="true" name="P">
                 <and mandatory="true" name="p1">
                     <feature mandatory="true" name="dp1 = 2"/>
@@ -37,6 +36,7 @@
             <and abstract="true" mandatory="true" name="M">
                 <feature mandatory="true" name="m1"/>
             </and>
+            <feature name="dl = 14"/>
         </and>
     </struct>
     <constraints>

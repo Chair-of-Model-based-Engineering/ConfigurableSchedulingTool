@@ -1,7 +1,7 @@
 namespace J2_T5_M1
 
 features
-	J2_T5_M1 {featureDescription__ "14", abstract true}
+	J2_T5_M1 {abstract true}
 		mandatory
 			P {abstract true}
 				mandatory
@@ -24,6 +24,7 @@ features
 					p5
 						mandatory
 							"dp5 = 3"
+			"dl = 14"
 			M {abstract true}
 				mandatory
 					m1

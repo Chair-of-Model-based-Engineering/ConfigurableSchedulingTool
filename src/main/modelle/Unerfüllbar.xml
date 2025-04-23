@@ -12,7 +12,7 @@
     </properties>
     <struct>
         <and abstract="true" mandatory="true" name="Unerfüllbar">
-            <description>10</description>
+            <feature name="dl = 10"/>
             <and abstract="true" mandatory="true" name="P">
                 <alt mandatory="true" name="p1">
                     <feature name="dp1 = 5"/>

@@ -28,12 +28,14 @@ import java.util.*;
 
 public class Main {
 
+    enum SolveComplexity {
+        FEASIBLE,
+        OPTIMAL;
+    }
+
     public static void main(String[] args) throws ParserConfigurationException, IOException, SAXException, XPathExpressionException, ClassNotFoundException {
         Loader.loadNativeLibraries();
         PathPreferences prefs = new PathPreferences();
-
-        // 0 = search for feasible solution, 1 = search for optimal solution
-        int mode = 1;
 
         if (args.length == 12 || args.length == 2 || args.length == 3 || args.length == 4) {
             switch (args[0]) {
@@ -55,16 +57,14 @@ public class Main {
 
                 // Solve a problem
                 case "solve":
+                    SolveComplexity solveMode;
                     // set mode (search for feasible or optimal solution?)
-                    switch (args[1]) {
-                        case "o":
-                            mode = 1;
-                            break;
-                        case "f":
-                            mode = 0;
-                            break;
-                        default:
-                            System.out.println("Undefinded argument " + args[1] + "\n" +
+                    if ("o".equals(args[1])) {
+                        solveMode = SolveComplexity.OPTIMAL;
+                    } else if ("f".equals(args[1])) {
+                        solveMode = SolveComplexity.FEASIBLE;
+                    } else {
+                            System.err.println("Undefinded argument \"" + args[1] + "\"\n" +
                                     "Please use \"o\" to search for an optimal schedule or \"f\" to search for a feasible schedule");
                             break;
                     }
@@ -79,7 +79,7 @@ public class Main {
                         Instant solveStart = Instant.now();
                         ProblemSolver problemSolver = new ProblemSolver(sp);
                         SolverReturn sr;
-                        if (mode == 0) {
+                        if (solveMode == SolveComplexity.FEASIBLE) {
                             sr = problemSolver.getFirstSolution();
                         } else {
                             sr = problemSolver.getBestSolution();
@@ -94,7 +94,7 @@ public class Main {
                         if (sr != null) {
                             PrintSolution(sr);
                             System.out.println("Read Time: " + readTime + "ms, Solve Time: " + solveTime + "ms, Combined: " + combinedTime + "ms");
-                            WriteCSV(sr, mode, args[2]);
+                            WriteCSV(sr, solveMode, args[2]);
                         } else {
                             System.out.println("No solution found");
                             System.out.println("Read Time: " + readTime + "ms, Solve Time: " + solveTime + "ms, Combined: " + combinedTime + "ms");
@@ -106,7 +106,7 @@ public class Main {
                         SchedulingProblem sp = FMReader.readFM(modelPath);
                         PrintProblem(sp);
                         ConfigurationSolverReturn csr;
-                        if (mode == 0) {
+                        if (solveMode == SolveComplexity.FEASIBLE) {
                             csr = ConfigurationSolver.getFirst(args[3], modelPath);
                         } else {
                             csr = ConfigurationSolver.getBest(args[3], modelPath);
@@ -116,7 +116,7 @@ public class Main {
                             PrintSolution(csr.getSolverReturn());
                             System.out.println("Found solution in iteration " + csr.getIteration() + "\n" +
                                     "Read time: " + csr.getReadTime() + "ms, Solve time: " + csr.getTimeSolve() + "ms, Combined: " + csr.getNeededTime() + "ms");
-                            WriteCSV(csr.getSolverReturn(), mode, args[2]);
+                            WriteCSV(csr.getSolverReturn(), solveMode, args[2]);
                         } else {
                             System.out.println("No solution found");
                             System.out.println("Searched in " + (csr.getSearchedConfigs() - 1) + " configurations \n" +
@@ -283,17 +283,17 @@ public class Main {
     /**
      * Saves a solution to a CSV-file
      * @param sr            The solution in the form of a {@link SolverReturn}
-     * @param mode          An {@link Integer} indicating the mode (feasible/optimal) of the search
+     * @param mode          The mode (feasible/optimal) of the search
      * @param ProblemPath   The path of the corresponding problem
      * @throws IOException
      */
-    public static void WriteCSV(SolverReturn sr, int mode, String ProblemPath) throws IOException {
+    public static void WriteCSV(SolverReturn sr, SolveComplexity mode, String ProblemPath) throws IOException {
         List<String[]> data = ConvertSRToStrings(sr);
         String fileName = ReadProblemName(ProblemPath);
 
-        if (mode == 0) {
+        if (mode == SolveComplexity.FEASIBLE) {
             fileName = fileName + "-feasible";
-        } else if (mode == 1) {
+        } else {
             fileName = fileName + "-optimum";
         }
 

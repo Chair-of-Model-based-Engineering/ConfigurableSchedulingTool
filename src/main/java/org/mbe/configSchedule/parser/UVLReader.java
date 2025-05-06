@@ -383,35 +383,31 @@ public final class UVLReader {
      * @return A List containing the exclude constraints as String-arrays
      */
     private static List<String[]> excludeConstraintsToString(List<Constraint> excludeConstraints) {
-
         List<String[]> constraintStrings = new ArrayList<>();
 
         // pa1 & !pa2 & !pa3 | !pa1 & pa2 & pa3 | !pa1 & !pa2 & pa3
         for (Constraint constraint : excludeConstraints) {
-            constraintStrings.add(findAndClause(constraint));
+            constraintStrings.add(getVariables(constraint).toArray(new String[0]));
         }
 
         return constraintStrings;
     }
 
     /**
-     * Helper function that strips a constraint of all its characters, except the task names
-     *
-     * @param constraint The constraint to be processed
-     * @return A String array containing the task names featured in the constraint
+     * Get a set of the names of all variables used in the given constraint.
+     * @param constraint The constraint from which to extract the variables.
+     * @return a set of all variables.
      */
-    private static String[] findAndClause(Constraint constraint) {
+    private static Set<String> getVariables(Constraint constraint) {
+        if (constraint instanceof LiteralConstraint) {
+            return Set.of(((LiteralConstraint) constraint).getLiteral());
+        }
 
-        String c = constraint.toString().split(" \\| ")[0];
-        c = c.replaceAll("[()!&]", "");
-        c = c.replaceAll("_\\S*", "");
-        c = c.replaceAll("\\s+", " ");
-        c = c.trim();
-
-        String[] substrings = c.split(" ");
-        String stop;
-
-        return substrings;
+        Set<String> variables = new HashSet<>();
+        for (Constraint part : constraint.getConstraintSubParts()) {
+            variables.addAll(getVariables(part));
+        }
+        return variables;
     }
 
     /**

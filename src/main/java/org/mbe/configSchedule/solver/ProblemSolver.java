@@ -58,6 +58,12 @@ public class ProblemSolver {
                 }
             }
         }
+
+        int longestMachineName = sp.getMachines().stream()
+                .mapToInt(m -> m.getName().length())
+                .max()
+                .orElse(0);
+
         // Create per machine output lines.
         String output = "";
         for (Machine machine : sp.getMachines()) {
@@ -66,8 +72,11 @@ public class ProblemSolver {
                 if (assignedJobs.get(machine) != null) {
                     Collections.sort(assignedJobs.get(machine), new SortTasks());
                 }
-                String solLineTasks = "Machine_" + machine.getName() + ": ";
-                String solLine = "           ";
+
+                StringBuilder solLineTasks = new StringBuilder("Machine " + machine.getName() + ": ");
+                solLineTasks.append(" ".repeat(Math.max(0, longestMachineName - machine.getName().length())));
+                StringBuilder solLine = new StringBuilder();
+                solLine.append(" ".repeat(longestMachineName + 10)); // 10 = length of "Machine_: "
 
                 if (assignedJobs.get(machine) != null) {
                     for (AssignedTask assignedTask : assignedJobs.get(machine)) {
@@ -75,11 +84,11 @@ public class ProblemSolver {
                             //String name = "job_" + assignedTask.jobID + "_task_" + assignedTask.taskID;
                             String name = assignedTask.getName();
                             // Add spaces to output to align columns.
-                            solLineTasks += String.format("%-15s", name);
+                            solLineTasks.append(String.format("%-15s", name));
 
                             String solTmp = "[" + assignedTask.getStart() + "," + (assignedTask.getStart() + assignedTask.getDuration()) + "]";
                             // Add spaces to output to align columns.
-                            solLine += String.format("%-15s", solTmp);
+                            solLine.append(String.format("%-15s", solTmp));
                         }
 
                     }

@@ -142,8 +142,10 @@ public final class UVLReader {
                 .map(c -> (ImplicationConstraint) c)
                 .toList();
 
+        List<String> machineNames = machines.stream().map(Machine::getName).toList();
         List<ImplicationConstraint> machineConstraints = implicationConstraints.stream()
-                .filter(c -> c.getRight().toString().startsWith("m"))
+                .filter(c -> c.getRight() instanceof LiteralConstraint && c.getLeft() instanceof LiteralConstraint)
+                .filter(c -> machineNames.contains(((LiteralConstraint) c.getRight()).getLiteral()))
                 .toList();
         Map<String, String> machineAssignments = machineConstraintsToString(machineConstraints);
 

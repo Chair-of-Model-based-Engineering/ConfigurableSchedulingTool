@@ -1,15 +1,10 @@
 package org.mbe.configSchedule.parser;
 
-
-import com.google.ortools.sat.Literal;
 import de.vill.main.UVLModelFactory;
 import de.vill.model.Feature;
 import de.vill.model.FeatureModel;
 import de.vill.model.Group;
-import de.vill.model.constraint.Constraint;
-import de.vill.model.constraint.ImplicationConstraint;
-import de.vill.model.constraint.LiteralConstraint;
-import de.vill.model.constraint.OrConstraint;
+import de.vill.model.constraint.*;
 import org.mbe.configSchedule.util.Machine;
 import org.mbe.configSchedule.util.Task;
 
@@ -19,6 +14,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public final class UVLReader {
 
@@ -59,13 +55,13 @@ public final class UVLReader {
     public static int parseDeadline(FeatureModel featureModel) {
         int deadline = -1;
 
-        Optional<Feature> machineParent = featureModel.getRootFeature().getChildren()
+        Optional<Feature> deadlineFeature = featureModel.getRootFeature().getChildren()
                 .stream()
                 .flatMap(c -> c.getFeatures().stream())
                 .filter(c -> c.getFeatureName().contains("dl"))
                 .findAny();
-        if (machineParent.isPresent()) {
-            deadline = getDuration(machineParent.get().getFeatureName());
+        if (deadlineFeature.isPresent()) {
+            deadline = getDuration(deadlineFeature.get().getFeatureName());
         }
         return deadline;
     }
@@ -88,24 +84,22 @@ public final class UVLReader {
             return machines;
         }
         List<Group> machineGroups = machineParent.get().getChildren();
-        List<Feature> mandatoryMachines = machineGroups
+        Stream<Feature> mandatoryMachines = machineGroups
                 .stream()
                 .filter(c -> c.GROUPTYPE == Group.GroupType.MANDATORY)
-                .flatMap(c -> c.getFeatures().stream())
-                .toList();
-        List<Feature> optionalMachines = machineGroups
-                .stream()
-                .filter(c -> c.GROUPTYPE == Group.GroupType.OPTIONAL)
-                .flatMap(c -> c.getFeatures().stream())
-                .toList();
+                .flatMap(c -> c.getFeatures().stream());
         machines.addAll(mandatoryMachines
-                .stream()
                 .map(c -> new Machine(c.getFeatureName(), false))
                 .toList());
-        machines.addAll(optionalMachines
+
+        Stream<Feature> optionalMachines = machineGroups
                 .stream()
+                .filter(c -> c.GROUPTYPE == Group.GroupType.OPTIONAL)
+                .flatMap(c -> c.getFeatures().stream());
+        machines.addAll(optionalMachines
                 .map(c -> new Machine(c.getFeatureName(), true))
                 .toList());
+
         return machines;
     }
 
@@ -140,73 +134,47 @@ public final class UVLReader {
                 .flatMap(c -> c.getFeatures().stream())
                 .toList();
 
-        List<Constraint> ctc = featureModel.getOwnConstraints();
+        List<Constraint> crossTreeConstraints = featureModel.getOwnConstraints();
 
-        List<Constraint> machineConstraints = ctc
+        List<ImplicationConstraint> implicationConstraints = crossTreeConstraints
                 .stream()
                 .filter(c -> c instanceof ImplicationConstraint)
-                .filter(c -> c.getConstraintSubParts().get(1).toString().startsWith("m"))
+                .map(c -> (ImplicationConstraint) c)
                 .toList();
-        List<String[]> machineConstraintsStrings = machineConstraintsToString(machineConstraints);
 
-        List<Constraint> orderConstraints = ctc
-                .stream()
-                .filter(c -> c instanceof ImplicationConstraint)
-                .filter(c -> ((ImplicationConstraint) c).getLeft().toString().startsWith("p")
-                        && ((ImplicationConstraint) c).getRight().toString().startsWith("p"))
+        List<ImplicationConstraint> machineConstraints = implicationConstraints.stream()
+                .filter(c -> c.getRight().toString().startsWith("m"))
+                .toList();
+        Map<String, String> machineAssignments = machineConstraintsToString(machineConstraints);
+
+        List<ImplicationConstraint> orderConstraints = implicationConstraints.stream()
+                .filter(c -> c.getLeft().toString().startsWith("p")
+                        && c.getRight().toString().startsWith("p"))
+                // This collector is needed because `Stream.toList()` returns an immutable list.
                 .collect(Collectors.toCollection(ArrayList::new));
 
-        List<Constraint> durationConstraints = ctc
-                .stream()
-                .filter(c -> c instanceof ImplicationConstraint)
-                .filter(c -> c.getConstraintSubParts().get(0).toString().startsWith("\"d")
-                        && c.getConstraintSubParts().get(0).toString().contains(" = "))
+        List<ImplicationConstraint> durationConstraints = implicationConstraints.stream()
+                .filter(c -> c.getLeft().toString().startsWith("\"d")
+                        && c.getLeft().toString().contains(" = "))
                 .toList();
 
-        List<Constraint> excludeConstraints = ctc
+        List<Constraint> excludeConstraints = crossTreeConstraints
                 .stream()
                 .filter(c -> c.toString().contains(" & "))
                 .toList();
 
-
         // First parse mandatory jobs, then add optional jobs
-        jobs = parseMandatoryJobs(orderConstraints, mandatoryTasks);
-        List<List<Task>> optionalJobs = parseOptionalJobs(optionalTasks, machineConstraintsStrings, machines);
-        for (List<Task> job : optionalJobs) {
-            jobs.add(job);
-        }
+        jobs = parseMandatoryJobs(orderConstraints, mandatoryTasks, machines, machineAssignments);
+        List<List<Task>> optionalJobs = parseOptionalJobs(optionalTasks, machineAssignments, machines);
+        jobs.addAll(optionalJobs);
 
         // Parse the constraints for excluding tasks and duration constraints
         List<String[]> excludeConstraintStrings = excludeConstraintsToString(excludeConstraints);
         Map<String, Map<Integer, List<String>>> TaskToDurationToRequiredTask = durationConstraintsToString(durationConstraints);
 
-        // Assign machines to tasks
-        // and complete the alternative groups
+        // complete the alternative groups
         for (List<Task> job : jobs) {
             for (Task task : job) {
-                // Find name of corresponding machine
-                String machineName = null;
-                for (String[] constraint : machineConstraintsStrings) {
-                    if (constraint[0].equals(task.getName())) {
-                        machineName = constraint[1];
-                        break;
-                    }
-                }
-
-                if (machineName != null) {
-                    // Find machine corresponding to machineName
-                    Machine machine;
-                    for (Machine m : machines) {
-                        if (machineName.equals(m.getName())) {
-                            task.setMachine(m);
-                            break;
-                        }
-                    }
-                } else {
-                    System.out.printf("Could not find a machine constraint for task %s \n", task.getName());
-                }
-
-
                 // Add the excluded tasks of the alternative group to the excludeTask-List
                 // Only optional tasks can exclude other optional tasks
                 if (task.isOptional()) {
@@ -231,9 +199,8 @@ public final class UVLReader {
                     }
                 }
 
-
                 // Add duration constraints
-                if (TaskToDurationToRequiredTask.keySet().contains(task.getName())) {
+                if (TaskToDurationToRequiredTask.containsKey(task.getName())) {
                     Map<Integer, List<String>> entry = TaskToDurationToRequiredTask.get(task.getName());
                     for (Integer duration : entry.keySet()) {
                         List<Task> requiredTasks = allTasks
@@ -246,13 +213,11 @@ public final class UVLReader {
             }
         }
 
-
         return jobs;
-
     }
 
     /**
-     * Gets the Duration from the feature wihh a name in the format "dp = x"
+     * Gets the Duration from the feature with a name in the format "dp = x"
      *
      * @param featureName Name of the feature
      * @return Integer value of the duration
@@ -270,22 +235,24 @@ public final class UVLReader {
     /**
      * Parses the mandatory jobs/ tasks. Also orders them in the correct order
      *
-     * @param orderConstraints List containing the task-order-constraints
-     * @param mandatoryTasks   List containing the features for the mandatory tasks
+     * @param orderConstraints   List containing the task-order-constraints
+     * @param mandatoryTasks     List containing the features for the mandatory tasks
+     * @param machines           List containing all machines.
+     * @param machineAssignments Map of assignments of machines to tasks.
      * @return The mandatory tasks, divided into their jobs
      */
-    private static List<List<Task>> parseMandatoryJobs(List<Constraint> orderConstraints, List<Feature> mandatoryTasks) {
-        Set<String[]> orderPairs = new HashSet<>();
+    private static List<List<Task>> parseMandatoryJobs(
+            List<ImplicationConstraint> orderConstraints,
+            List<Feature> mandatoryTasks,
+            List<Machine> machines,
+            Map<String, String> machineAssignments
+    ) {
         Set<String> notStarter = new HashSet<>();
         Set<String> starterTasks = new HashSet<>();
-        for (Constraint c : orderConstraints) {
-            LiteralConstraint lLiteral = (LiteralConstraint) c.getConstraintSubParts().get(0);
-            LiteralConstraint rLiteral = (LiteralConstraint) c.getConstraintSubParts().get(1);
-            String l = lLiteral.getLiteral();
-            String r = rLiteral.getLiteral();
+        for (ImplicationConstraint c : orderConstraints) {
+            String l = ((LiteralConstraint) c.getLeft()).getLiteral();
+            String r = ((LiteralConstraint) c.getRight()).getLiteral();
 
-            orderPairs.add(new String[]{l, r});
-            starterTasks.add(l);
             starterTasks.add(r);
             notStarter.add(l);
         }
@@ -309,13 +276,13 @@ public final class UVLReader {
                     break;
                 }
             }
+            setTaskMachine(task, machines, machineAssignments);
 
             String currentTaskName = task.getName();
-
             for (int i = 0; i < orderConstraints.size(); i++) {
-                Constraint orderPair = orderConstraints.get(i);
-                LiteralConstraint lLiteral = (LiteralConstraint) orderPair.getConstraintSubParts().get(0);
-                LiteralConstraint rLiteral = (LiteralConstraint) orderPair.getConstraintSubParts().get(1);
+                ImplicationConstraint orderPair = orderConstraints.get(i);
+                LiteralConstraint lLiteral = (LiteralConstraint) orderPair.getLeft();
+                LiteralConstraint rLiteral = (LiteralConstraint) orderPair.getRight();
                 String l = lLiteral.getLiteral();
                 String r = rLiteral.getLiteral();
                 if (r.equals(currentTaskName)) {
@@ -328,6 +295,7 @@ public final class UVLReader {
                             break;
                         }
                     }
+                    setTaskMachine(followTask, machines, machineAssignments);
 
                     job.add(followTask);
                     allTasks.add(followTask);
@@ -335,7 +303,6 @@ public final class UVLReader {
                     currentTaskName = followTask.getName();
                     orderConstraints.remove(orderPair);
                     i = -1;
-
                 }
             }
             jobs.add(job);
@@ -348,11 +315,11 @@ public final class UVLReader {
      * Parses the optional jobs/ tasks
      *
      * @param optionalTasks      List containing the features for the optional tasks
-     * @param machineConstraints List of the constraints assigning the tasks to machines in the style of [p,m]
+     * @param machineAssignments Assignment of machines to tasks.
      * @param machines           List of machines
      * @return The optional tasks, each in their own job
      */
-    private static List<List<Task>> parseOptionalJobs(List<Feature> optionalTasks, List<String[]> machineConstraints, List<Machine> machines) {
+    private static List<List<Task>> parseOptionalJobs(List<Feature> optionalTasks, Map<String, String> machineAssignments, List<Machine> machines) {
         List<List<Task>> jobs = new ArrayList<>();
 
         for (Feature feature : optionalTasks) {
@@ -362,31 +329,14 @@ public final class UVLReader {
             String name = feature.getFeatureName();
             Task task = new Task();
             task.setName(name);
-
-            // Set optional of task to true
             task.setOptional(true);
-
-            // Set duration of task
-            List<Group> durations = feature.getChildren();
-            List<Integer> durationIntegers = new ArrayList<>();
-            for (Group group : durations) {
-                for (Feature durationFeature : group.getFeatures()) {
-                    String durationString = durationFeature.getFeatureName();
-                    String[] durationSubstring = durationString.split(" = ");
-                    durationIntegers.add(Integer.parseInt(durationSubstring[durationSubstring.length - 1]));
-                }
-            }
-            Collections.sort(durationIntegers);
-            task.setDuration(new int[]{durationIntegers.get(0), durationIntegers.get(durationIntegers.size() - 1)});
+            setTaskDuration(feature, task);
+            setTaskMachine(task, machines, machineAssignments);
 
             // Set machine of task
+            Optional<String> machineName = Optional.ofNullable(machineAssignments.get(name));
             Optional<Machine> machine = machines.stream()
-                    .filter(m -> machineConstraints.stream()
-                            .filter(c -> c[0].equals(name))
-                            .map(c -> c[1])
-                            .findFirst()
-                            .map(cm -> cm.equals(m.getName()))
-                            .orElse(false))
+                    .filter(m -> machineName.map(cm -> cm.equals(m.getName())).orElse(false))
                     .findFirst();
 
             if (machine.isPresent()) {
@@ -394,7 +344,6 @@ public final class UVLReader {
             } else {
                 System.out.printf("Could not find machine for %s\n", name);
             }
-
 
             job.add(task);
             allTasks.add(task);
@@ -405,25 +354,25 @@ public final class UVLReader {
     }
 
     /**
-     * Parses the machine constraints to a List of String-arrays in the style of [p,m]
+     * Parses the machine constraints to a {@link Map} of tasks to machines (p->m).
      *
      * @param machineConstraints List of machine constraints
-     * @return A List containing the machine-constraint-pairs as String-arrays
+     * @return A Map containing the machine-constraint-pairs
      */
-    private static List<String[]> machineConstraintsToString(List<Constraint> machineConstraints) {
-        List<String[]> constraintStrings = new ArrayList<>();
+    private static Map<String, String> machineConstraintsToString(List<ImplicationConstraint> machineConstraints) {
+        Map<String, String> taskMachineMap = new HashMap<>();
 
-        for (Constraint constraint : machineConstraints) {
-            LiteralConstraint p = (LiteralConstraint) constraint.getConstraintSubParts().get(0);
-            LiteralConstraint m = (LiteralConstraint) constraint.getConstraintSubParts().get(1);
+        for (ImplicationConstraint constraint : machineConstraints) {
+            LiteralConstraint p = (LiteralConstraint) constraint.getLeft();
+            LiteralConstraint m = (LiteralConstraint) constraint.getRight();
 
             String pString = p.getLiteral();
             String mString = m.getLiteral();
 
-            constraintStrings.add(new String[]{pString, mString});
+            taskMachineMap.put(pString, mString);
         }
 
-        return constraintStrings;
+        return taskMachineMap;
     }
 
     /**
@@ -482,7 +431,30 @@ public final class UVLReader {
             }
         }
         Collections.sort(durationIntegers);
-        task.setDuration(new int[]{durationIntegers.get(0), durationIntegers.get(durationIntegers.size() - 1)});
+        task.setDuration(new int[] {durationIntegers.getFirst(), durationIntegers.getLast()});
+    }
+
+    /**
+     * Set the machine of a task.
+     * @param task               The task to which to assign the machine.
+     * @param machines           The list of all machines.
+     * @param machineAssignments The mapping of tasks to machines.
+     */
+    private static void setTaskMachine(Task task, List<Machine> machines, Map<String, String> machineAssignments) {
+        // Find name of corresponding machine
+        String machineName = machineAssignments.get(task.getName());
+        if (machineName == null) {
+            System.out.printf("Could not find a machine constraint for task %s \n", task.getName());
+            return;
+        }
+
+        // Find machine corresponding to machineName
+        for (Machine m : machines) {
+            if (machineName.equals(m.getName())) {
+                task.setMachine(m);
+                break;
+            }
+        }
     }
 
     /**
@@ -491,16 +463,18 @@ public final class UVLReader {
      * @param durationConstraints The List of duration constraints
      * @return A Map<String,Map<Integer, List<String>>> in the style of <taskname,<durationOfTask,requiredTasksForDuration>>>
      */
-    private static Map<String, Map<Integer, List<String>>> durationConstraintsToString(List<Constraint> durationConstraints) {
+    private static Map<String, Map<Integer, List<String>>> durationConstraintsToString(List<ImplicationConstraint> durationConstraints) {
         Map<String, Map<Integer, List<String>>> TaskToDurationToRequiredTask = new HashMap<>();
 
-        for (Constraint constraint : durationConstraints) {
-            LiteralConstraint d = (LiteralConstraint) constraint.getConstraintSubParts().get(0);
-            LiteralConstraint p = (LiteralConstraint) constraint.getConstraintSubParts().get(1);
+        for (ImplicationConstraint constraint : durationConstraints) {
+            LiteralConstraint d = (LiteralConstraint) constraint.getLeft();
+            LiteralConstraint p = (LiteralConstraint) constraint.getRight();
 
             String dString = d.getLiteral();
             String pString = p.getLiteral();
 
+            // TODO: Remove dependence on the name of the task in the duration.
+            //       Determine corresponding task from feature model.
             dString = dString.replace("\"\"", "");
             String[] dSubstrings = dString.split(" ");
             String taskName = dSubstrings[0].substring(1);

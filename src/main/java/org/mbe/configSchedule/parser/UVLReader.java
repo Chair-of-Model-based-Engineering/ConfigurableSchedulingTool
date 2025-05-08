@@ -444,7 +444,7 @@ public final class UVLReader {
             }
         }
         Collections.sort(durationIntegers);
-        task.setDuration(new int[] {durationIntegers.getFirst(), durationIntegers.getLast()});
+        task.setDurations(new int[] {durationIntegers.getFirst(), durationIntegers.getLast()});
     }
 
     /**

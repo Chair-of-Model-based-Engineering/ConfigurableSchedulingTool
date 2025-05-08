@@ -71,7 +71,7 @@ public class ConfigurationReader {
                 if (selectedFeatureNames.contains(task.getName()))
                     task.setOptional(false);
                 if (selectedDurations.containsKey(task.getName()))
-                    task.setDuration(new int[] {selectedDurations.get(task.getName()), selectedDurations.get(task.getName())});
+                    task.setDurations(new int[] {selectedDurations.get(task.getName()), selectedDurations.get(task.getName())});
             }
         }
 

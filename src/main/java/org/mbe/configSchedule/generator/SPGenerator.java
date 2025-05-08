@@ -5,9 +5,7 @@ import org.mbe.configSchedule.util.PathPreferences;
 import org.mbe.configSchedule.util.SchedulingProblem;
 import org.mbe.configSchedule.util.Task;
 
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.nio.file.Path;
 import java.nio.file.Files;
 import java.util.ArrayList;
@@ -133,7 +131,7 @@ public class SPGenerator {
                 task.setName("p" + taskID);
                 taskID++;
                 task.setMachine(machines.get(random.nextInt(machineCount)));
-                task.setDuration(new int[2]);
+                task.setDurations(new int[2]);
 
                 // If there are equal to or more durationOutlier than tasks to be created,
                 // then the task has to be an outlier
@@ -146,14 +144,14 @@ public class SPGenerator {
                         int dur1 = random.nextInt(10) + 6;
                         int dur2 = random.nextInt(10) + 6;
                         int[] duration = {dur1, dur2};
-                        task.setDuration(duration);
+                        task.setDurations(duration);
 
                         // Add tasks to mandatory tasks for the duration constraints
                         mandatoryTasksWithVarDuration.add(task);
                     } else {
                         int dur = random.nextInt(10) + 6;
                         int[] duration = {dur, dur};
-                        task.setDuration(duration);
+                        task.setDurations(duration);
                     }
                     durationOutlierCount--;
 
@@ -170,13 +168,13 @@ public class SPGenerator {
                             int dur1 = random.nextInt(10) + 6;
                             int dur2 = random.nextInt(10) + 6;
                             int[] duration = {dur1, dur2};
-                            task.setDuration(duration);
+                            task.setDurations(duration);
 
                             mandatoryTasksWithVarDuration.add(task);
                         } else {
                             int dur = random.nextInt(10) + 6;
                             int[] duration = {dur, dur};
-                            task.setDuration(duration);
+                            task.setDurations(duration);
                         }
                         durationOutlierCount--;
 
@@ -190,13 +188,13 @@ public class SPGenerator {
                             int dur1 = random.nextInt(5) + 1;
                             int dur2 = random.nextInt(5) + 1;
                             int[] duration = {dur1, dur2};
-                            task.setDuration(duration);
+                            task.setDurations(duration);
 
                             mandatoryTasksWithVarDuration.add(task);
                         } else {
                             int dur = random.nextInt(5) + 1;
                             int[] duration = {dur, dur};
-                            task.setDuration(duration);
+                            task.setDurations(duration);
                         }
                     }
                 }
@@ -233,7 +231,7 @@ public class SPGenerator {
             taskID++;
             task.setMachine(machines.get(random.nextInt(machineCount)));
             task.setOptional(true);
-            task.setDuration(new int[2]);
+            task.setDurations(new int[2]);
 
             // Randomly choose if task has a variable duration
             int varDurationChance = random.nextInt(2);
@@ -244,12 +242,12 @@ public class SPGenerator {
                 int dur1 = random.nextInt(5) + 1;
                 int dur2 = random.nextInt(5) + 1;
                 int[] duration = {dur1, dur2};
-                task.setDuration(duration);
+                task.setDurations(duration);
             } else {
                 // Not variable
                 int dur = random.nextInt(5) + 1;
                 int[] duration = {dur, dur};
-                task.setDuration(duration);
+                task.setDurations(duration);
             }
 
             // Add to optional tasks
@@ -311,7 +309,7 @@ public class SPGenerator {
                     task.setName("pa" + taskID);
                     taskID++;
                     task.setMachine(machines.get(random.nextInt(machineCount)));
-                    task.setDuration(new int[2]);
+                    task.setDurations(new int[2]);
 
                     // Randomly choose if the task has a variable duration
                     int variableDurationChance = random.nextInt(2);
@@ -321,11 +319,11 @@ public class SPGenerator {
                         int dur1 = random.nextInt(5) + 1;
                         int dur2 = random.nextInt(5) + 1;
                         int[] duration = {dur1, dur2};
-                        task.setDuration(duration);
+                        task.setDurations(duration);
                     } else {
                         int dur = random.nextInt(5) + 1;
                         int[] duration = {dur, dur};
-                        task.setDuration(duration);
+                        task.setDurations(duration);
                     }
 
                     task.setOptional(true);
@@ -392,8 +390,8 @@ public class SPGenerator {
                 Task task = mandatoryTasksWithVarDuration.get(i);
 
                 // Choose which duration value is part of the constraint
-                int minDuration = task.getDuration()[0];
-                int maxDuration = task.getDuration()[1];
+                int minDuration = task.getDurations()[0];
+                int maxDuration = task.getDurations()[1];
                 int durationForConstraint = random.nextInt((maxDuration + 1) - minDuration) + minDuration;
 
                 List<Task> requiredTasks = new ArrayList<>();
@@ -477,12 +475,12 @@ public class SPGenerator {
             for (int i = 0; i < job.size(); i++) {
                 Task task = job.get(i);
                 uvlString.append("\t\t\t\t\t" + task.getName() + "\n");
-                if (task.getDuration()[0] == task.getDuration()[1]) {
+                if (task.getDurations()[0] == task.getDurations()[1]) {
                     uvlString.append("\t\t\t\t\t\tmandatory\n");
-                    uvlString.append("\t\t\t\t\t\t\t\"d" + task.getName() + " = " + task.getDuration()[0] + "\"\n");
+                    uvlString.append("\t\t\t\t\t\t\t\"d" + task.getName() + " = " + task.getDurations()[0] + "\"\n");
                 } else {
                     uvlString.append("\t\t\t\t\t\talternative\n");
-                    for (int k = task.getDuration()[0]; k <= task.getDuration()[1]; k++) {
+                    for (int k = task.getDurations()[0]; k <= task.getDurations()[1]; k++) {
                         uvlString.append("\t\t\t\t\t\t\t\"d" + task.getName() + " = " + k + "\"\n");
                     }
                 }
@@ -513,12 +511,12 @@ public class SPGenerator {
         for (List<Task> job : optionalJobs) {
             for (Task task : job) {
                 uvlString.append("\t\t\t\t\t" + task.getName() + "\n");
-                if (task.getDuration()[0] == task.getDuration()[1]) {
+                if (task.getDurations()[0] == task.getDurations()[1]) {
                     uvlString.append("\t\t\t\t\t\tmandatory\n");
-                    uvlString.append("\t\t\t\t\t\t\t\"d" + task.getName() + " = " + task.getDuration()[0] + "\"\n");
+                    uvlString.append("\t\t\t\t\t\t\t\"d" + task.getName() + " = " + task.getDurations()[0] + "\"\n");
                 } else {
                     uvlString.append("\t\t\t\t\t\talternative\n");
-                    for (int k = task.getDuration()[0]; k <= task.getDuration()[1]; k++) {
+                    for (int k = task.getDurations()[0]; k <= task.getDurations()[1]; k++) {
                         uvlString.append("\t\t\t\t\t\t\t\"d" + task.getName() + " = " + k + "\"\n");
                     }
                 }

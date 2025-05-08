@@ -3,11 +3,9 @@ package org.mbe.configSchedule.util;
 import java.io.Serializable;
 import java.util.*;
 
-import static java.util.Optional.ofNullable;
-
 public class Task implements Serializable {
     private Machine machine;
-    private int[] duration;
+    private int[] durations;
     private String name;
     private boolean optional;
     private List<String> excludeTasks = new ArrayList<>();
@@ -17,14 +15,15 @@ public class Task implements Serializable {
      * Creates a new task.
      *
      * @param machine      contains on which machine this task is executed.
-     * @param duration     contains all possible durations of the task.
+     * @param durations    contains all possible durations of the task.
      * @param name         contains the name of the task.
      * @param optional     contains wether the task is optional.
      * @param excludeTasks contains all tasks which are excluded with this task.
      */
-    Task(Machine machine, int[] duration, String name, boolean optional, List<String> excludeTasks) {
+    Task(Machine machine, int[] durations, String name, boolean optional, List<String> excludeTasks) {
         this.machine = machine;
-        this.duration = duration;
+        this.durations = durations;
+        Arrays.sort(this.durations);
         this.name = name;
         this.optional = optional;
         this.excludeTasks = excludeTasks;
@@ -33,20 +32,17 @@ public class Task implements Serializable {
     /**
      * Creates a new task.
      *
-     * @param machine  contains on which machine this task is executed.
-     * @param duration contains all possible durations of the task.
-     * @param name     contains the name of the task.
-     * @param optional contains wether the task is optional.
+     * @param machine   contains on which machine this task is executed.
+     * @param durations contains all possible durations of the task.
+     * @param name      contains the name of the task.
+     * @param optional  contains wether the task is optional.
      */
-    Task(Machine machine, int[] duration, String name, boolean optional) {
-        this.machine = machine;
-        this.duration = duration;
-        this.name = name;
-        this.optional = optional;
+    Task(Machine machine, int[] durations, String name, boolean optional) {
+        this(machine, durations, name, optional, new ArrayList<>());
     }
 
     /**
-     * Creates a new Task
+     * Creates a new Task with no values set.
      */
     public Task() {
     }
@@ -74,18 +70,33 @@ public class Task implements Serializable {
      *
      * @return Array of Integers.
      */
-    public int[] getDuration() {
-        return duration;
+    public int[] getDurations() {
+        return durations;
     }
 
     /**
-     * Sets duration of task
+     * Sets possible durations of the task.
      *
-     * @param duration Array of Integers.
+     * @param durations Array of Integers.
      */
-    public void setDuration(int[] duration) {
-        this.duration = duration;
-        Arrays.sort(this.duration);
+    public void setDurations(int[] durations) {
+        this.durations = durations;
+        Arrays.sort(this.durations);
+    }
+
+    /**
+     * Add a possible duration to the task.
+     *
+     * @param duration The duration to add.
+     */
+    public void addDuration(int duration) {
+        if (this.durations == null)
+            this.durations = new int[1];
+        else
+            this.durations = Arrays.copyOf(this.durations, this.durations.length + 1);
+
+        this.durations[this.durations.length - 1] = duration;
+        Arrays.sort(this.durations);
     }
 
     /**
@@ -180,7 +191,7 @@ public class Task implements Serializable {
     public String toString() {
         return String.format("p: %s/ d: %s/ m: %s/ o: %b",
                 Optional.ofNullable(this.name).orElse("-"),
-                Optional.ofNullable(this.duration).map(Arrays::toString).orElse("-"),
+                Optional.ofNullable(this.durations).map(Arrays::toString).orElse("-"),
                 Optional.ofNullable(this.machine).map(Machine::getName).orElse("-"),
                 this.optional);
     }

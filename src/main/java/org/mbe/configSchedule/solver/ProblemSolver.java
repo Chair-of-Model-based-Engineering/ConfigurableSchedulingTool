@@ -167,7 +167,7 @@ public class ProblemSolver {
         int maxDuration = 0;
         for (List<Task> job : sp.getJobs()) {
             for (Task task : job) {
-                maxDuration += task.getDuration()[1];
+                maxDuration += task.getDurations()[1];
             }
         }
 
@@ -219,7 +219,7 @@ public class ProblemSolver {
                     BoolVar bool = model.newBoolVar(task.getName() + "_active");
                     taskType.setActive(bool);
                     taskType.setInterval(model.newOptionalIntervalVar(taskType.getStart(),
-                            model.newIntVar(task.getDuration()[0], task.getDuration()[1], task.getName() + "_duration"),
+                            model.newIntVar(task.getDurations()[0], task.getDurations()[1], task.getName() + "_duration"),
                             taskType.getEnd(),
                             taskType.getActive(),
                             "interval_" + suffix));
@@ -240,7 +240,7 @@ public class ProblemSolver {
                     // Erstellt ein neues Interval mit (start, size, end, name)
                     taskType.setInterval(model.newIntervalVar(
                             taskType.getStart(),
-                            model.newIntVar(task.getDuration()[0], task.getDuration()[1], task.getName() + "_duration"),
+                            model.newIntVar(task.getDurations()[0], task.getDurations()[1], task.getName() + "_duration"),
                             taskType.getEnd(),
                             "interval" + suffix));
 

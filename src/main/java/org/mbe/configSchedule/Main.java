@@ -215,7 +215,7 @@ public class Main {
                         task.getName(),
                         task.getMachine().getName(),
                         task.isOptional(),
-                        Arrays.toString(task.getDuration()),
+                        Arrays.toString(task.getDurations()),
                         task.getExcludeTasks().toString(),
                         task.getDurationCons().toString()
                 );

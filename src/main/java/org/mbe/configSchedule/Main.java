@@ -209,22 +209,20 @@ public class Main {
         System.out.println("*********************** \n" +
                 "Scheduling problem:");
         System.out.println("Deadline: " + sp.getDeadline());
-        int index = 0;
+        int jobIndex = 0;
         for (List<Task> job : sp.getJobs()) {
-            System.out.println("Job " + index + ": ");
+            System.out.println("Job " + jobIndex + ": ");
             for (Task task : job) {
-                System.out.print(task.getName() + ", d: [" + task.getDuration()[0] + "," + task.getDuration()[1] + "], m: " + task.getMachine().getName() + ", o: " + task.isOptional()
-                        + ", e: " + task.getExcludeTasks().toString() + ", d: ");
-                for (Map.Entry<Integer, List<Task>> item : task.getDurationCons().entrySet()) {
-                    System.out.print("[" + item.getKey() + "; ");
-                    for (Task t : item.getValue()) {
-                        System.out.print(t.getName() + ",");
-                    }
-                    System.out.print("], ");
-                }
-                System.out.println();
+                System.out.printf("%s -> m: %s, o: %b, d: %s, e: %s, d: %s%n",
+                        task.getName(),
+                        task.getMachine().getName(),
+                        task.isOptional(),
+                        Arrays.toString(task.getDuration()),
+                        task.getExcludeTasks().toString(),
+                        task.getDurationCons().toString()
+                );
             }
-            index++;
+            jobIndex++;
         }
 
         System.out.println("\n*********************** \n");

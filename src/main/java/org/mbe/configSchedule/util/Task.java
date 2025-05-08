@@ -182,6 +182,6 @@ public class Task implements Serializable {
                 Optional.ofNullable(this.name).orElse("-"),
                 Optional.ofNullable(this.duration).map(Arrays::toString).orElse("-"),
                 Optional.ofNullable(this.machine).map(Machine::getName).orElse("-"),
-                Optional.ofNullable(this.optional).orElse(null));
+                this.optional);
     }
 }

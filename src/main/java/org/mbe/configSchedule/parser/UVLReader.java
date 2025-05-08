@@ -149,9 +149,15 @@ public final class UVLReader {
                 .toList();
         Map<String, String> machineAssignments = machineConstraintsToString(machineConstraints);
 
+        Set<String> taskNames = Stream.concat(mandatoryTasks.stream(), optionalTasks.stream())
+                .map(Feature::getFeatureName)
+                .collect(Collectors.toUnmodifiableSet());
         List<ImplicationConstraint> orderConstraints = implicationConstraints.stream()
-                .filter(c -> c.getLeft().toString().startsWith("p")
-                        && c.getRight().toString().startsWith("p"))
+                .filter(c -> {
+                    String leftTaskName = ((LiteralConstraint) c.getLeft()).getLiteral();
+                    String rightTaskName = ((LiteralConstraint) c.getRight()).getLiteral();
+                    return taskNames.containsAll(List.of(leftTaskName, rightTaskName));
+                })
                 // This collector is needed because `Stream.toList()` returns an immutable list.
                 .collect(Collectors.toCollection(ArrayList::new));
 

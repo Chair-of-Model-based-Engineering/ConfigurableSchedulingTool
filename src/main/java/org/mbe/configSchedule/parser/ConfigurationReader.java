@@ -82,7 +82,9 @@ public class ConfigurationReader {
         // Expressions
         String exprRoot = "//description";
         String exprOrder = "//imp";
+        // TODO: Remove dependency on task name starting with 'p'
         String exprTask = "//feature[starts-with(@name, 'p')]";
+        // TODO: Remove dependency on machine name starting with 'm'
         String exprMachine = "//feature[starts-with(@name, 'm')]";
         String exprDuration = "//feature[starts-with(@name, 'd')]";
         String expressionDeadline = "//feature[starts-with(@name, 'dl')]/@name";
@@ -214,6 +216,7 @@ public class ConfigurationReader {
             }
             // If the first constraint string begins with "m", the constraint is an assignment from task to machine
             // If it begins with "p", then it is an task order constraint
+            // TODO: Remove dependency on machines and tasks starting with 'm' and 'p', respectively
             if (constrPair[1].startsWith("m")) {
                 if (nameToTask.containsKey(constrPair[0]) && nameToMachine.containsKey(constrPair[1])) {
                     Task task = nameToTask.get(constrPair[0]);

@@ -6,10 +6,9 @@ import org.mbe.configSchedule.parser.UVLReader;
 import java.io.Serializable;
 import java.util.*;
 
-import static java.util.Arrays.stream;
-
 
 public class SchedulingProblem implements Serializable {
+    private final String name;
     private List<List<Task>> jobs;
     private List<Machine> machines;
     private int deadline;
@@ -17,11 +16,13 @@ public class SchedulingProblem implements Serializable {
     /**
      * Creates new object of type SchedulingProblem.
      *
+     * @param name     the name/identifier of the problem.
      * @param jobs     a {@link List} of {@link List} of {@link Task Tasks}.
      * @param machines a {@link List} of {@link Machine Machines}.
      * @param deadline deadline of the scheduling problem.
      */
-    public SchedulingProblem(List<List<Task>> jobs, List<Machine> machines, int deadline) {
+    public SchedulingProblem(String name, List<List<Task>> jobs, List<Machine> machines, int deadline) {
+        this.name = name;
         this.jobs = jobs;
         this.machines = machines;
         this.deadline = deadline;
@@ -33,6 +34,7 @@ public class SchedulingProblem implements Serializable {
      * @param featureModel parsed feature model.
      */
     public SchedulingProblem(FeatureModel featureModel) {
+        this.name = UVLReader.parseName(featureModel);
         this.deadline = UVLReader.parseDeadline(featureModel);
         this.machines = UVLReader.parseMachines(featureModel);
         this.jobs = UVLReader.parseJobs(featureModel, machines);
@@ -92,4 +94,11 @@ public class SchedulingProblem implements Serializable {
         this.deadline = deadline;
     }
 
+    /**
+     * Get the name of the scheduling problem.
+     * @return the scheduling problem's name.
+     */
+    public String getName() {
+        return name;
+    }
 }

@@ -77,7 +77,7 @@ public class FMReader {
         readExcludeConstraints(xPath, modellDoc, taskNameMap);
         readDurationConstraints(durationConstraints, allTasks);
 
-        SchedulingProblem sp = new SchedulingProblem(jobs, machines, deadline);
+        SchedulingProblem sp = new SchedulingProblem(name, jobs, machines, deadline);
         return sp;
     }
 

@@ -64,8 +64,8 @@ public class SPGenerator {
         createDurationConstraints(optionalTasks, mandatoryTasksWithVarDuration, durationConstraints, maxDurationRequires);
 
         // Create a SchedulingProblem from the beforehand created lists
-        SchedulingProblem sp = new SchedulingProblem(jobs, machines, deadline);
-        String problemUVL = parseToUVL(sp, name);
+        SchedulingProblem sp = new SchedulingProblem(name, jobs, machines, deadline);
+        String problemUVL = parseToUVL(sp);
 
         PathPreferences prefs = new PathPreferences();
         Path path = Path.of(prefs.getProblemSavePath());
@@ -430,15 +430,14 @@ public class SPGenerator {
      * Parses the given scheduling problem to the UVL-format
      *
      * @param sp   SchedulingProblem-Object for which the UVL-file is to be created
-     * @param name Name of the problemm
      * @return String in the format of a UVL-file
      */
-    private static String parseToUVL(SchedulingProblem sp, String name) {
+    private static String parseToUVL(SchedulingProblem sp) {
         StringBuilder uvlString = new StringBuilder();
         uvlString.append("features\n");
-        uvlString.append("\t" + name + " {featuredescription__ \'" + sp.getDeadline() + "\', abstract true}\n");
+        uvlString.append("\t").append(sp.getName()).append(" {featuredescription__ '").append(sp.getDeadline()).append("', abstract true}\n");
         uvlString.append("\t\tmandatory\n");
-        uvlString.append("\t\t\t\"dl = " + sp.getDeadline() + "\"\n");
+        uvlString.append("\t\t\t\"dl = ").append(sp.getDeadline()).append("\"\n");
 
         List<String>[] cons = parseTasks(sp.getJobs(), uvlString);
         parseMachines(sp.getMachines(), uvlString);

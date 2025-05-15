@@ -47,6 +47,15 @@ public final class UVLReader {
     }
 
     /**
+     * Parses the name from the feature model. The name is the value of the root feature.
+     * @param featureModel The feature model from which the name should be retrieved.
+     * @return the feature model's name
+     */
+    public static String parseName(FeatureModel featureModel) {
+        return featureModel.getRootFeature().getFeatureName();
+    }
+
+    /**
      * Parses the deadline from the feature model
      *
      * @param featureModel The feature model from which the deadline should be retrieved
@@ -504,5 +513,4 @@ public final class UVLReader {
 
         return TaskToDurationToRequiredTask;
     }
-
 }

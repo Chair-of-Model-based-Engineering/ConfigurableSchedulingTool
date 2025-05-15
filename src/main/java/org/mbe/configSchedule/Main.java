@@ -4,7 +4,6 @@ import com.google.ortools.Loader;
 import com.opencsv.CSVWriter;
 import de.vill.model.FeatureModel;
 import org.mbe.configSchedule.generator.SPGenerator;
-import org.mbe.configSchedule.parser.FMReader;
 import org.mbe.configSchedule.parser.UVLReader;
 import org.mbe.configSchedule.solver.ConfigurationSolver;
 import org.mbe.configSchedule.solver.ProblemSolver;
@@ -157,8 +156,7 @@ public class Main {
      * @throws IOException if the problem file cannot be read or the result file cannot be written.
      */
     private static void solveInstanceBased(String modelPath, String configDirPath, SolveComplexity solveMode) throws ParserConfigurationException, IOException, SAXException, XPathExpressionException {
-        // TODO: Make instance-based solving work with UVL
-        SchedulingProblem sp = FMReader.readFM(modelPath);
+        SchedulingProblem sp = ReadProblemUVL(modelPath);
         PrintProblem(sp);
         ConfigurationSolverReturn csr;
         if (solveMode == SolveComplexity.FEASIBLE) {

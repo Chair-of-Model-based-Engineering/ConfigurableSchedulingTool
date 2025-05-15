@@ -54,7 +54,7 @@ It is also possible to specify the complete path.
 ```
 solve [o|f] <problemFilePath>
 ```
-If you want to solve a variable problem via its instances, the path to the folder containing the valid configurations of the problem has to be specified, as well as the path to the xml-file of the corresponding feature model. In this case, only xml-files are supported.
+If you want to solve a variable problem via its instances, the path to the folder containing the valid configurations of the problem has to be specified, as well as the path to the uvl-file of the corresponding feature model.
 ```
-solve [o|f] <fmXmlFilePath> <configsFolderPath>
+solve [o|f] <problemFilePath> <configsFolderPath>
 ```

@@ -434,17 +434,13 @@ public final class UVLReader {
      * @param task    The Task-Object for which the duration should be set
      */
     private static void setTaskDuration(Feature feature, Task task) {
-        List<Group> durations = feature.getChildren();
-        List<Integer> durationIntegers = new ArrayList<>();
-        for (Group group : durations) {
+        for (Group group : feature.getChildren()) {
             for (Feature durationFeature : group.getFeatures()) {
                 String durationString = durationFeature.getFeatureName();
-                String[] durationSubstring = durationString.split(" = ");
-                durationIntegers.add(Integer.parseInt(durationSubstring[durationSubstring.length - 1]));
+                int duration = Integer.parseInt(durationString.split(" = ")[1]);
+                task.addDuration(duration);
             }
         }
-        Collections.sort(durationIntegers);
-        task.setDurations(new int[] {durationIntegers.getFirst(), durationIntegers.getLast()});
     }
 
     /**

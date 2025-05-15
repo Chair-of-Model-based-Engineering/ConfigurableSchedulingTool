@@ -5,7 +5,7 @@ import java.util.*;
 
 public class Task implements Serializable {
     private Machine machine;
-    private int[] durations;
+    private int[] durations = new int[0];
     private String name;
     private boolean optional;
     private List<String> excludeTasks = new ArrayList<>();
@@ -71,7 +71,29 @@ public class Task implements Serializable {
      * @return Array of Integers.
      */
     public int[] getDurations() {
-        return durations;
+        return this.durations;
+    }
+
+    /**
+     * Gets the minimum duration of the task.
+     *
+     * @return the minimum duration of the task
+     */
+    public int getMinimumDuration() {
+        if (this.durations.length == 0)
+            return 0;
+        return this.durations[0];
+    }
+
+    /**
+     * Gets the maximum duration of the task.
+     *
+     * @return the maximum duration of the task
+     */
+    public int getMaximumDuration() {
+        if (this.durations.length == 0)
+            return 0;
+        return this.durations[this.durations.length - 1];
     }
 
     /**

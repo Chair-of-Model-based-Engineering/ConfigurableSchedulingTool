@@ -48,13 +48,12 @@ public class SPGenerator {
         List<Task[]> optionalTasks = new ArrayList<>();
         List<Task> mandatoryTasksWithVarDuration = new ArrayList<>();
 
-        Random random = new Random();
-
         if (jobCount > taskCount) {
             System.out.println("Please enter more tasks than jobs");
         }
 
         // Fill the necessary lists (jobs and machines)
+        // TODO: Generate non-continuous durations somewhere (probably in the standard jobs)
         createMachines(machineCount, machines);
         createStandardJobs(taskCount, jobCount, machineCount, durationOutlierCount, machines, jobs, mandatoryTasksWithVarDuration);
         createOptionalTasks(optionalCount, machineCount, machines, jobs, optionalTasks);
@@ -68,7 +67,7 @@ public class SPGenerator {
         PathPreferences prefs = new PathPreferences();
         Path path = Path.of(prefs.getProblemSavePath());
 
-        if(!Files.exists(path)) {
+        if (!Files.exists(path)) {
             Files.createDirectories(path);
         }
 
@@ -390,8 +389,8 @@ public class SPGenerator {
                 Task task = mandatoryTasksWithVarDuration.get(i);
 
                 // Choose which duration value is part of the constraint
-                int minDuration = task.getDurations()[0];
-                int maxDuration = task.getDurations()[1];
+                int minDuration = task.getMinimumDuration();
+                int maxDuration = task.getMaximumDuration();
                 int durationForConstraint = random.nextInt((maxDuration + 1) - minDuration) + minDuration;
 
                 List<Task> requiredTasks = new ArrayList<>();
@@ -427,7 +426,7 @@ public class SPGenerator {
     /**
      * Parses the given scheduling problem to the UVL-format
      *
-     * @param sp   SchedulingProblem-Object for which the UVL-file is to be created
+     * @param sp SchedulingProblem-Object for which the UVL-file is to be created
      * @return String in the format of a UVL-file
      */
     private static String parseToUVL(SchedulingProblem sp) {
@@ -463,7 +462,7 @@ public class SPGenerator {
         List<String> machineCons = new ArrayList<>();
 
         for (List<Task> job : jobs) {
-            if (job.get(0).isOptional()) {
+            if (job.getFirst().isOptional()) {
                 optionalJobs.add(job);
             } else {
                 mandatoryJobs.add(job);
@@ -474,19 +473,7 @@ public class SPGenerator {
         for (List<Task> job : mandatoryJobs) {
             for (int i = 0; i < job.size(); i++) {
                 Task task = job.get(i);
-                uvlString.append("\t\t\t\t\t" + task.getName() + "\n");
-                if (task.getDurations()[0] == task.getDurations()[1]) {
-                    uvlString.append("\t\t\t\t\t\tmandatory\n");
-                    uvlString.append("\t\t\t\t\t\t\t\"d" + task.getName() + " = " + task.getDurations()[0] + "\"\n");
-                } else {
-                    uvlString.append("\t\t\t\t\t\talternative\n");
-                    for (int k = task.getDurations()[0]; k <= task.getDurations()[1]; k++) {
-                        uvlString.append("\t\t\t\t\t\t\t\"d" + task.getName() + " = " + k + "\"\n");
-                    }
-                }
-
-
-                machineCons.add("\t" + task.getName() + " => " + task.getMachine().getName() + "\n");
+                parseTask(task, uvlString, machineCons);
 
                 // Add constraint for the task order in the job
                 if (i < job.size() - 1) {
@@ -510,28 +497,12 @@ public class SPGenerator {
         uvlString.append("\t\t\t\toptional\n");
         for (List<Task> job : optionalJobs) {
             for (Task task : job) {
-                uvlString.append("\t\t\t\t\t" + task.getName() + "\n");
-                if (task.getDurations()[0] == task.getDurations()[1]) {
-                    uvlString.append("\t\t\t\t\t\tmandatory\n");
-                    uvlString.append("\t\t\t\t\t\t\t\"d" + task.getName() + " = " + task.getDurations()[0] + "\"\n");
-                } else {
-                    uvlString.append("\t\t\t\t\t\talternative\n");
-                    for (int k = task.getDurations()[0]; k <= task.getDurations()[1]; k++) {
-                        uvlString.append("\t\t\t\t\t\t\t\"d" + task.getName() + " = " + k + "\"\n");
-                    }
-                }
-
-                machineCons.add("\t" + task.getName() + " => " + task.getMachine().getName() + "\n");
+                parseTask(task, uvlString, machineCons);
 
                 if (!task.getExcludeTasks().isEmpty() && !excludeTasksAlreadyHandled.contains(task.getName())) {
-                    for (String handledTask : task.getExcludeTasks()) {
-                        excludeTasksAlreadyHandled.add(handledTask);
-                    }
+                    excludeTasksAlreadyHandled.addAll(task.getExcludeTasks());
 
-                    List<String> alternativeGroup = new ArrayList<>();
-                    for (String excludeTask : task.getExcludeTasks()) {
-                        alternativeGroup.add(excludeTask);
-                    }
+                    List<String> alternativeGroup = new ArrayList<>(task.getExcludeTasks());
                     alternativeGroup.add(task.getName());
 
                     StringBuilder excludeConString = new StringBuilder();
@@ -568,6 +539,30 @@ public class SPGenerator {
         cons[3] = machineCons;
 
         return cons;
+    }
+
+    /**
+     * Appends the task as a feature with durations and its machine constraints.
+     *
+     * @param task        The task to parse.
+     * @param uvlString   The UVL-String to be appended.
+     * @param machineCons The machine constraints list to be appended.
+     */
+    private static void parseTask(Task task, StringBuilder uvlString, List<String> machineCons) {
+        uvlString.append("\t\t\t\t\t").append(task.getName()).append("\n");
+
+        String durationStringTemplate = "\t\t\t\t\t\t\t\"d%s = %d\"\n";
+        if (task.getDurations().length == 1) {
+            uvlString.append("\t\t\t\t\t\tmandatory\n");
+            uvlString.append(durationStringTemplate.formatted(task.getName(), task.getMinimumDuration()));
+        } else {
+            uvlString.append("\t\t\t\t\t\talternative\n");
+            for (int duration : task.getDurations()) {
+                uvlString.append(durationStringTemplate.formatted(task.getName(), duration));
+            }
+        }
+
+        machineCons.add("\t" + task.getName() + " => " + task.getMachine().getName() + "\n");
     }
 
     /**

@@ -1,6 +1,7 @@
 package org.mbe.configSchedule.solver;
 
 import com.google.ortools.sat.*;
+import com.google.ortools.util.Domain;
 import org.mbe.configSchedule.util.*;
 
 import java.util.*;
@@ -167,7 +168,7 @@ public class ProblemSolver {
         int maxDuration = 0;
         for (List<Task> job : sp.getJobs()) {
             for (Task task : job) {
-                maxDuration += task.getDurations()[1];
+                maxDuration += task.getMaximumDuration();
             }
         }
 
@@ -218,8 +219,10 @@ public class ProblemSolver {
                 if (task.isOptional()) {
                     BoolVar bool = model.newBoolVar(task.getName() + "_active");
                     taskType.setActive(bool);
+                    long[] taskDurations = Arrays.stream(task.getDurations()).asLongStream().toArray();
+                    IntVar possibleDurations = model.newIntVarFromDomain(Domain.fromValues(taskDurations), task.getName() + "_duration");
                     taskType.setInterval(model.newOptionalIntervalVar(taskType.getStart(),
-                            model.newIntVar(task.getDurations()[0], task.getDurations()[1], task.getName() + "_duration"),
+                            possibleDurations,
                             taskType.getEnd(),
                             taskType.getActive(),
                             "interval_" + suffix));
@@ -238,9 +241,11 @@ public class ProblemSolver {
                     // Wenn die Task nicht optional ist wird ein normales IntervalVar erstellt, das immer performed
                 } else {
                     // Erstellt ein neues Interval mit (start, size, end, name)
+                    long[] taskDurations = Arrays.stream(task.getDurations()).asLongStream().toArray();
+                    IntVar possibleDurations = model.newIntVarFromDomain(Domain.fromValues(taskDurations), task.getName() + "_duration");
                     taskType.setInterval(model.newIntervalVar(
                             taskType.getStart(),
-                            model.newIntVar(task.getDurations()[0], task.getDurations()[1], task.getName() + "_duration"),
+                            possibleDurations,
                             taskType.getEnd(),
                             "interval" + suffix));
 

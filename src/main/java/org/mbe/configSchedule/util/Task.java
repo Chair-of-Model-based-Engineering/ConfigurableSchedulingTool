@@ -112,13 +112,17 @@ public class Task implements Serializable {
      * @param duration The duration to add.
      */
     public void addDuration(int duration) {
-        if (this.durations == null)
-            this.durations = new int[1];
-        else
-            this.durations = Arrays.copyOf(this.durations, this.durations.length + 1);
+        if (this.durations == null) {
+            this.durations = new int[] {duration};
+        } else {
+            // Don't include durations multiple times.
+            for (int d : this.durations)
+                if (d == duration) return;
 
-        this.durations[this.durations.length - 1] = duration;
-        Arrays.sort(this.durations);
+            this.durations = Arrays.copyOf(this.durations, this.durations.length + 1);
+            this.durations[this.durations.length - 1] = duration;
+            Arrays.sort(this.durations);
+        }
     }
 
     /**

@@ -130,71 +130,23 @@ public class SPGenerator {
                 task.setName("p" + taskID);
                 taskID++;
                 task.setMachine(machines.get(random.nextInt(machineCount)));
-                task.setDurations(new int[2]);
 
                 // If there are equal to or more durationOutlier than tasks to be created,
                 // then the task has to be an outlier
                 if (((taskCount - taskID) == durationOutlierCount) && (durationOutlierCount > 0)) {
-                    // Should duration be variable?
-                    int variableDurationChance = random.nextInt(2);
-                    // 0 = Variable duration, 1 = static duration
-                    if (variableDurationChance == 0) {
-                        // between 6 and 15
-                        int dur1 = random.nextInt(10) + 6;
-                        int dur2 = random.nextInt(10) + 6;
-                        int[] duration = {dur1, dur2};
-                        task.setDurations(duration);
-
-                        // Add tasks to mandatory tasks for the duration constraints
-                        mandatoryTasksWithVarDuration.add(task);
-                    } else {
-                        int dur = random.nextInt(10) + 6;
-                        int[] duration = {dur, dur};
-                        task.setDurations(duration);
-                    }
+                    setRandomDurations(task, 6, 10, random, mandatoryTasksWithVarDuration);
                     durationOutlierCount--;
-
                 } else {
                     // Tasks duration still has the chance to be an outlier
                     int outLierChance = random.nextInt(2);
                     // 0 = Outlier, 1 = not an outlier
                     if (outLierChance == 0 && durationOutlierCount > 0) {
-                        // Should it be a variable duration?
-                        int variableDurationChance = random.nextInt(2);
-                        // 0 = Variable duration, 1 = Static duration
-                        if (variableDurationChance == 0) {
-                            // Between 6 and 15
-                            int dur1 = random.nextInt(10) + 6;
-                            int dur2 = random.nextInt(10) + 6;
-                            int[] duration = {dur1, dur2};
-                            task.setDurations(duration);
-
-                            mandatoryTasksWithVarDuration.add(task);
-                        } else {
-                            int dur = random.nextInt(10) + 6;
-                            int[] duration = {dur, dur};
-                            task.setDurations(duration);
-                        }
+                        setRandomDurations(task, 6,10, random, mandatoryTasksWithVarDuration);
                         durationOutlierCount--;
 
-                        // No outlier
+                    // No outlier
                     } else {
-                        // Should it be a variable duration?
-                        int variableDurationChance = random.nextInt(2);
-                        // 0 = Variable duration, 1 = Static duration
-                        if (variableDurationChance == 0) {
-                            // Between 1 and 5
-                            int dur1 = random.nextInt(5) + 1;
-                            int dur2 = random.nextInt(5) + 1;
-                            int[] duration = {dur1, dur2};
-                            task.setDurations(duration);
-
-                            mandatoryTasksWithVarDuration.add(task);
-                        } else {
-                            int dur = random.nextInt(5) + 1;
-                            int[] duration = {dur, dur};
-                            task.setDurations(duration);
-                        }
+                        setRandomDurations(task, 1, 5, random, mandatoryTasksWithVarDuration);
                     }
                 }
 
@@ -202,6 +154,25 @@ public class SPGenerator {
                 job.add(task);
             }
             jobs.add(job);
+        }
+    }
+
+    private static void setRandomDurations(Task task, int minimum, int variability, Random random, List<Task> mandatoryTasksWithVarDuration) {
+        // Should duration be variable?
+        int variableDurationChance = random.nextInt(2);
+        // 0 = Variable duration, 1 = static duration
+        if (variableDurationChance == 0) {
+            // TODO: Make amount of durations (1 to 5) configurable, e.g. via cli arguments
+            int durationCount = random.nextInt(5) + 1;
+            for (int i = 0; i < durationCount; i++) {
+                task.addDuration(random.nextInt(variability) + minimum);
+            }
+
+            // Add tasks to mandatory tasks for the duration constraints
+            mandatoryTasksWithVarDuration.add(task);
+        } else {
+            int duration = random.nextInt(variability) + minimum;
+            task.setDurations(new int[] {duration});
         }
     }
 
@@ -389,9 +360,8 @@ public class SPGenerator {
                 Task task = mandatoryTasksWithVarDuration.get(i);
 
                 // Choose which duration value is part of the constraint
-                int minDuration = task.getMinimumDuration();
-                int maxDuration = task.getMaximumDuration();
-                int durationForConstraint = random.nextInt((maxDuration + 1) - minDuration) + minDuration;
+                int[] durations = task.getDurations();
+                int durationForConstraint = durations[random.nextInt(durations.length)];
 
                 List<Task> requiredTasks = new ArrayList<>();
 

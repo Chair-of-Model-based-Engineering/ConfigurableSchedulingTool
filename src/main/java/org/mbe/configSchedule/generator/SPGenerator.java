@@ -254,8 +254,7 @@ public class SPGenerator {
             }
             // Calculate how many tasks belong in one group
             // If there are e.g. 5 tasks and 2 groups -> g1 = (1,2,3), g2 = (4,5)
-            double tasksPerGroupD = altCount / altGroupCount;
-            int tasksPerGroup = (int) floor(tasksPerGroupD);
+            int tasksPerGroup = (int) floor((double) altCount / altGroupCount);
             int restTasksAlt = altCount % tasksPerGroup;
             int tasksInGroup;
 

@@ -18,6 +18,7 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
+import java.util.stream.Collectors;
 
 // =======================================================================
 // Basierend auf dem Jobshop-Problem-Beispiel von Google OR-Tools
@@ -211,13 +212,18 @@ public class Main {
         for (List<Task> job : sp.getJobs()) {
             System.out.println("Job " + jobIndex + ": ");
             for (Task task : job) {
-                System.out.printf("%s -> m: %s, o: %b, d: %s, e: %s, d: %s%n",
+                String taskDurationConsString = task.getDurationCons().entrySet().stream().map(entry -> {
+                    String taskList = entry.getValue().stream().map(Task::getName).collect(Collectors.joining(", "));
+                    return "%d -> {%s}".formatted(entry.getKey(), taskList);
+                }).collect(Collectors.joining(", "));
+
+                System.out.printf("%s => m: %s, o: %b, d: %s, e: %s, d: {%s}%n",
                         task.getName(),
                         task.getMachine().getName(),
                         task.isOptional(),
                         Arrays.toString(task.getDurations()),
                         task.getExcludeTasks().toString(),
-                        task.getDurationCons().toString()
+                        taskDurationConsString
                 );
             }
             jobIndex++;

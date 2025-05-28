@@ -57,8 +57,10 @@ public class Main {
                 spgenerator.generateProblem(intParameter[0], intParameter[1], intParameter[2], intParameter[3], intParameter[4], intParameter[5],
                         intParameter[6], intParameter[7], intParameter[8], intParameter[9], args[11]);
 
-                System.out.println("Problem saved as " + args[11] + ".uvl\n" +
-                        "To solve use: solve [o or f] " + args[11] + ".uvl");
+                System.out.printf("""
+                        Problem saved as %1$s.uvl
+                        To solve use: solve [o|f] %1$s.uvl
+                        """, args[11]);
             }
             case "solve" -> {
                 SolveComplexity solveMode;
@@ -68,8 +70,10 @@ public class Main {
                 } else if ("f".equals(args[1])) {
                     solveMode = SolveComplexity.FEASIBLE;
                 } else {
-                    System.err.println("Undefinded argument \"" + args[1] + "\"\n" +
-                            "Please use \"o\" to search for an optimal schedule or \"f\" to search for a feasible schedule");
+                    System.err.printf("""
+                            Undefined argument "%s"
+                            Please use "o" to search for an optimal schedule or "f" to search for a feasible schedule
+                            """, args[1]);
                     break;
                 }
 
@@ -105,8 +109,10 @@ public class Main {
                     System.out.println("Deleted path for saving problems");
                 }
             }
-            default -> System.err.println("Undefined command " + args[0] + "\n" +
-                    "Use \"generate\" or \"solve\"");
+            default -> System.err.printf("""
+                    Undefined command %s
+                    "Use "generate" or "solve"
+                    """, args[0]);
         }
 
     }
@@ -168,13 +174,17 @@ public class Main {
 
         if (csr != null && csr.isHasSolution()) {
             PrintSolution(csr.getSolverReturn());
-            System.out.println("Found solution in iteration " + csr.getIteration() + "\n" +
-                    "Read time: " + csr.getReadTime() + "ms, Solve time: " + csr.getTimeSolve() + "ms, Combined: " + csr.getNeededTime() + "ms");
+            System.out.printf("""
+                    Found solution in iteration %s
+                    "Read time: %d ms, Solve time: %d ms, Combined: %d ms
+                    """, csr.getIteration(), csr.getReadTime(), csr.getTimeSolve(), csr.getNeededTime());
             WriteCSV(csr.getSolverReturn(), solveMode, modelPath);
         } else {
-            System.out.println("No solution found");
-            System.out.println("Searched in " + (csr.getSearchedConfigs() - 1) + " configurations \n" +
-                    "Read time: " + csr.getReadTime() + "ms, Solve time: " + csr.getTimeSolve() + "ms, Combined: " + csr.getNeededTime() + "ms");
+            System.out.printf("""
+                    No solution found
+                    Searched in %d configurations
+                    "Read time: %d ms, Solve time: %d ms, Combined: %d ms
+                    """, (csr.getSearchedConfigs() - 1), csr.getReadTime(), csr.getTimeSolve(), csr.getNeededTime());
         }
     }
 
@@ -185,17 +195,15 @@ public class Main {
      * @throws IOException if the input uvl file cannot be written.
      */
     public static SchedulingProblem ReadProblemUVL(String name) throws IOException {
-        Path path = Path.of("");
-        Path filePath = Path.of("");
+        Path filePath;
         if(name.contains("/")) {
             filePath = Path.of(name);
         } else {
             PathPreferences prefs = new PathPreferences();
-            path = Path.of(prefs.getProblemSavePath());
-            filePath = path.resolve(name);
+            filePath = Path.of(prefs.getProblemSavePath()).resolve(name);
         }
 
-        System.out.println("\n" + name + "\n");
+        System.out.printf("%nReading problem: %s%n", name);
         FeatureModel fm = UVLReader.read(filePath);
         return new SchedulingProblem(fm);
     }
@@ -205,12 +213,14 @@ public class Main {
      * @param sp    The {@link SchedulingProblem} to be printed
      */
     public static void PrintProblem(SchedulingProblem sp) {
-        System.out.println("*********************** \n" +
-                "Scheduling problem:");
-        System.out.println("Deadline: " + sp.getDeadline());
+        System.out.printf("""
+                ***********************
+                Scheduling problem:
+                Deadline: %d
+                """, sp.getDeadline());
         int jobIndex = 0;
         for (List<Task> job : sp.getJobs()) {
-            System.out.println("Job " + jobIndex + ": ");
+            System.out.printf("Job %d: %n", jobIndex);
             for (Task task : job) {
                 String taskDurationConsString = task.getDurationCons().entrySet().stream().map(entry -> {
                     String taskList = entry.getValue().stream().map(Task::getName).collect(Collectors.joining(", "));
@@ -229,7 +239,7 @@ public class Main {
             jobIndex++;
         }
 
-        System.out.println("\n*********************** \n");
+        System.out.printf("%n***********************%n%n");
     }
 
     /**
@@ -238,7 +248,7 @@ public class Main {
      */
     public static void PrintSolution(SolverReturn sr) {
         System.out.println("Solution:");
-        System.out.printf(sr.getOutput() + "\n");
+        System.out.println(sr.getOutput());
         System.out.println("Schedule is " + sr.getStatus() + ", takes " + sr.getTime());
     }
 

@@ -359,7 +359,7 @@ public final class UVLReader {
             if (machine.isPresent()) {
                 task.setMachine(machine.get());
             } else {
-                System.out.printf("Could not find machine for %s\n", name);
+                System.out.printf("Could not find machine for %s%n", name);
             }
 
             job.add(task);
@@ -453,7 +453,7 @@ public final class UVLReader {
         // Find name of corresponding machine
         String machineName = machineAssignments.get(task.getName());
         if (machineName == null) {
-            System.out.printf("Could not find a machine constraint for task %s \n", task.getName());
+            System.out.printf("Could not find a machine constraint for task %s.%n", task.getName());
             return;
         }
 

@@ -141,10 +141,10 @@ public class SPGenerator {
                     int outLierChance = random.nextInt(2);
                     // 0 = Outlier, 1 = not an outlier
                     if (outLierChance == 0 && durationOutlierCount > 0) {
-                        setRandomDurations(task, 6,10, random, mandatoryTasksWithVarDuration);
+                        setRandomDurations(task, 6, 10, random, mandatoryTasksWithVarDuration);
                         durationOutlierCount--;
 
-                    // No outlier
+                        // No outlier
                     } else {
                         setRandomDurations(task, 1, 5, random, mandatoryTasksWithVarDuration);
                     }
@@ -247,10 +247,12 @@ public class SPGenerator {
 
             if (altGroupCount > altCount) {
                 altGroupCount = altCount / 2;
-                System.out.printf("Number of alternative groups must be greater than number of alternative tasks. \n" +
-                        "Set number of groups to %d (every group consists of 2 tasks). \n", altGroupCount);
+                System.out.printf("""
+                        Number of alternative groups must be greater than number of alternative tasks.
+                        Set number of groups to %d (every group consists of 2 tasks).
+                        """, altGroupCount);
             }
-            // Calculate how many tasks beling in one group
+            // Calculate how many tasks belong in one group
             // If there are e.g. 5 tasks and 2 groups -> g1 = (1,2,3), g2 = (4,5)
             double tasksPerGroupD = altCount / altGroupCount;
             int tasksPerGroup = (int) floor(tasksPerGroupD);
@@ -401,10 +403,10 @@ public class SPGenerator {
      */
     private static String parseToUVL(SchedulingProblem sp) {
         StringBuilder uvlString = new StringBuilder();
-        uvlString.append("features\n");
-        uvlString.append("\t").append(sp.getName()).append(" {featuredescription__ '").append(sp.getDeadline()).append("', abstract true}\n");
-        uvlString.append("\t\tmandatory\n");
-        uvlString.append("\t\t\t\"dl = ").append(sp.getDeadline()).append("\"\n");
+        uvlString.append("features").append(System.lineSeparator());
+        uvlString.append("\t").append(sp.getName()).append(" {featuredescription__ '").append(sp.getDeadline()).append("', abstract true}").append(System.lineSeparator());
+        uvlString.append("\t\tmandatory").append(System.lineSeparator());
+        uvlString.append("\t\t\t\"dl = ").append(sp.getDeadline()).append("\"").append(System.lineSeparator());
 
         List<String>[] cons = parseTasks(sp.getJobs(), uvlString);
         parseMachines(sp.getMachines(), uvlString);
@@ -421,7 +423,7 @@ public class SPGenerator {
      * @return Returns constraints for task order, excluding tasks, durations and machine
      */
     private static List<String>[] parseTasks(List<List<Task>> jobs, StringBuilder uvlString) {
-        uvlString.append("\t\t\tP {abstract true}\n");
+        uvlString.append("\t\t\tP {abstract true}").append(System.lineSeparator());
 
         List<List<Task>> mandatoryJobs = new ArrayList<>();
         List<List<Task>> optionalJobs = new ArrayList<>();
@@ -439,7 +441,7 @@ public class SPGenerator {
             }
         }
 
-        uvlString.append("\t\t\t\tmandatory\n");
+        uvlString.append("\t\t\t\tmandatory").append(System.lineSeparator());
         for (List<Task> job : mandatoryJobs) {
             for (int i = 0; i < job.size(); i++) {
                 Task task = job.get(i);
@@ -447,7 +449,7 @@ public class SPGenerator {
 
                 // Add constraint for the task order in the job
                 if (i < job.size() - 1) {
-                    taskOrderCons.add("\t" + job.get(i + 1).getName() + " => " + task.getName() + "\n");
+                    taskOrderCons.add("\t%s => %s%n".formatted(job.get(i + 1).getName(), task.getName()));
                 }
 
                 // Task-duration-constraints
@@ -455,7 +457,7 @@ public class SPGenerator {
                     for (Map.Entry<Integer, List<Task>> taskDurationCon : task.getDurationCons().entrySet()) {
                         List<Task> requiredTasks = taskDurationCon.getValue();
                         for (Task requiredTask : requiredTasks) {
-                            durationCons.add("\t\"d" + task.getName() + " = " + taskDurationCon.getKey() + "\" => " + requiredTask.getName() + "\n");
+                            durationCons.add("\t\"d%s = %d\" => %s%n".formatted(task.getName(), taskDurationCon.getKey(), requiredTask.getName()));
                         }
                     }
                 }
@@ -464,7 +466,7 @@ public class SPGenerator {
         }
 
         List<String> excludeTasksAlreadyHandled = new ArrayList<>();
-        uvlString.append("\t\t\t\toptional\n");
+        uvlString.append("\t\t\t\toptional").append(System.lineSeparator());
         for (List<Task> job : optionalJobs) {
             for (Task task : job) {
                 parseTask(task, uvlString, machineCons);
@@ -495,7 +497,7 @@ public class SPGenerator {
                             excludeConString.append(" | ");
                         }
                     }
-                    excludeConString.append("\n");
+                    excludeConString.append(System.lineSeparator());
 
                     excludeCons.add(excludeConString.toString());
                 }
@@ -519,20 +521,20 @@ public class SPGenerator {
      * @param machineCons The machine constraints list to be appended.
      */
     private static void parseTask(Task task, StringBuilder uvlString, List<String> machineCons) {
-        uvlString.append("\t\t\t\t\t").append(task.getName()).append("\n");
+        uvlString.append("\t\t\t\t\t").append(task.getName()).append(System.lineSeparator());
 
-        String durationStringTemplate = "\t\t\t\t\t\t\t\"d%s = %d\"\n";
+        String durationStringTemplate = "\t\t\t\t\t\t\t\"d%s = %d\"%n";
         if (task.getDurations().length == 1) {
-            uvlString.append("\t\t\t\t\t\tmandatory\n");
+            uvlString.append("\t\t\t\t\t\tmandatory").append(System.lineSeparator());
             uvlString.append(durationStringTemplate.formatted(task.getName(), task.getMinimumDuration()));
         } else {
-            uvlString.append("\t\t\t\t\t\talternative\n");
+            uvlString.append("\t\t\t\t\t\talternative").append(System.lineSeparator());
             for (int duration : task.getDurations()) {
                 uvlString.append(durationStringTemplate.formatted(task.getName(), duration));
             }
         }
 
-        machineCons.add("\t" + task.getName() + " => " + task.getMachine().getName() + "\n");
+        machineCons.add("\t%s => %s%n".formatted(task.getName(), task.getMachine().getName()));
     }
 
     /**
@@ -542,11 +544,11 @@ public class SPGenerator {
      * @param uvlString The UVL-String to be appended
      */
     private static void parseMachines(List<Machine> machines, StringBuilder uvlString) {
-        uvlString.append("\t\t\tM {abstract true}\n");
-        uvlString.append("\t\t\t\tmandatory\n");
+        uvlString.append("\t\t\tM {abstract true}").append(System.lineSeparator());
+        uvlString.append("\t\t\t\tmandatory").append(System.lineSeparator());
 
         for (Machine machine : machines) {
-            uvlString.append("\t\t\t\t\t" + machine.getName() + "\n");
+            uvlString.append("\t\t\t\t\t").append(machine.getName()).append(System.lineSeparator());
         }
     }
 
@@ -557,7 +559,7 @@ public class SPGenerator {
      * @param uvlString The UVL-String to be appended
      */
     private static void parseConstraints(List<String>[] cons, StringBuilder uvlString) {
-        uvlString.append("constraints\n");
+        uvlString.append("constraints").append(System.lineSeparator());
         for (List<String> conType : cons) {
             for (String con : conType) {
                 uvlString.append(con);

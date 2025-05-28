@@ -66,12 +66,12 @@ public class ProblemSolver {
                 .orElse(0);
 
         // Create per machine output lines.
-        String output = "";
+        StringBuilder output = new StringBuilder();
         for (Machine machine : sp.getMachines()) {
             if (!machine.isOptional() || solver.value(machine.getActive()) == 1) {
                 // Sort by starting time.
                 if (assignedJobs.get(machine) != null) {
-                    Collections.sort(assignedJobs.get(machine), new SortTasks());
+                    assignedJobs.get(machine).sort(new SortTasks());
                 }
 
                 StringBuilder solLineTasks = new StringBuilder("Machine " + machine.getName() + ": ");
@@ -94,12 +94,12 @@ public class ProblemSolver {
 
                     }
                 }
-                output += solLineTasks + "%n";
-                output += solLine + "%n";
+                output.append(solLineTasks).append(System.lineSeparator());
+                output.append(solLine).append(System.lineSeparator());
             }
 
         }
-        return output;
+        return output.toString();
     }
 
     private Map<Machine, List<AssignedTask>> getAssignedJobs(SchedulingProblem sp, CpSolver solver) {
@@ -137,14 +137,9 @@ public class ProblemSolver {
 
                 //assignedJobs.computeIfAbsent(task.machine, (Integer k) -> new ArrayList<>());
                 //assignedJobs.get(task.machine).add(assignedTask);
-                Machine machine = null;
-                for (Machine machine1 : sp.getMachines()) {
-                    if (machine1 == task.getMachine()) {
-                        machine = machine1;
-                    }
-                }
+                Machine machine = task.getMachine();
 
-                assignedJobs.computeIfAbsent(machine, (Machine m) -> new ArrayList<>());
+                assignedJobs.computeIfAbsent(machine, (Machine _) -> new ArrayList<>());
                 assignedJobs.get(machine).add(assignedTask);
 
             }

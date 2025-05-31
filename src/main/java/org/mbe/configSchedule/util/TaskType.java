@@ -4,19 +4,28 @@ import com.google.ortools.sat.BoolVar;
 import com.google.ortools.sat.IntVar;
 import com.google.ortools.sat.IntervalVar;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class TaskType extends Task {
+public class TaskType {
     //IntVar has a lower bound, upper bound and name
     private IntVar start;
     private IntVar end;
     //IntervalVar does hava a start position, duration and an end date
     private IntervalVar interval;
     private BoolVar active;
-    private Map<Integer, List<TaskType>> durationsConstraints = new HashMap<>();
+    private final Map<Integer, List<TaskType>> durationsConstraints = new HashMap<>();
+    private final Task task;
+
+    /**
+     * Constructs a new TaskType corresponding to a {@link SchedulingProblem}'s {@link Task}.
+     *
+     * @param task the corresponding task.
+     */
+    public TaskType(Task task) {
+        this.task = task;
+    }
 
     /**
      * Get lower bound.
@@ -117,5 +126,22 @@ public class TaskType extends Task {
      */
     public void addTaskTypeToDuration(Integer key, TaskType taskType) {
         durationsConstraints.get(key).add(taskType);
+    }
+
+    /**
+     * Gets the {@link Task} corresponding to this TaskType.
+     *
+     * @return the corresponding task.
+     */
+    public Task getTask() {
+        return task;
+    }
+
+    /**
+     * Gets the name of the corresponding task. This is a shortcut for {@code TaskType.getTask().getName()}
+     * @return the name of the corresponding task.
+     */
+    public String getName() {
+        return this.task.getName();
     }
 }

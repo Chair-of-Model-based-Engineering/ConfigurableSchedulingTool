@@ -8,12 +8,12 @@ import java.util.*;
 
 public class ProblemSolver {
 
-    private CpModel model = new CpModel();
+    private final CpModel model = new CpModel();
     // List<Integer> ist später {JobID, TaskID}, Map ist also <{JobID, TaskID}, TaskType-Objekt>
     // TaskID ist nur der Index der Task im Job, {JobID, TaskID} ist sozusagen die echte TaskID der Task
-    private Map<List<Integer>, TaskType> allTaskTypes = new HashMap<>();
+    private final Map<List<Integer>, TaskType> allTaskTypes = new HashMap<>();
 
-    SchedulingProblem sp;
+    private final SchedulingProblem sp;
 
     public ProblemSolver(SchedulingProblem sp) {
         this.sp = sp;
@@ -126,17 +126,11 @@ public class ProblemSolver {
 
                 if (task.isOptional()) {
                     int active = (int) solver.value(allTaskTypes.get(key).getActive());
-                    if (active == 1) {
-                        assignedTask.setActive(true);
-                    } else {
-                        assignedTask.setActive(false);
-                    }
+                    assignedTask.setActive(active == 1);
                 } else {
                     assignedTask.setActive(true);
                 }
 
-                //assignedJobs.computeIfAbsent(task.machine, (Integer k) -> new ArrayList<>());
-                //assignedJobs.get(task.machine).add(assignedTask);
                 Machine machine = task.getMachine();
 
                 assignedJobs.computeIfAbsent(machine, (Machine _) -> new ArrayList<>());
@@ -148,28 +142,11 @@ public class ProblemSolver {
     }
 
     private void buildModel(SchedulingProblem sp) {
-
-        // Für jede optionale Maschine wird eine neue BoolVar erstellt
-        for (Machine machine : sp.getMachines()) {
-            if (machine.isOptional()) {
-                machine.setActive(model.newBoolVar("Machine_" + machine.getName() + "_active"));
-            }
-        }
-
-        // Setzt fest wie viele Maschinen es gibt
-        int numMachines = sp.getMachines().size();
-
         // Berechnet wie lange es dauern würde, wenn alle Tasks einzeln nacheinander laufen würden
-        int maxDuration = 0;
-        for (List<Task> job : sp.getJobs()) {
-            for (Task task : job) {
-                maxDuration += task.getMaximumDuration();
-            }
-        }
+        int maxDuration = sp.getJobs().stream().flatMap(Collection::stream).mapToInt(Task::getMaximumDuration).sum();
 
         // Map mit Tasknamen als Key, genutzt für die Duration Constraints
         Map<String, TaskType> nameToTaskType = new HashMap<>();
-        Map<String, Task> nameToTask = new HashMap<>();
 
         // Jede Maschine hat eine Liste mit Intervallen (Tasks) die sich nicht überlappen dürfen
         Map<Machine, List<IntervalVar>> machineToIntervals = new HashMap<>();
@@ -178,7 +155,7 @@ public class ProblemSolver {
         // können die Constraints für die active BoolVars festgelegt werden
         List<TaskType> excludingTasks = new ArrayList<>();
 
-        Map<List<Integer>, TaskType> idToTaskTypesWithDurationConstraints = new HashMap<>();
+        List<TaskType> taskTypesWithDurationConstraints = new ArrayList<>();
 
         // Jede optionale Maschine hat eine Liste mit BoolVars, die dafür stehen,
         // ob die Tasks die auf ihr ausgeführt werden, auch aktiv sind
@@ -187,185 +164,60 @@ public class ProblemSolver {
         for (Machine machine : sp.getMachines()) {
             if (machine.isOptional()) {
                 optionalMachineTaskActives.put(machine, new ArrayList<>());
+                machine.setActive(model.newBoolVar("Machine_" + machine.getName() + "_active"));
             }
         }
 
-        // Erstellen der TaskTypes
-        // Iteriert durch Jobs
-        for (int jobID = 0; jobID < sp.getJobs().size(); ++jobID) {
-            List<Task> job = sp.getJobs().get(jobID);
-            // Iteriert durch Tasks des aktuellen Jobs
-            for (int taskID = 0; taskID < job.size(); ++taskID) {
-                Task task = job.get(taskID);
-                String suffix = "_" + jobID + "_" + taskID;
+        buildTaskTypes(sp, maxDuration,
+                optionalMachineTaskActives,
+                excludingTasks,
+                nameToTaskType,
+                taskTypesWithDurationConstraints,
+                machineToIntervals
+        );
+        buildDurationConstraints(taskTypesWithDurationConstraints, nameToTaskType);
+        buildExcludeConstraints(excludingTasks, nameToTaskType);
+        buildOptionalMachines(optionalMachineTaskActives);
 
-                // Für jede Task wird ein TaskType erstellt
-                TaskType taskType = new TaskType();
-                taskType.setName(task.getName());
-                //Tasks dürfen zwischen 0 und maxDuration starten und enden
-                taskType.setStart(model.newIntVar(0, maxDuration, "start" + suffix));
-                taskType.setEnd(model.newIntVar(0, maxDuration, "end" + suffix));
+        buildValidityConstraints(sp, machineToIntervals);
 
-                taskType.setExcludeTasks(task.getExcludeTasks());
-
-                // Wenn eine Task optional ist, bekommt sie ein OptionalIntervalVar, sodass das Interval
-                // nicht performed, wenn die Task nicht aktiv ist
-                // dafür hat das Interval den Task.active als Literal
-                if (task.isOptional()) {
-                    BoolVar bool = model.newBoolVar(task.getName() + "_active");
-                    taskType.setActive(bool);
-                    long[] taskDurations = Arrays.stream(task.getDurations()).asLongStream().toArray();
-                    IntVar possibleDurations = model.newIntVarFromDomain(Domain.fromValues(taskDurations), task.getName() + "_duration");
-                    taskType.setInterval(model.newOptionalIntervalVar(taskType.getStart(),
-                            possibleDurations,
-                            taskType.getEnd(),
-                            taskType.getActive(),
-                            "interval_" + suffix));
-                    if (task.getExcludeTasks().size() > 0) {
-                        excludingTasks.add(taskType);
-                    }
-
-                    // Wenn die optionale Task auf einer optionalen Maschine ausgeführt wird,
-                    // Wird ein BoolVar für die Maschine zu optionalMachineTaskActives hinzugefügt
-                    for (Machine machine : sp.getMachines()) {
-                        if (task.getMachine() == machine && machine.isOptional()) {
-                            optionalMachineTaskActives.get(machine).add(taskType.getActive());
-                        }
-                    }
-
-                    // Wenn die Task nicht optional ist wird ein normales IntervalVar erstellt, das immer performed
-                } else {
-                    // Erstellt ein neues Interval mit (start, size, end, name)
-                    long[] taskDurations = Arrays.stream(task.getDurations()).asLongStream().toArray();
-                    IntVar possibleDurations = model.newIntVarFromDomain(Domain.fromValues(taskDurations), task.getName() + "_duration");
-                    taskType.setInterval(model.newIntervalVar(
-                            taskType.getStart(),
-                            possibleDurations,
-                            taskType.getEnd(),
-                            "interval" + suffix));
-
-                    // Wenn die Task einer alternative Task Gruppe angehört, wird sie der Liste mit
-                    // den Tasks, welche einer Gruppe angehören hinzugefügt
-                    BoolVar active = model.newBoolVar(task.getName() + "_active");
-                    if (task.getExcludeTasks().size() > 0) {
-                        excludingTasks.add(taskType);
-                    }
-                    // Wenn die Task mandatory ist und auf einer optionalen Maschine ausgeführt wird,
-                    // wird optionalMachineTaskActives der Maschine ein BoolVar hinzugefügt der immer true ist
-                    // Dadurch kann die Maschine nicht mehr deaktiviert werden
-                    model.addEquality(active, 1);
-                    for (Machine machine : sp.getMachines()) {
-                        if (task.getMachine() == machine && machine.isOptional()) {
-                            optionalMachineTaskActives.get(machine).add(active);
-                        }
-                    }
-                }
-
-                // Packt die Task mit (jobID, taskID) in die AlleTasks Map
-                List<Integer> key = Arrays.asList(jobID, taskID);
-                allTaskTypes.put(key, taskType);
-                nameToTaskType.put(task.getName(), taskType);
-                nameToTask.put(task.getName(), task);
-
-                // Wenn die Task eine Duration hat, die nur gewählt werden darf, wenn eine andere Task ausgeführt wird
-                if (task.getDurationCons() != null && task.getDurationCons().size() > 0) {
-                    idToTaskTypesWithDurationConstraints.put(key, taskType);
-                }
-
-                // Die Maschine finden, auf der die Task ausgeführt wird, und ihr in
-                // machineToIntervals das Interval der Task hinzufügen
-                Machine machine = null;
-                for (Machine machine1 : sp.getMachines()) {
-                    if (machine1 == task.getMachine()) {
-                        machine = machine1;
-                    }
-                }
-                // Falls noch keine ArrayList für die Maschine vorhanden ist, wird eine neue erstellt
-                machineToIntervals.computeIfAbsent(machine, (Machine m) -> new ArrayList<>());
-                machineToIntervals.get(machine).add(taskType.getInterval());
-            }
-        }
-
-
-        // Für die TaskTypes, deren Task duration-Constraints haben die entsprechenden Constraints auch im
-        // TaskType erstellen
-        for (Map.Entry<List<Integer>, TaskType> entry : idToTaskTypesWithDurationConstraints.entrySet()) {
-            TaskType tt = entry.getValue();
-            Task task = nameToTask.get(tt.getName());
-
-            for (Map.Entry<Integer, List<Task>> con : task.getDurationCons().entrySet()) {
-                int durationValue = con.getKey();
-                List<TaskType> conTTs = new ArrayList<>();
-                for (Task conTask : con.getValue()) {
-                    conTTs.add(nameToTaskType.get(conTask.getName()));
-                }
-                tt.addDurationsConstraint(durationValue, conTTs);
-            }
-        }
-
-
-        // Für jede Task, die mindestens eine durationConstraint hat, werden Constraints dem Model hinzugefügt
-        for (TaskType tt : idToTaskTypesWithDurationConstraints.values()) {
-            // Über jede Constraint dieser Task iterieren
-            for (Map.Entry<Integer, List<TaskType>> con : tt.getDurationsConstraints().entrySet()) {
-                int durationValue = con.getKey();
-                // BoolVar soll 1 annehmen, wenn alle benötigten Tasks für diese Duration aktiv sind, ansonsten 0
-                BoolVar allRequiredTasksActive = model.newBoolVar(tt.getName() + "_durationConstraints_" + con.getKey());
-
-                // Liste mit den active-BoolVars der required TaskTypes
-                List<BoolVar> requiredBoolVars = new ArrayList<>();
-                for (TaskType requiredTT : con.getValue()) {
-                    requiredBoolVars.add(requiredTT.getActive());
-                }
-
-                model.addMinEquality(allRequiredTasksActive, requiredBoolVars);
-
-                // Falls eine der required Tasks nicht aktiv ist, darf die zugehörie Dauer auch nicht für
-                // die Task gewählt werden
-                model.addDifferent(tt.getInterval().getSizeExpr(), durationValue).onlyEnforceIf(allRequiredTasksActive.not());
-            }
-
-        }
-
-
-        // Für jede Task in der excludingTasks-Liste wird ein BoolVar und eine Liste mit den actives der Tasks,
-        // mit denen sie in eienr alt. Task Gruppe ist
-        // Der BoolVar nimmt den maximalen Value der Liste an
-        // Wenn der BoolVar = 0, dann muss task.active = 1
-        // Wenn der BoolVar = 1, dann muss task.active = 0
-        for (TaskType tt : excludingTasks) {
-            // Für jeden TaskType in excludingTasks eine Liste mit den TTs active machen, die sie excluden will
-            List<BoolVar> tasksToExclude = new ArrayList<>();
-            for (TaskType tt2 : excludingTasks) {
-                if (tt.getExcludeTasks().contains(tt2.getName())) {
-                    tasksToExclude.add(tt2.getActive());
-                }
-            }
-
-            BoolVar atLeastOneActive = model.newBoolVar(tt.getName() + "_exclude_atLeastOneActive");
-
-            model.addMaxEquality(atLeastOneActive, tasksToExclude);
-            model.addEquality(tt.getActive(), 1).onlyEnforceIf(atLeastOneActive.not());
-            model.addEquality(tt.getActive(), 0).onlyEnforceIf(atLeastOneActive);
-        }
-
-        // Neue BoolVar erstellen, die am Ende gleich dem Aktivstatus der Maschine sein soll
-        // Wenn mindestens eine Task in optionalMachineTaskActives für die Maschine true ist,
-        // dann soll die Maschine auch aktiv sein
-        for (Machine machine : optionalMachineTaskActives.keySet()) {
-            if (!optionalMachineTaskActives.get(machine).isEmpty()) {
-                BoolVar atLeastOneActive = model.newBoolVar(machine.getName() + "_atLeastOneActiveTask");
-                model.addMaxEquality(atLeastOneActive, optionalMachineTaskActives.get(machine));
-                model.addEquality(machine.getActive(), atLeastOneActive);
+        // TODO: Is this even needed still?
+        // IntervalVars von optionalen Tasks, die nicht ausgeführt werden, werden nicht "performed",
+        // sie existieren aber immer noch. Ihre lower und upper bounds, sowie noOverlaps werden ignoriert,
+        // sodass sie eine duration von 0 haben und ganz am Anfang gestartet werden.
+        // Da sie aber immer noch die letzte Task in einem Job sein können, und der Solver nicht denken soll,
+        // dass das Ende des Jobs schon nach 0 Sekunden erreicht wird, erstellen wir (anders als vorher)
+        // die Constraint, dass objVar == max(possibleMaxEndtimes).
+        // Daher werden alle Endzeiten jeder Task possibleMaxEndtimes hinzugefügt
+        // Falls eine Task inaktiv ist, ist die Endzeit 0, falls aktiv ist sie die tatsächliche Endzeit
+        List<IntVar> possibleMaxEndtimes = new ArrayList<>();
+        for (TaskType taskType : allTaskTypes.values()) {
+            IntVar possibleEndTime = model.newIntVar(0, maxDuration, "possibleMaxEndtime_" + taskType.getName());
+            if (taskType.getTask().isOptional()) {
+                model.addEquality(possibleEndTime, taskType.getEnd()).onlyEnforceIf(taskType.getActive());
+                model.addEquality(possibleEndTime, 0).onlyEnforceIf(taskType.getActive().not());
             } else {
-                model.addEquality(machine.getActive(), 0);
+                model.addEquality(possibleEndTime, taskType.getEnd());
             }
+            possibleMaxEndtimes.add(possibleEndTime);
         }
 
+        // Zielvariable, nimmt am Ende die komplette Duration an und soll minimiert werden
+        IntVar objVar = model.newIntVar(0, maxDuration, "makespan");
+
+        // objVar darf höchstens so groß wie die Deadline sein
+        // und soll den selben Wert wie die maximale Endtime haben (Endzeitpunkt des letzten Tasks)
+        model.addLessOrEqual(objVar, sp.getDeadline());
+        model.addMaxEquality(objVar, possibleMaxEndtimes);
+
+        // objVar soll so klein wie möglich gehalten werden
+        model.minimize(objVar);
+    }
+
+    private void buildValidityConstraints(SchedulingProblem sp, Map<Machine, List<IntervalVar>> machineToIntervals) {
         // Intervalle (Tasks) auf einer Maschine dürfen sich nicht überlappen
-        for (Machine machine : machineToIntervals.keySet()) {
-            List<IntervalVar> list = machineToIntervals.get(machine);
-            model.addNoOverlap(list);
+        for (List<IntervalVar> intervalsOnMachine : machineToIntervals.values()) {
+            model.addNoOverlap(intervalsOnMachine);
         }
 
         // Tasks innerhalb eines Jobs dürfen nur nacheinander starten
@@ -374,67 +226,163 @@ public class ProblemSolver {
             List<Task> job = sp.getJobs().get(jobID);
             // Über alle Tasks
             for (int taskID = 0; taskID < job.size() - 1; ++taskID) {
-                List<Integer> prevKey = Arrays.asList(jobID, taskID);
+                List<Integer> prevKey = List.of(jobID, taskID);
                 List<Integer> nextKey = Arrays.asList(jobID, taskID + 1);
                 // Einschränkung, dass Task 2 aus Job 1 erst nach Beendigung von Task 1 aus Job 1 startet (Beispiel)
                 model.addGreaterOrEqual(allTaskTypes.get(nextKey).getStart(), allTaskTypes.get(prevKey).getEnd());
             }
         }
+    }
 
-
-        // Zielvariable, nimmt am Ende die komplette Duration an und soll minimiert werden
-        IntVar objVar = model.newIntVar(0, maxDuration, "makespan");
-
-        // Map die für jede Task (TaskType) die Endzeit der Task beinhaltet
-        Map<TaskType, IntVar> endTimes = new HashMap<>();
-        for (int jobID = 0; jobID < sp.getJobs().size(); jobID++) {
-            List<Task> job = sp.getJobs().get(jobID);
-            for (int taskID = 0; taskID < job.size(); taskID++) {
-                List<Integer> key = Arrays.asList(jobID, taskID);
-                endTimes.put(allTaskTypes.get(key), allTaskTypes.get(key).getEnd());
-            }
-
-        }
-
-        // IntervalVars von optionalen Tasks, die nicht ausgeführt werden, werden nicht "performed",
-        // sie exisitieren aber immernoch. Ihre lower und upper bounds, sowie noOverlaps werden ignoriert,
-        // sodass sie eine duration von 0 haben und ganz am Anfang gestartet werden.
-        // Da sie aber immernoch die letzte Task in einem Job sein können, und der Solver nicht denken soll,
-        // dass das Ende des Jobs schon nach 0 Sekunden erreicht wird, erstellen wir (anders als vorher)
-        // die Constraint, dass objVar == max(possibleMaxEndtimes).
-        // Daher werden alle Endzeiten jeder Task possibleMaxEndtimes hinzugefügt
-        // Falls eine Task inaktiv ist, ist die Endzeit 0, falls aktiv ist sie die tatsächliche Endzeit
-
-        // Arrays mit jeweils allen BoolVars (bzw. den TaskTypes die die aktiv-BoolVars enthalten)
-        // und Intvars von endTimes
-        TaskType[] activeBools = endTimes.keySet().toArray(new TaskType[endTimes.size()]);
-        IntVar[] endtimeInts = endTimes.values().toArray(new IntVar[endTimes.size()]);
-
-        IntVar[] possibleMaxEndtimes = new IntVar[activeBools.length];
-
-        for (int i = 0; i < activeBools.length; i++) {
-            possibleMaxEndtimes[i] = model.newIntVar(0, maxDuration, "possibleMaxEndtime_" + i);
-            //Falls es eine optionale Task ist (wenn es keine optionale ist, dann ist active = null)
-            if (activeBools[i].getActive() != null) {
-                model.addEquality(possibleMaxEndtimes[i], endtimeInts[i]).onlyEnforceIf(activeBools[i].getActive());
-                model.addEquality(possibleMaxEndtimes[i], 0).onlyEnforceIf(activeBools[i].getActive().not());
+    private void buildOptionalMachines(Map<Machine, List<BoolVar>> optionalMachineTaskActives) {
+        // Neue BoolVar erstellen, die am Ende gleich dem Aktivstatus der Maschine sein soll.
+        // Wenn mindestens ein Task in optionalMachineTaskActives für die Maschine true ist,
+        // dann soll die Maschine auch aktiv sein
+        for (Machine machine : optionalMachineTaskActives.keySet()) {
+            if (!optionalMachineTaskActives.get(machine).isEmpty()) {
+                BoolVar atLeastOneActive = model.newBoolVar(machine.getName() + "_atLeastOneActiveTask");
+                model.addMaxEquality(atLeastOneActive, optionalMachineTaskActives.get(machine));
+                model.addEquality(machine.getActive(), atLeastOneActive);
             } else {
-                model.addEquality(possibleMaxEndtimes[i], endtimeInts[i]);
+                model.addEquality(machine.getActive(), model.falseLiteral());
+            }
+        }
+    }
+
+    private void buildExcludeConstraints(List<TaskType> excludingTasks, Map<String, TaskType> nameToTaskType) {
+        // Für jeden Task in der excludingTasks-Liste wird eine BoolVar und eine Liste mit den actives der TaskTypes,
+        // mit denen sie in einer alternativen Taskgruppe sind, erstellt.
+        // Die BoolVar nimmt den maximalen Value der Liste an
+        // Wenn der BoolVar = 0, dann muss task.active = 1
+        // Wenn der BoolVar = 1, dann muss task.active = 0
+        for (TaskType taskType : excludingTasks) {
+            // Für jeden TaskType in excludingTasks eine Liste mit den TTs active machen, die sie excluden will
+            List<BoolVar> tasksToExclude = new ArrayList<>();
+            for (String excludeTaskName : taskType.getTask().getExcludeTasks()) {
+                tasksToExclude.add(nameToTaskType.get(excludeTaskName).getActive());
             }
 
+            BoolVar atLeastOneActive = model.newBoolVar(taskType.getName() + "_exclude_atLeastOneActive");
+
+            model.addMaxEquality(atLeastOneActive, tasksToExclude);
+            model.addEquality(taskType.getActive(), 1).onlyEnforceIf(atLeastOneActive.not());
+            model.addEquality(taskType.getActive(), 0).onlyEnforceIf(atLeastOneActive);
         }
+    }
 
-        // System.out.println("Die möglichen Zeiten die ausgewählt werden können wehe es steht 0 drinne :");
-        for (IntVar time : possibleMaxEndtimes) {
-            //System.out.println(time);
+    private void buildDurationConstraints(List<TaskType> taskTypesWithDurationConstraints, Map<String, TaskType> nameToTaskType) {
+        // Für jede Task, die mindestens eine durationConstraint hat, werden Constraints dem Model hinzugefügt
+        for (TaskType taskType : taskTypesWithDurationConstraints) {
+            Map<Integer, List<Task>> durationCons = taskType.getTask().getDurationCons();
+            for (Map.Entry<Integer, List<Task>> con : durationCons.entrySet()) {
+                int durationValue = con.getKey();
+                // BoolVar soll 1 annehmen, wenn alle benötigten Tasks für diese Duration aktiv sind, ansonsten 0
+                BoolVar allRequiredTasksActive = model.newBoolVar(taskType.getName() + "_durationConstraints_" + con.getKey());
+
+                // Liste mit den active-BoolVars der required TaskTypes
+                List<BoolVar> requiredBoolVars = new ArrayList<>();
+                for (Task requiredTask : con.getValue()) {
+                    requiredBoolVars.add(nameToTaskType.get(requiredTask.getName()).getActive());
+                }
+
+                model.addMinEquality(allRequiredTasksActive, requiredBoolVars);
+
+                // Falls eine der required Tasks nicht aktiv ist, darf die zugehörie Dauer auch nicht für
+                // die Task gewählt werden
+                model.addDifferent(taskType.getInterval().getSizeExpr(), durationValue).onlyEnforceIf(allRequiredTasksActive.not());
+            }
         }
+    }
 
-        // objVar darf höchstens so groß wie die Deadline sein
-        // und soll den selben Wert wie die  maximale Endtime haben (Endzeitpunkt der letzten Task)
-        model.addLessOrEqual(objVar, sp.getDeadline());
-        model.addMaxEquality(objVar, possibleMaxEndtimes);
+    private void buildTaskTypes(
+            SchedulingProblem sp,
+            int maxDuration,
+            Map<Machine, List<BoolVar>> optionalMachineTaskActives,
+            List<TaskType> excludingTasks,
+            Map<String, TaskType> nameToTaskType,
+            List<TaskType> taskTypesWithDurationConstraints,
+            Map<Machine, List<IntervalVar>> machineToIntervals) {
+        for (int jobID = 0; jobID < sp.getJobs().size(); ++jobID) {
+            List<Task> job = sp.getJobs().get(jobID);
+            // Iteriert durch Tasks des aktuellen Jobs
+            for (int taskID = 0; taskID < job.size(); ++taskID) {
+                Task task = job.get(taskID);
 
-        // objVar soll so klein wie möglich gehalten werden
-        model.minimize(objVar);
+                TaskType taskType = createTaskType(task, jobID + "_" + taskID, maxDuration);
+
+                // Wenn der optionale Task auf einer optionalen Maschine ausgeführt wird,
+                // so wird eine BoolVar für die Maschine zu optionalMachineTaskActives hinzugefügt
+                if (task.getMachine().isOptional()) {
+                    optionalMachineTaskActives.get(task.getMachine()).add(taskType.getActive());
+                }
+
+                if (!task.getExcludeTasks().isEmpty()) {
+                    excludingTasks.add(taskType);
+                }
+
+                // Packt die Task mit (jobID, taskID) in die AlleTasks Map
+                List<Integer> key = Arrays.asList(jobID, taskID);
+                allTaskTypes.put(key, taskType);
+                nameToTaskType.put(task.getName(), taskType);
+
+                // Wenn die Task eine Duration hat, die nur gewählt werden darf, wenn eine andere Task ausgeführt wird
+                if (task.getDurationCons() != null && !task.getDurationCons().isEmpty()) {
+                    taskTypesWithDurationConstraints.add(taskType);
+                }
+
+                // Falls noch keine ArrayList für die Maschine vorhanden ist, wird eine neue erstellt
+                machineToIntervals.computeIfAbsent(task.getMachine(), (Machine m) -> new ArrayList<>());
+                machineToIntervals.get(task.getMachine()).add(taskType.getInterval());
+            }
+        }
+    }
+
+    /**
+     * Create the {@link TaskType} for a task.
+     *
+     * @param task           the task for which to create the TaskType
+     * @param taskIdentifier the identifier for the task.
+     * @param maxDuration    the maximumDuration of the scheduling problem
+     * @return a fitting TaskType
+     */
+    private TaskType createTaskType(Task task, String taskIdentifier, int maxDuration) {
+        // Für jede Task wird ein TaskType erstellt
+        TaskType taskType = new TaskType(task);
+        //Tasks dürfen zwischen 0 und maxDuration starten und enden
+        taskType.setStart(model.newIntVar(0, maxDuration, "start_" + taskIdentifier));
+        taskType.setEnd(model.newIntVar(0, maxDuration, "end_" + taskIdentifier));
+
+        long[] taskDurations = Arrays.stream(task.getDurations()).asLongStream().toArray();
+        IntVar possibleDurations = model.newIntVarFromDomain(Domain.fromValues(taskDurations), task.getName() + "_duration");
+
+        BoolVar taskActive = model.newBoolVar(task.getName() + "_active");
+        taskType.setActive(taskActive);
+
+        // Wenn eine Task optional ist, bekommt sie ein OptionalIntervalVar, sodass das Interval
+        // nicht performed, wenn die Task nicht aktiv ist
+        // dafür hat das Interval den Task.active als Literal
+        IntervalVar durationIntervalVar;
+        if (task.isOptional()) {
+            durationIntervalVar = model.newOptionalIntervalVar(
+                    taskType.getStart(),
+                    possibleDurations,
+                    taskType.getEnd(),
+                    taskType.getActive(),
+                    "interval_" + taskIdentifier
+            );
+        } else {
+            // Wenn der Task nicht optional ist, wird ein normales IntervalVar erstellt, das immer performt.
+            durationIntervalVar = model.newIntervalVar(
+                    taskType.getStart(),
+                    possibleDurations,
+                    taskType.getEnd(),
+                    "interval_" + taskIdentifier
+            );
+
+            // Mandatory Tasks müssen immer aktiv sein
+            model.addEquality(taskType.getActive(), model.trueLiteral());
+        }
+        taskType.setInterval(durationIntervalVar);
+        return taskType;
     }
 }

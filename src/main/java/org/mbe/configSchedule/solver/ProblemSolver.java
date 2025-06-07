@@ -42,7 +42,7 @@ public class ProblemSolver {
         if (status == CpSolverStatus.OPTIMAL || status == CpSolverStatus.FEASIBLE) {
             Map<Machine, List<AssignedTask>> assignedJobs = getAssignedJobs(sp, solver);
             String outputString = generateOutputString(sp, solver, assignedJobs);
-            return new SolverReturn(solver.objectiveValue(), status, outputString, assignedJobs);
+            return new SolverReturn(solver.userTime(), status, solver.objectiveValue(), outputString, assignedJobs);
         } else {
             return null;
         }

@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 
 public class SolverReturn {
+    private double makespan;
     private Double time;
     private CpSolverStatus status;
     private String output;
@@ -16,12 +17,14 @@ public class SolverReturn {
      * Creates new object of type SolverReturn.
      *
      * @param time         time it took to solve the problem.
+     * @param makespan     makespan of the found schedule.
      * @param status       status of the solver.
      * @param output       String output for display.
      * @param assignedJobs Jobs executed in solution.
      */
-    public SolverReturn(Double time, CpSolverStatus status, String output, Map<Machine, List<AssignedTask>> assignedJobs) {
+    public SolverReturn(double time, CpSolverStatus status, double makespan, String output, Map<Machine, List<AssignedTask>> assignedJobs) {
         this.time = time;
+        this.makespan = makespan;
         this.status = status;
         this.output = output;
         this.assignedJobs = assignedJobs;
@@ -103,5 +106,13 @@ public class SolverReturn {
      */
     public void setAssignedJobs(Map<Machine, List<AssignedTask>> assignedJobs) {
         this.assignedJobs = assignedJobs;
+    }
+
+    /**
+     * Get the makespan of the found schedule.
+     * @return the makespan of the found schedule.
+     */
+    public double getMakespan() {
+        return makespan;
     }
 }

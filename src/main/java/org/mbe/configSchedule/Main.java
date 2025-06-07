@@ -119,6 +119,7 @@ public class Main {
 
     /**
      * Use a family-based approach to search for a solution to the given problem.
+     *
      * @param fileName  The name of the given problem.
      * @param solveMode The mode (feasible/optimal) of the search.
      * @throws IOException if the problem file cannot be read or the result file cannot be written.
@@ -157,9 +158,10 @@ public class Main {
 
     /**
      * Use an instance-based approach to search for a solution to the given problem.
+     *
      * @param modelPath     The path to the model describing the problem.
      * @param configDirPath The path to the directory containing valid instances/configurations to the problem.
-     * @param solveMode The mode (feasible/optimal) of the search.
+     * @param solveMode     The mode (feasible/optimal) of the search.
      * @throws IOException if the problem file cannot be read or the result file cannot be written.
      */
     private static void solveInstanceBased(String modelPath, String configDirPath, SolveComplexity solveMode) throws ParserConfigurationException, IOException, SAXException, XPathExpressionException {
@@ -190,13 +192,14 @@ public class Main {
 
     /**
      * Reads a problem from a file in, which contents are formatted as an uvl.
-     * @param name          The name of the problem
-     * @return              A {@link SchedulingProblem} with the properties of the input-file
+     *
+     * @param name The name of the problem
+     * @return A {@link SchedulingProblem} with the properties of the input-file
      * @throws IOException if the input uvl file cannot be written.
      */
     public static SchedulingProblem ReadProblemUVL(String name) throws IOException {
         Path filePath;
-        if(name.contains("/")) {
+        if (name.contains("/")) {
             filePath = Path.of(name);
         } else {
             PathPreferences prefs = new PathPreferences();
@@ -210,7 +213,8 @@ public class Main {
 
     /**
      * Prints a problem
-     * @param sp    The {@link SchedulingProblem} to be printed
+     *
+     * @param sp The {@link SchedulingProblem} to be printed
      */
     public static void PrintProblem(SchedulingProblem sp) {
         System.out.printf("""
@@ -244,18 +248,20 @@ public class Main {
 
     /**
      * Prints a solution
-     * @param sr    The {@link SolverReturn} to be printed
+     *
+     * @param sr The {@link SolverReturn} to be printed
      */
     public static void PrintSolution(SolverReturn sr) {
         System.out.println("Solution:");
         System.out.println(sr.getOutput());
-        System.out.println("Schedule is " + sr.getStatus() + ", takes " + sr.getTime());
+        System.out.println("Schedule is " + sr.getStatus() + ", takes " + sr.getMakespan());
     }
 
     /**
      * Converts a solution to a {@link List} of String-Arrays, which can be used to save the solution as a CSV-file.
-     * @param sr    The solution in the form of a {@link SolverReturn}, which should be converted
-     * @return      A {@link List} of {@link Arrays} of type {@link String}
+     *
+     * @param sr The solution in the form of a {@link SolverReturn}, which should be converted
+     * @return A {@link List} of {@link Arrays} of type {@link String}
      */
     public static List<String[]> ConvertSRToStrings(SolverReturn sr) {
         Map<Machine, List<AssignedTask>> assignedJobs = new HashMap<>(sr.getAssignedJobs());
@@ -286,9 +292,10 @@ public class Main {
 
     /**
      * Saves a solution to a CSV-file
-     * @param sr            The solution in the form of a {@link SolverReturn}
-     * @param mode          The mode (feasible/optimal) of the search
-     * @param ProblemPath   The path of the corresponding problem
+     *
+     * @param sr          The solution in the form of a {@link SolverReturn}
+     * @param mode        The mode (feasible/optimal) of the search
+     * @param ProblemPath The path of the corresponding problem
      * @throws IOException if the result csv file cannot be written.
      */
     public static void WriteCSV(SolverReturn sr, SolveComplexity mode, String ProblemPath) throws IOException {
@@ -304,7 +311,7 @@ public class Main {
         PathPreferences prefs = new PathPreferences();
 
         Path path = Path.of(prefs.getSolutionSavePath());
-        if(!Files.exists(path)) {
+        if (!Files.exists(path)) {
             Files.createDirectories(path);
         }
 
@@ -324,8 +331,9 @@ public class Main {
 
     /**
      * Extracts the name of a problem from its file path
-     * @param path  The path to the problem file
-     * @return      The name of the problem
+     *
+     * @param path The path to the problem file
+     * @return The name of the problem
      */
     public static String ReadProblemName(String path) {
         String[] pathParts = path.split("/");

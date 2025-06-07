@@ -114,8 +114,8 @@ public class ConfigurationSolver {
 
                 Instant solveEnd = Instant.now();
 
-                if (sr != null && (sr.getStatus() == CpSolverStatus.OPTIMAL && sr.getTime() < bestResultTime)) {
-                    bestResultTime = sr.getTime();
+                if (sr != null && sr.getStatus() == CpSolverStatus.OPTIMAL && sr.getMakespan() < bestResultTime) {
+                    bestResultTime = sr.getMakespan();
                     bestResult = sr;
                     bestIteration = iteration;
                 }

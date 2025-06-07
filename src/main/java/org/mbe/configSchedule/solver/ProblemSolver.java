@@ -220,11 +220,10 @@ public class ProblemSolver {
             model.addNoOverlap(intervalsOnMachine);
         }
 
-        // Tasks innerhalb eines Jobs dürfen nur nacheinander starten
-        // Über alle Jobs
+        // Tasks innerhalb eines Jobs dürfen nur nacheinander starten.
+        // NOTE: For tasks required by duration constraints, this is already handled below in buildDurationConstraints(...).
         for (int jobID = 0; jobID < sp.getJobs().size(); ++jobID) {
             List<Task> job = sp.getJobs().get(jobID);
-            // Über alle Tasks
             for (int taskID = 0; taskID < job.size() - 1; ++taskID) {
                 List<Integer> prevKey = List.of(jobID, taskID);
                 List<Integer> nextKey = Arrays.asList(jobID, taskID + 1);
@@ -282,7 +281,11 @@ public class ProblemSolver {
                 // Liste mit den active-BoolVars der required TaskTypes
                 List<BoolVar> requiredBoolVars = new ArrayList<>();
                 for (Task requiredTask : con.getValue()) {
-                    requiredBoolVars.add(nameToTaskType.get(requiredTask.getName()).getActive());
+                    TaskType requiredTaskType = nameToTaskType.get(requiredTask.getName());
+                    requiredBoolVars.add(requiredTaskType.getActive());
+
+                    // This task should only start after all required tasks are finished.
+                    model.addGreaterOrEqual(taskType.getStart(), requiredTaskType.getEnd());
                 }
 
                 model.addMinEquality(allRequiredTasksActive, requiredBoolVars);

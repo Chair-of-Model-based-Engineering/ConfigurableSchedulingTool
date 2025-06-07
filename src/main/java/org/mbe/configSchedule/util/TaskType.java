@@ -9,13 +9,11 @@ import java.util.List;
 import java.util.Map;
 
 public class TaskType {
-    //IntVar has a lower bound, upper bound and name
+    // I haven't found out how to extract these IntVars from the IntervalVar below. Therefore, we also store them separately.
     private IntVar start;
     private IntVar end;
-    //IntervalVar does hava a start position, duration and an end date
     private IntervalVar interval;
     private BoolVar active;
-    private final Map<Integer, List<TaskType>> durationsConstraints = new HashMap<>();
     private final Task task;
 
     /**
@@ -97,35 +95,6 @@ public class TaskType {
      */
     public void setActive(BoolVar active) {
         this.active = active;
-    }
-
-    /**
-     * Gets duration constraints.
-     *
-     * @return {@link Map} which maps {@link Integer Integers} to {@link List Lists} of {@link TaskType TaskTypes}.
-     */
-    public Map<Integer, List<TaskType>> getDurationsConstraints() {
-        return durationsConstraints;
-    }
-
-    /**
-     * Adds new duration constraint.
-     *
-     * @param key   {@link Integer}
-     * @param tasks {@link List List} of {@link TaskType TaskTypes}
-     */
-    public void addDurationsConstraint(Integer key, List<TaskType> tasks) {
-        durationsConstraints.put(key, tasks);
-    }
-
-    /**
-     * Adds new task to existing duration constraint
-     *
-     * @param key      {@link Integer} corresponding to existing constraint.
-     * @param taskType {@link TaskType} to be added.
-     */
-    public void addTaskTypeToDuration(Integer key, TaskType taskType) {
-        durationsConstraints.get(key).add(taskType);
     }
 
     /**

@@ -231,11 +231,12 @@ public class Main {
                     return "%d -> {%s}".formatted(entry.getKey(), taskList);
                 }).collect(Collectors.joining(", "));
 
-                System.out.printf("%s => m: %s, o: %b, d: %s, e: %s, d: {%s}%n",
+                System.out.printf("%s => m: %s, o: %b, d: %s, ud: %s, e: %s, d: {%s}%n",
                         task.getName(),
                         task.getMachine().getName(),
                         task.isOptional(),
                         Arrays.toString(task.getDurations()),
+                        task.getUnboundDurations().map(String::valueOf).orElse("-"),
                         task.getExcludeTasks().toString(),
                         taskDurationConsString
                 );

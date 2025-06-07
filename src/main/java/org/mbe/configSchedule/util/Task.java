@@ -1,11 +1,12 @@
 package org.mbe.configSchedule.util;
 
-import java.io.Serializable;
 import java.util.*;
 
-public class Task implements Serializable {
+public class Task {
     private Machine machine;
     private int[] durations = new int[0];
+    @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
+    private Optional<Integer> unboundDurations = Optional.empty();
     private String name;
     private boolean optional;
     private List<String> excludeTasks = new ArrayList<>();
@@ -17,7 +18,7 @@ public class Task implements Serializable {
      * @param machine      contains on which machine this task is executed.
      * @param durations    contains all possible durations of the task.
      * @param name         contains the name of the task.
-     * @param optional     contains wether the task is optional.
+     * @param optional     contains whether the task is optional.
      * @param excludeTasks contains all tasks which are excluded with this task.
      */
     Task(Machine machine, int[] durations, String name, boolean optional, List<String> excludeTasks) {
@@ -27,6 +28,21 @@ public class Task implements Serializable {
         this.name = name;
         this.optional = optional;
         this.excludeTasks = excludeTasks;
+    }
+
+    /**
+     * Creates a new task.
+     *
+     * @param machine          the machine on which this task has to be executed.
+     * @param durations        all possible durations of the task.
+     * @param unboundDurations the lower bound of the unbound durations
+     * @param name             the name of the task.
+     * @param optional         whether the task is optional.
+     * @param excludeTasks     all tasks which are excluded with this task.
+     */
+    Task(Machine machine, int[] durations, int unboundDurations, String name, boolean optional, List<String> excludeTasks) {
+        this(machine, durations, name, optional, excludeTasks);
+        this.unboundDurations = Optional.of(unboundDurations);
     }
 
     /**
@@ -126,6 +142,34 @@ public class Task implements Serializable {
     }
 
     /**
+     * Returns whether the task has unbound durations.
+     *
+     * @return {@code true} if the task has unbound durations
+     */
+    public boolean hasUnboundDurations() {
+        return this.unboundDurations.isPresent();
+    }
+
+    /**
+     * Returns the lower bound of the unbound durations, if available.
+     *
+     * @return {@link Optional} of the lower bound of the unbound durations or {@link Optional#empty()} if none are set.
+     * @see #hasUnboundDurations() for checking if unbound durations are set.
+     */
+    public Optional<Integer> getUnboundDurations() {
+        return this.unboundDurations;
+    }
+
+    /**
+     * Sets the lower bound of the unbound durations.
+     *
+     * @param lowerBound the lower bound of the unbound durations.
+     */
+    public void setUnboundDurations(int lowerBound) {
+        this.unboundDurations = Optional.of(lowerBound);
+    }
+
+    /**
      * Gets name of machine.
      *
      * @return Variable of type {@link String}
@@ -215,9 +259,10 @@ public class Task implements Serializable {
      */
     @Override
     public String toString() {
-        return String.format("p: %s/ d: %s/ m: %s/ o: %b",
+        return String.format("p: %s/ d: %s/ ud: %s/ m: %s/ o: %b",
                 Optional.ofNullable(this.name).orElse("-"),
                 Optional.ofNullable(this.durations).map(Arrays::toString).orElse("-"),
+                this.unboundDurations.map(String::valueOf).orElse("-"),
                 Optional.ofNullable(this.machine).map(Machine::getName).orElse("-"),
                 this.optional);
     }

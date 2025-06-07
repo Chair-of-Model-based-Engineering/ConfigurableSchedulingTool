@@ -48,6 +48,7 @@ public final class UVLReader {
 
     /**
      * Parses the name from the feature model. The name is the value of the root feature.
+     *
      * @param featureModel The feature model from which the name should be retrieved.
      * @return the feature model's name
      */
@@ -70,7 +71,13 @@ public final class UVLReader {
                 .filter(c -> c.getFeatureName().contains("dl"))
                 .findAny();
         if (deadlineFeature.isPresent()) {
-            deadline = getDuration(deadlineFeature.get().getFeatureName());
+            String deadlineFeatureName = deadlineFeature.get().getFeatureName();
+            try {
+                String[] deadlineParts = deadlineFeatureName.split(" = ");
+                deadline = Integer.parseInt(deadlineParts[deadlineParts.length - 1]);
+            } catch (NumberFormatException _) {
+                System.err.printf("Could not determine deadline from feature '%s'%n", deadlineFeatureName);
+            }
         }
         return deadline;
     }
@@ -231,22 +238,6 @@ public final class UVLReader {
         }
 
         return jobs;
-    }
-
-    /**
-     * Gets the Duration from the feature with a name in the format "dp = x"
-     *
-     * @param featureName Name of the feature
-     * @return Integer value of the duration
-     */
-    private static int getDuration(String featureName) {
-        try {
-            String[] parts = featureName.split("=");
-            return Integer.parseInt(parts[1].strip());
-        } catch (Exception e) {
-            System.out.println("Could not determine duration for feature \"" + featureName + "\", using 0 instead.");
-            return 0;
-        }
     }
 
     /**
@@ -412,6 +403,7 @@ public final class UVLReader {
 
     /**
      * Get a set of the names of all variables used in the given constraint.
+     *
      * @param constraint The constraint from which to extract the variables.
      * @return a set of all variables.
      */
@@ -428,23 +420,33 @@ public final class UVLReader {
     }
 
     /**
-     * Set the duration of a task
+     * Set the duration and unbound durations of a task
      *
      * @param feature The feature containing the duration
      * @param task    The Task-Object for which the duration should be set
      */
     private static void setTaskDuration(Feature feature, Task task) {
         for (Group group : feature.getChildren()) {
-            for (Feature durationFeature : group.getFeatures()) {
-                String durationString = durationFeature.getFeatureName();
-                int duration = Integer.parseInt(durationString.split(" = ")[1]);
-                task.addDuration(duration);
+            for (Feature childFeature : group.getFeatures()) {
+                String childName = childFeature.getFeatureName();
+                if (childName.startsWith("d")) {
+                    if (childName.contains(">=")) {
+                        int lowerBound = Integer.parseInt(childName.split(" >= ")[1]);
+                        task.setUnboundDurations(lowerBound);
+                    } else if (childName.contains("=")) {
+                        int duration = Integer.parseInt(childName.split(" = ")[1]);
+                        task.addDuration(duration);
+                    }
+                } else {
+                    System.err.printf("Ignoring feature '%s' for task '%s'", childName, task.getName());
+                }
             }
         }
     }
 
     /**
      * Set the machine of a task.
+     *
      * @param task               The task to which to assign the machine.
      * @param machines           The list of all machines.
      * @param machineAssignments The mapping of tasks to machines.

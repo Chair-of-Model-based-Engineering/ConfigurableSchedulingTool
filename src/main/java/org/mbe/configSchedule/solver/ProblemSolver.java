@@ -356,7 +356,13 @@ public class ProblemSolver {
         taskType.setEnd(model.newIntVar(0, maxDuration, "end_" + taskIdentifier));
 
         long[] taskDurations = Arrays.stream(task.getDurations()).asLongStream().toArray();
-        IntVar possibleDurations = model.newIntVarFromDomain(Domain.fromValues(taskDurations), task.getName() + "_duration");
+        Domain durationsDomain = Domain.fromValues(taskDurations);
+        Optional<Integer> unboundDurationsBound = task.getUnboundDurations();
+        if (unboundDurationsBound.isPresent()) {
+            Domain unboundDurationsDomain = Domain.fromFlatIntervals(new long[] {unboundDurationsBound.get(), maxDuration});
+            durationsDomain = durationsDomain.unionWith(unboundDurationsDomain);
+        }
+        IntVar possibleDurations = model.newIntVarFromDomain(durationsDomain, task.getName() + "_duration");
 
         BoolVar taskActive = model.newBoolVar(task.getName() + "_active");
         taskType.setActive(taskActive);

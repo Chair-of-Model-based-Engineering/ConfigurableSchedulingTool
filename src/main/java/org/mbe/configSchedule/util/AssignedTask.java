@@ -1,12 +1,15 @@
 package org.mbe.configSchedule.util;
 
+/**
+ * Represents a final task in a schedule.
+ */
+@SuppressWarnings("ClassCanBeRecord")
 public class AssignedTask {
-    private int jobID;
-    private int taskID;
-    private int start;
-    private int duration;
-    private String name;
-    private boolean isActive;
+    private final int jobID;
+    private final int taskID;
+    private final int start;
+    private final int duration;
+    private final String name;
 
     /**
      * Creates new a new assigned task.
@@ -35,30 +38,12 @@ public class AssignedTask {
     }
 
     /**
-     * Sets ID of job.
-     *
-     * @param jobID new ID.
-     */
-    public void setJobID(int jobID) {
-        this.jobID = jobID;
-    }
-
-    /**
      * Gets the ID of this task.
      *
      * @return taskID
      */
     public int getTaskID() {
         return taskID;
-    }
-
-    /**
-     * Sets ID of this task.
-     *
-     * @param taskID new ID
-     */
-    public void setTaskID(int taskID) {
-        this.taskID = taskID;
     }
 
     /**
@@ -71,15 +56,6 @@ public class AssignedTask {
     }
 
     /**
-     * Sets start time.
-     *
-     * @param start new start time.
-     */
-    public void setStart(int start) {
-        this.start = start;
-    }
-
-    /**
      * Gets duration of this task.
      *
      * @return duration.
@@ -89,47 +65,11 @@ public class AssignedTask {
     }
 
     /**
-     * Sets duration of this task.
-     *
-     * @param duration new duration.
-     */
-    public void setDuration(int duration) {
-        this.duration = duration;
-    }
-
-    /**
      * Gets name of this task.
      *
      * @return name.
      */
     public String getName() {
         return name;
-    }
-
-    /**
-     * Sets name of this task.
-     *
-     * @param name new name.
-     */
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    /**
-     * Gets the active state of this task.
-     *
-     * @return isActive.
-     */
-    public boolean isActive() {
-        return isActive;
-    }
-
-    /**
-     * Sets active state of this task.
-     *
-     * @param active new active state.
-     */
-    public void setActive(boolean active) {
-        isActive = active;
     }
 }

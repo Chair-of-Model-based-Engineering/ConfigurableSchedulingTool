@@ -81,17 +81,14 @@ public class ProblemSolver {
 
                 if (assignedJobs.get(machine) != null) {
                     for (AssignedTask assignedTask : assignedJobs.get(machine)) {
-                        if (assignedTask.isActive()) {
-                            //String name = "job_" + assignedTask.jobID + "_task_" + assignedTask.taskID;
-                            String name = assignedTask.getName();
-                            // Add spaces to output to align columns.
-                            solLineTasks.append(String.format("%-15s", name));
+                        //String name = "job_" + assignedTask.jobID + "_task_" + assignedTask.taskID;
+                        String name = assignedTask.getName();
+                        // Add spaces to output to align columns.
+                        solLineTasks.append(String.format("%-15s", name));
 
-                            String solTmp = "[" + assignedTask.getStart() + "," + (assignedTask.getStart() + assignedTask.getDuration()) + "]";
-                            // Add spaces to output to align columns.
-                            solLine.append(String.format("%-15s", solTmp));
-                        }
-
+                        String solTmp = "[" + assignedTask.getStart() + "," + (assignedTask.getStart() + assignedTask.getDuration()) + "]";
+                        // Add spaces to output to align columns.
+                        solLine.append(String.format("%-15s", solTmp));
                     }
                 }
                 output.append(solLineTasks).append(System.lineSeparator());
@@ -123,19 +120,12 @@ public class ProblemSolver {
                         (int) solver.value(allTaskTypes.get(key).getInterval().getSizeExpr()),
                         task.getName());
 
-
-                if (task.isOptional()) {
-                    int active = (int) solver.value(allTaskTypes.get(key).getActive());
-                    assignedTask.setActive(active == 1);
-                } else {
-                    assignedTask.setActive(true);
+                // Add task to machine's task list, if it is executed
+                if (!task.isOptional() || solver.value(allTaskTypes.get(key).getActive()) == 1) {
+                    Machine machine = task.getMachine();
+                    assignedJobs.computeIfAbsent(machine, (Machine _) -> new ArrayList<>());
+                    assignedJobs.get(machine).add(assignedTask);
                 }
-
-                Machine machine = task.getMachine();
-
-                assignedJobs.computeIfAbsent(machine, (Machine _) -> new ArrayList<>());
-                assignedJobs.get(machine).add(assignedTask);
-
             }
         }
         return assignedJobs;

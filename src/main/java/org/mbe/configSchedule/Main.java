@@ -276,11 +276,9 @@ public class Main {
 
             int index = 1;
             for (AssignedTask t : assignedJobs.get(m)) {
-                if (t.isActive()) {
-                    mLine[index] = t.getName();
-                    iLine[index] = t.getStart() + "," + (t.getStart() + t.getDuration());
-                    index++;
-                }
+                mLine[index] = t.getName();
+                iLine[index] = t.getStart() + "," + (t.getStart() + t.getDuration());
+                index++;
             }
 
             resultString.add(mLine);

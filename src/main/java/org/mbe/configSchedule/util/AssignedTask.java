@@ -1,10 +1,12 @@
 package org.mbe.configSchedule.util;
 
+import java.util.Comparator;
+
 /**
  * Represents a final task in a schedule.
  */
 @SuppressWarnings("ClassCanBeRecord")
-public class AssignedTask {
+public class AssignedTask implements Comparable<AssignedTask> {
     private final int jobID;
     private final int taskID;
     private final int start;
@@ -71,5 +73,19 @@ public class AssignedTask {
      */
     public String getName() {
         return name;
+    }
+
+    /**
+     * {@inheritDoc}
+     * @param o the object to be compared.
+     * @return
+     */
+    @Override
+    public int compareTo(AssignedTask o) {
+        if (this.getStart() != o.getStart()) {
+            return this.getStart() - o.getStart();
+        } else {
+            return this.getDuration() - o.getDuration();
+        }
     }
 }

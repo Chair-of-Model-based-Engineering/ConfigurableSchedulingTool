@@ -39,74 +39,18 @@ public class ProblemSolver {
 
     private SolverReturn getSolverReturn(SchedulingProblem sp, CpSolver solver) {
         CpSolverStatus status = solver.solve(model);
+        Schedule schedule;
         if (status == CpSolverStatus.OPTIMAL || status == CpSolverStatus.FEASIBLE) {
-            Map<Machine, List<AssignedTask>> assignedJobs = getAssignedJobs(sp, solver);
-            String outputString = generateOutputString(sp, solver, assignedJobs);
-            return new SolverReturn(solver.userTime(), status, solver.objectiveValue(), outputString, assignedJobs);
+            schedule = getSchedule(sp, solver);
         } else {
-            return null;
+            schedule = null;
         }
+        return new SolverReturn(solver.userTime(), status, schedule);
     }
 
-    private String generateOutputString(SchedulingProblem sp, CpSolver solver, Map<Machine, List<AssignedTask>> assignedJobs) {
-        class SortTasks implements Comparator<AssignedTask> {
-            @Override
-            public int compare(AssignedTask a, AssignedTask b) {
-                if (a.getStart() != b.getStart()) {
-                    return a.getStart() - b.getStart();
-                } else {
-                    return a.getDuration() - b.getDuration();
-                }
-            }
-        }
+    private Schedule getSchedule(SchedulingProblem sp, CpSolver solver) {
+        Schedule schedule = new Schedule(solver.objectiveValue());
 
-        int longestMachineName = sp.getMachines().stream()
-                .mapToInt(m -> m.getName().length())
-                .max()
-                .orElse(0);
-
-        // Create per machine output lines.
-        StringBuilder output = new StringBuilder();
-        for (Machine machine : sp.getMachines()) {
-            if (!machine.isOptional() || solver.value(machine.getActive()) == 1) {
-                // Sort by starting time.
-                if (assignedJobs.get(machine) != null) {
-                    assignedJobs.get(machine).sort(new SortTasks());
-                }
-
-                StringBuilder solLineTasks = new StringBuilder("Machine " + machine.getName() + ": ");
-                solLineTasks.append(" ".repeat(Math.max(0, longestMachineName - machine.getName().length())));
-                StringBuilder solLine = new StringBuilder();
-                solLine.append(" ".repeat(longestMachineName + 10)); // 10 = length of "Machine_: "
-
-                if (assignedJobs.get(machine) != null) {
-                    for (AssignedTask assignedTask : assignedJobs.get(machine)) {
-                        //String name = "job_" + assignedTask.jobID + "_task_" + assignedTask.taskID;
-                        String name = assignedTask.getName();
-                        // Add spaces to output to align columns.
-                        solLineTasks.append(String.format("%-15s", name));
-
-                        String solTmp = "[" + assignedTask.getStart() + "," + (assignedTask.getStart() + assignedTask.getDuration()) + "]";
-                        // Add spaces to output to align columns.
-                        solLine.append(String.format("%-15s", solTmp));
-                    }
-                }
-                output.append(solLineTasks).append(System.lineSeparator());
-                output.append(solLine).append(System.lineSeparator());
-            }
-
-        }
-        return output.toString();
-    }
-
-    private Map<Machine, List<AssignedTask>> getAssignedJobs(SchedulingProblem sp, CpSolver solver) {
-        Map<Machine, List<AssignedTask>> assignedJobs = new HashMap<>();
-
-        //System.out.println("Solution:");
-
-        // Create one list of assigned tasks per machine.
-        //Map<Machine, List<AssignedTask>> assignedJobs = new HashMap<>();
-        // Über jede Task iterieren
         for (int jobID = 0; jobID < sp.getJobs().size(); ++jobID) {
             List<Task> job = sp.getJobs().get(jobID);
             for (int taskID = 0; taskID < job.size(); ++taskID) {
@@ -122,13 +66,11 @@ public class ProblemSolver {
 
                 // Add task to machine's task list, if it is executed
                 if (!task.isOptional() || solver.value(allTaskTypes.get(key).getActive()) == 1) {
-                    Machine machine = task.getMachine();
-                    assignedJobs.computeIfAbsent(machine, (Machine _) -> new ArrayList<>());
-                    assignedJobs.get(machine).add(assignedTask);
+                    schedule.addTaskToMachine(assignedTask, task.getMachine());
                 }
             }
         }
-        return assignedJobs;
+        return schedule;
     }
 
     private void buildModel(SchedulingProblem sp) {

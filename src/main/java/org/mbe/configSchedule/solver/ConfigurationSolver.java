@@ -114,10 +114,14 @@ public class ConfigurationSolver {
 
                 Instant solveEnd = Instant.now();
 
-                if (sr != null && sr.getStatus() == CpSolverStatus.OPTIMAL && sr.getMakespan() < bestResultTime) {
-                    bestResultTime = sr.getMakespan();
-                    bestResult = sr;
-                    bestIteration = iteration;
+                if (sr.isOptimal()) {
+                    @SuppressWarnings("OptionalGetWithoutIsPresent") // if the schedule is optimal, it necessarily has a schedule.
+                    double makespan = sr.getSchedule().get().getMakespan();
+                    if (makespan < bestResultTime) {
+                        bestResultTime = makespan;
+                        bestResult = sr;
+                        bestIteration = iteration;
+                    }
                 }
                 iteration++;
 

@@ -146,13 +146,10 @@ public class Main {
         long solveTime = Duration.between(solveStart, solveEnd).toMillis();
         long combinedTime = readTime + solveTime;
 
-        if (sr != null) {
-            PrintSolution(sr);
-            System.out.println("Read Time: " + readTime + "ms, Solve Time: " + solveTime + "ms, Combined: " + combinedTime + "ms");
+        PrintSolution(sr);
+        System.out.println("Read Time: " + readTime + "ms, Solve Time: " + solveTime + "ms, Combined: " + combinedTime + "ms");
+        if (sr.isAtLeastFeasible()) {
             WriteCSV(sr, solveMode, fileName);
-        } else {
-            System.out.println("No solution found");
-            System.out.println("Read Time: " + readTime + "ms, Solve Time: " + solveTime + "ms, Combined: " + combinedTime + "ms");
         }
     }
 
@@ -253,9 +250,14 @@ public class Main {
      * @param sr The {@link SolverReturn} to be printed
      */
     public static void PrintSolution(SolverReturn sr) {
-        System.out.println("Solution:");
-        System.out.println(sr.getOutput());
-        System.out.println("Schedule is " + sr.getStatus() + ", takes " + sr.getMakespan());
+        Optional<Schedule> schedule = sr.getSchedule();
+        if (schedule.isEmpty()) {
+            System.out.println("No solution found.");
+        } else {
+            System.out.println("Solution:");
+            System.out.println(schedule.get().generateOutputString());
+            System.out.println("Schedule is " + sr.getStatus() + ", takes " + schedule.get().getMakespan());
+        }
     }
 
     /**
@@ -265,17 +267,21 @@ public class Main {
      * @return A {@link List} of {@link Arrays} of type {@link String}
      */
     public static List<String[]> ConvertSRToStrings(SolverReturn sr) {
-        Map<Machine, List<AssignedTask>> assignedJobs = new HashMap<>(sr.getAssignedJobs());
+        if (sr.getSchedule().isEmpty()) {
+            return List.of();
+        }
+
+        Schedule schedule = sr.getSchedule().get();
         List<String[]> resultString = new ArrayList<>();
 
-        for (Machine m : assignedJobs.keySet()) {
-            String[] mLine = new String[assignedJobs.get(m).size() + 1];
-            String[] iLine = new String[assignedJobs.get(m).size() + 1];
+        for (Machine m : schedule.getActiveMachines()) {
+            String[] mLine = new String[schedule.getTasks(m).size() + 1];
+            String[] iLine = new String[schedule.getTasks(m).size() + 1];
             mLine[0] = m.getName();
             iLine[0] = m.getName() + "Intervals";
 
             int index = 1;
-            for (AssignedTask t : assignedJobs.get(m)) {
+            for (AssignedTask t : schedule.getTasks(m)) {
                 mLine[index] = t.getName();
                 iLine[index] = t.getStart() + "," + (t.getStart() + t.getDuration());
                 index++;

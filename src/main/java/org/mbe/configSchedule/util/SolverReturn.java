@@ -2,32 +2,24 @@ package org.mbe.configSchedule.util;
 
 import com.google.ortools.sat.CpSolverStatus;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.Optional;
 
 public class SolverReturn {
-    private double makespan;
     private Double time;
     private CpSolverStatus status;
-    private String output;
-    private Map<Machine, List<AssignedTask>> assignedJobs;
+    private Schedule schedule;
 
     /**
      * Creates new object of type SolverReturn.
      *
-     * @param time         time it took to solve the problem.
-     * @param makespan     makespan of the found schedule.
-     * @param status       status of the solver.
-     * @param output       String output for display.
-     * @param assignedJobs Jobs executed in solution.
+     * @param time     time it took to solve the problem.
+     * @param status   status of the solver.
+     * @param schedule Jobs executed in solution.
      */
-    public SolverReturn(double time, CpSolverStatus status, double makespan, String output, Map<Machine, List<AssignedTask>> assignedJobs) {
+    public SolverReturn(double time, CpSolverStatus status, Schedule schedule) {
         this.time = time;
-        this.makespan = makespan;
         this.status = status;
-        this.output = output;
-        this.assignedJobs = assignedJobs;
+        this.schedule = schedule;
     }
 
     /**
@@ -55,28 +47,29 @@ public class SolverReturn {
     }
 
     /**
-     * Get output String.
+     * Returns whether the schedule is at least feasible, e.g. feasible or optimal.
      *
-     * @return output String.
+     * @return {@code true} if the schedule is feasible, {@code false} otherwise.
      */
-    public String getOutput() {
-        return output;
+    public boolean isAtLeastFeasible() {
+        return status == CpSolverStatus.OPTIMAL || status == CpSolverStatus.FEASIBLE;
+    }
+
+    /**
+     * Returns whether the schedule is optimal.
+     *
+     * @return {@code true} if the schedule is optimal, {@code false} otherwise.
+     */
+    public boolean isOptimal() {
+        return status == CpSolverStatus.OPTIMAL;
     }
 
     /**
      * Get all jobs assigned to each machine in solution.
      *
-     * @return all assigned jobs.
+     * @return all assigned jobs or {@link Optional#empty()} if no feasible solution was found.
      */
-    public Map<Machine, List<AssignedTask>> getAssignedJobs() {
-        return assignedJobs;
-    }
-
-    /**
-     * Get the makespan of the found schedule.
-     * @return the makespan of the found schedule.
-     */
-    public double getMakespan() {
-        return makespan;
+    public Optional<Schedule> getSchedule() {
+        return Optional.ofNullable(schedule);
     }
 }

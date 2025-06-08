@@ -46,30 +46,12 @@ public class SolverReturn {
     }
 
     /**
-     * Set time spend to solve the problem.
-     *
-     * @param time new time in ms.
-     */
-    public void setTime(Double time) {
-        this.time = time;
-    }
-
-    /**
      * Get status of solver.
      *
      * @return status of solver.
      */
     public CpSolverStatus getStatus() {
         return status;
-    }
-
-    /**
-     * Sets status of solver.
-     *
-     * @param status new status of solver.
-     */
-    public void setStatus(CpSolverStatus status) {
-        this.status = status;
     }
 
     /**
@@ -82,30 +64,12 @@ public class SolverReturn {
     }
 
     /**
-     * Set output String.
-     *
-     * @param output output String.
-     */
-    public void setOutput(String output) {
-        this.output = output;
-    }
-
-    /**
      * Get all jobs assigned to each machine in solution.
      *
      * @return all assigned jobs.
      */
     public Map<Machine, List<AssignedTask>> getAssignedJobs() {
         return assignedJobs;
-    }
-
-    /**
-     * Set Jobs assigned to each machine.
-     *
-     * @param assignedJobs new assigned jobs.
-     */
-    public void setAssignedJobs(Map<Machine, List<AssignedTask>> assignedJobs) {
-        this.assignedJobs = assignedJobs;
     }
 
     /**

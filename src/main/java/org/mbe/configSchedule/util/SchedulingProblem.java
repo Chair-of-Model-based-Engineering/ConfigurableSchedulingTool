@@ -50,15 +50,6 @@ public class SchedulingProblem implements Serializable {
     }
 
     /**
-     * Set jobs of scheduling problem.
-     *
-     * @param jobs a {@link List} of {@link List} of {@link Task Tasks}.
-     */
-    public void setJobs(List<List<Task>> jobs) {
-        this.jobs = jobs;
-    }
-
-    /**
      * Get machines of scheduling problem.
      *
      * @return {@link List} of {@link Machine Machines}.
@@ -68,30 +59,12 @@ public class SchedulingProblem implements Serializable {
     }
 
     /**
-     * Set machines of scheduling problem.
-     *
-     * @param machines {@link List} of {@link Machine Machines}.
-     */
-    public void setMachines(List<Machine> machines) {
-        this.machines = machines;
-    }
-
-    /**
      * Get deadline of scheduling problem.
      *
      * @return deadline as an integer.
      */
     public int getDeadline() {
         return deadline;
-    }
-
-    /**
-     * Set deadline of scheduling Problem.
-     *
-     * @param deadline new deadline.
-     */
-    public void setDeadline(int deadline) {
-        this.deadline = deadline;
     }
 
     /**

@@ -33,6 +33,8 @@ public class Main {
         OPTIMAL;
     }
 
+    private final static String sectionDivider = System.lineSeparator() + "***********************";
+
     public static void main(String[] args) throws ParserConfigurationException, IOException, SAXException, XPathExpressionException, ClassNotFoundException {
         Loader.loadNativeLibraries();
         PathPreferences prefs = new PathPreferences();
@@ -127,8 +129,9 @@ public class Main {
     private static void solveFamilyBased(String fileName, SolveComplexity solveMode) throws IOException {
         Instant readStart = Instant.now();
         SchedulingProblem sp = ReadProblemUVL(fileName);
-        Instant readEnd = Instant.now();
+        long readTime = Duration.between(readStart, Instant.now()).toMillis();
 
+        System.out.println(sectionDivider);
         PrintProblem(sp);
 
         Instant solveStart = Instant.now();
@@ -139,15 +142,21 @@ public class Main {
         } else {
             sr = problemSolver.getBestSolution();
         }
+        long solveTime = Duration.between(solveStart, Instant.now()).toMillis();
 
-        Instant solveEnd = Instant.now();
-
-        long readTime = Duration.between(readStart, readEnd).toMillis();
-        long solveTime = Duration.between(solveStart, solveEnd).toMillis();
-        long combinedTime = readTime + solveTime;
-
+        System.out.println(sectionDivider);
         PrintSolution(sr);
-        System.out.println("Read Time: " + readTime + "ms, Solve Time: " + solveTime + "ms, Combined: " + combinedTime + "ms");
+
+        System.out.println(sectionDivider);
+        // TODO: Is the solving time correct? Timing around the `solver.solve(model)` call in ProblemSolver yields times about twice as big.
+        System.out.printf("""
+                Time:
+                Reading: %d ms
+                Solving with model setup: %d ms
+                Solving: %d ms
+                Overall: %d ms
+                """, readTime, solveTime, (int) (sr.getTime() * 1000), readTime + solveTime);
+
         if (sr.isAtLeastFeasible()) {
             WriteCSV(sr, solveMode, fileName);
         }
@@ -163,6 +172,7 @@ public class Main {
      */
     private static void solveInstanceBased(String modelPath, String configDirPath, SolveComplexity solveMode) throws ParserConfigurationException, IOException, SAXException, XPathExpressionException {
         SchedulingProblem sp = ReadProblemUVL(modelPath);
+        System.out.println(sectionDivider);
         PrintProblem(sp);
         ConfigurationSolverReturn csr;
         if (solveMode == SolveComplexity.FEASIBLE) {
@@ -171,8 +181,11 @@ public class Main {
             csr = ConfigurationSolver.getBest(configDirPath, modelPath);
         }
 
+        System.out.println(sectionDivider);
         if (csr != null && csr.isHasSolution()) {
             PrintSolution(csr.getSolverReturn());
+
+            System.out.println(sectionDivider);
             System.out.printf("""
                     Found solution in iteration %s
                     "Read time: %d ms, Solve time: %d ms, Combined: %d ms
@@ -215,13 +228,13 @@ public class Main {
      */
     public static void PrintProblem(SchedulingProblem sp) {
         System.out.printf("""
-                ***********************
                 Scheduling problem:
                 Deadline: %d
+
                 """, sp.getDeadline());
         int jobIndex = 0;
         for (List<Task> job : sp.getJobs()) {
-            System.out.printf("Job %d: %n", jobIndex);
+            System.out.printf("Job %d:%n", jobIndex);
             for (Task task : job) {
                 String taskDurationConsString = task.getDurationCons().entrySet().stream().map(entry -> {
                     String taskList = entry.getValue().stream().map(Task::getName).collect(Collectors.joining(", "));
@@ -240,8 +253,6 @@ public class Main {
             }
             jobIndex++;
         }
-
-        System.out.printf("%n***********************%n%n");
     }
 
     /**

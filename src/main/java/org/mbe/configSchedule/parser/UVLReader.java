@@ -255,18 +255,13 @@ public final class UVLReader {
             List<Machine> machines,
             Map<String, String> machineAssignments
     ) {
-        Set<String> notStarter = new HashSet<>();
-        Set<String> starterTasks = new HashSet<>();
-        for (ImplicationConstraint c : orderConstraints) {
-            String l = ((LiteralConstraint) c.getLeft()).getLiteral();
-            String r = ((LiteralConstraint) c.getRight()).getLiteral();
-
-            starterTasks.add(r);
-            notStarter.add(l);
-        }
-
-        // Remove notStarter, so starterTasks only contains tasks that start a job
-        starterTasks.removeAll(notStarter);
+        Set<String> dependentTasks = orderConstraints.stream()
+                .map(c -> ((LiteralConstraint) c.getLeft()).getLiteral())
+                .collect(Collectors.toUnmodifiableSet());
+        Set<String> starterTasks = mandatoryTasks.stream()
+                .map(Feature::getFeatureName)
+                .filter(t -> !dependentTasks.contains(t))
+                .collect(Collectors.toSet());
 
         List<List<Task>> jobs = new ArrayList<>();
 
@@ -287,7 +282,8 @@ public final class UVLReader {
             setTaskMachine(task, machines, machineAssignments);
 
             String currentTaskName = task.getName();
-            for (int i = 0; i < orderConstraints.size(); i++) {
+            int i = 0;
+            while (i < orderConstraints.size()) {
                 ImplicationConstraint orderPair = orderConstraints.get(i);
                 LiteralConstraint lLiteral = (LiteralConstraint) orderPair.getLeft();
                 LiteralConstraint rLiteral = (LiteralConstraint) orderPair.getRight();
@@ -310,7 +306,9 @@ public final class UVLReader {
 
                     currentTaskName = followTask.getName();
                     orderConstraints.remove(orderPair);
-                    i = -1;
+                    i = 0;
+                } else {
+                    i++;
                 }
             }
             jobs.add(job);
@@ -459,6 +457,7 @@ public final class UVLReader {
             return;
         }
 
+        // TODO: Could be optimized by adding a `Map<String, Machine> nameToMachine`
         // Find machine corresponding to machineName
         for (Machine m : machines) {
             if (machineName.equals(m.getName())) {

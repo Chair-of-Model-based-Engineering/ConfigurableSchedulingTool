@@ -216,13 +216,29 @@ public class ProblemSolver {
                     TaskType requiredTaskType = nameToTaskType.get(requiredTask.getName());
                     requiredBoolVars.add(requiredTaskType.getActive());
 
-                    // This task should only start after all required tasks are finished.
-                    model.addGreaterOrEqual(taskType.getStart(), requiredTaskType.getEnd());
+                    // The dependent task should only start after all requirements are finished,
+                    // but only if the duration of the duration constraint is actually selected.
+                    // (taskType.selectedDuration == durationOfDurationConstraint) => (taskType.start >= requiredTask.end)
+                    //
+                    // The required task may still be executed as a requirement of a different task, but since this task
+                    // did not select the duration of the duration constraint it is not dependent on the required task.
+                    //
+                    // This cannot be directly encoded for CP-SAT because we cannot set a boolean variable based on
+                    // the equality of two other variables. Therefore, we need to use the channeling pattern as described here:
+                    // https://github.com/google/or-tools/blob/stable/ortools/sat/docs/channeling.md#java-code
+                    BoolVar constraintDurationSelected = model.newBoolVar(taskType.getName() + "_constraintDurationSelected_" + con.getKey());
+
+                    // Set `constraintDurationSelected = (task.selectedDuration == durationValue)`
+                    LinearExpr sizeExpr = taskType.getInterval().getSizeExpr();
+                    model.addEquality(sizeExpr, durationValue).onlyEnforceIf(constraintDurationSelected);
+                    model.addDifferent(sizeExpr, durationValue).onlyEnforceIf(constraintDurationSelected.not());
+
+                    model.addGreaterOrEqual(taskType.getStart(), requiredTaskType.getEnd()).onlyEnforceIf(constraintDurationSelected);
                 }
 
                 model.addMinEquality(allRequiredTasksActive, requiredBoolVars);
 
-                // Falls eine der required Tasks nicht aktiv ist, darf die zugehörie Dauer auch nicht für
+                // Falls eine der required Tasks nicht aktiv ist, darf die zugehörige Dauer auch nicht für
                 // die Task gewählt werden
                 model.addDifferent(taskType.getInterval().getSizeExpr(), durationValue).onlyEnforceIf(allRequiredTasksActive.not());
             }

@@ -4,12 +4,10 @@ import com.google.ortools.sat.BoolVar;
 import com.google.ortools.sat.IntVar;
 import com.google.ortools.sat.IntervalVar;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 public class TaskType {
     // I haven't found out how to extract these IntVars from the IntervalVar below. Therefore, we also store them separately.
+    // With `model.getIntVarFromProtoIndex(interval.getEndExpr().getVariableIndex(0))`,
+    // we could get a rebuilt IntVar for the end, but I'm not sure if that would work.
     private IntVar start;
     private IntVar end;
     private IntervalVar interval;

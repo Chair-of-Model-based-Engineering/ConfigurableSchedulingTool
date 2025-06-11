@@ -57,10 +57,13 @@ public final class UVLReader {
     }
 
     /**
-     * Parses the deadline from the feature model
+     * Parses the deadline from the feature model.
+     *
+     * <p>If the deadline cannot be parsed, because the value is malformed or the feature is missing,
+     * the method returns {@code -1} representing a deadline of infinity.
      *
      * @param featureModel The feature model from which the deadline should be retrieved
-     * @return the deadline value
+     * @return the deadline value or -1
      */
     public static int parseDeadline(FeatureModel featureModel) {
         int deadline = -1;

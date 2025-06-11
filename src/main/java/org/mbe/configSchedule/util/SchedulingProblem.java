@@ -61,6 +61,9 @@ public class SchedulingProblem implements Serializable {
     /**
      * Get deadline of scheduling problem.
      *
+     * <p>If the deadline is at infinity, this method returns {@code -1}.
+     * Only non-negative numbers (>=0) should be interpreted as actual deadlines.
+     *
      * @return deadline as an integer.
      */
     public int getDeadline() {
@@ -69,6 +72,7 @@ public class SchedulingProblem implements Serializable {
 
     /**
      * Get the name of the scheduling problem.
+     *
      * @return the scheduling problem's name.
      */
     public String getName() {

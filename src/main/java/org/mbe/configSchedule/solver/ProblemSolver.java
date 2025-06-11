@@ -74,8 +74,13 @@ public class ProblemSolver {
     }
 
     private void buildModel(SchedulingProblem sp) {
-        // Berechnet wie lange es dauern würde, wenn alle Tasks einzeln nacheinander laufen würden
-        int maxDuration = sp.getJobs().stream().flatMap(Collection::stream).mapToInt(Task::getMaximumDuration).sum();
+        // Used as the upper bound for the domain of task durations.
+        // A negative number as the deadline represents a deadline of infinity in which case we calculate the
+        // upper bound for task durations as the sum of all task durations.
+        // Adding 1 so tasks with unbound durations can assume an infeasible duration.
+        int maxDuration = 1 + (sp.getDeadline() >= 0 ?
+                sp.getDeadline() :
+                sp.getJobs().stream().flatMap(Collection::stream).mapToInt(Task::getMaximumDuration).sum());
 
         // Map mit Tasknamen als Key, genutzt für die Duration Constraints
         Map<String, TaskType> nameToTaskType = new HashMap<>();
@@ -136,11 +141,10 @@ public class ProblemSolver {
 
         // Zielvariable, nimmt am Ende die komplette Duration an und soll minimiert werden
         IntVar objVar = model.newIntVar(0, maxDuration, "makespan");
-
-        // objVar darf höchstens so groß wie die Deadline sein
-        // und soll den selben Wert wie die maximale Endtime haben (Endzeitpunkt des letzten Tasks)
-        model.addLessOrEqual(objVar, sp.getDeadline());
         model.addMaxEquality(objVar, possibleMaxEndtimes);
+
+        if (sp.getDeadline() >= 0)
+            model.addLessOrEqual(objVar, sp.getDeadline());
 
         // objVar soll so klein wie möglich gehalten werden
         model.minimize(objVar);
@@ -307,15 +311,7 @@ public class ProblemSolver {
         Domain durationsDomain = Domain.fromValues(taskDurations);
         Optional<Integer> unboundDurationsBound = task.getUnboundDurations();
         if (unboundDurationsBound.isPresent()) {
-            // Using the deadline as the upper bound for the domain instead of maxDuration because
-            // the deadline may be much further in the future than maxDuration.
-            // In that case, maxDuration would pose an upper bound for the "unbound" durations
-            // and we could not maximize the duration correctly.
-            // On the other hand, with the deadline as the max possible duration,
-            // even a task started at time 0 cannot produce a feasible schedule with a duration greater than the deadline.
-            Domain unboundDurationsDomain = Domain.fromFlatIntervals(
-                    new long[] {unboundDurationsBound.get(), sp.getDeadline() + 1}
-            );
+            Domain unboundDurationsDomain = Domain.fromFlatIntervals(new long[] {unboundDurationsBound.get(), maxDuration});
             durationsDomain = durationsDomain.unionWith(unboundDurationsDomain);
         }
         IntVar possibleDurations = model.newIntVarFromDomain(durationsDomain, task.getName() + "_duration");

@@ -113,7 +113,7 @@ public class Main {
             }
             default -> System.err.printf("""
                     Undefined command %s
-                    "Use "generate" or "solve"
+                    Use "generate" or "solve"
                     """, args[0]);
         }
 
@@ -188,14 +188,14 @@ public class Main {
             System.out.println(sectionDivider);
             System.out.printf("""
                     Found solution in iteration %s
-                    "Read time: %d ms, Solve time: %d ms, Combined: %d ms
+                    Read time: %d ms, Solve time: %d ms, Combined: %d ms
                     """, csr.getIteration(), csr.getReadTime(), csr.getTimeSolve(), csr.getNeededTime());
             WriteCSV(csr.getSolverReturn(), solveMode, modelPath);
         } else {
             System.out.printf("""
                     No solution found
                     Searched in %d configurations
-                    "Read time: %d ms, Solve time: %d ms, Combined: %d ms
+                    Read time: %d ms, Solve time: %d ms, Combined: %d ms
                     """, (csr.getSearchedConfigs() - 1), csr.getReadTime(), csr.getTimeSolve(), csr.getNeededTime());
         }
     }
@@ -228,10 +228,14 @@ public class Main {
      */
     public static void PrintProblem(SchedulingProblem sp) {
         System.out.printf("""
-                Scheduling problem:
-                Deadline: %d
+                        Scheduling problem: %s
+                        Deadline: %s
 
-                """, sp.getDeadline());
+                        """,
+                sp.getName(),
+                sp.getDeadline() >= 0 ? String.valueOf(sp.getDeadline()) : "∞"
+        );
+
         int jobIndex = 0;
         for (List<Task> job : sp.getJobs()) {
             System.out.printf("Job %d:%n", jobIndex);

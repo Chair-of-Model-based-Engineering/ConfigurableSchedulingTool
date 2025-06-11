@@ -93,23 +93,35 @@ public class Task {
     /**
      * Gets the minimum duration of the task.
      *
+     * <p>This also takes unbound durations into account. This returns the smaller duration
+     * between the smallest normal duration and the lower bound of the unbound durations.
+     *
      * @return the minimum duration of the task
      */
     public int getMinimumDuration() {
         if (this.durations.length == 0)
-            return 0;
-        return this.durations[0];
+            return this.unboundDurations.orElse(0);
+        else
+            return this.unboundDurations
+                    .map(lowerBound -> Math.min(lowerBound, this.durations[0]))
+                    .orElseGet(() -> this.durations[0]);
     }
 
     /**
      * Gets the maximum duration of the task.
      *
+     * <p>If the task has unbound durations, this only returns the bigger value between
+     * the biggest normal duration and the lower bound of the unbound durations.
+     *
      * @return the maximum duration of the task
      */
     public int getMaximumDuration() {
         if (this.durations.length == 0)
-            return 0;
-        return this.durations[this.durations.length - 1];
+            return this.unboundDurations.orElse(0);
+        else
+            return this.unboundDurations
+                    .map(lowerBound -> Math.max(lowerBound, this.durations[this.durations.length-1]))
+                    .orElseGet(() -> this.durations[this.durations.length-1]);
     }
 
     /**

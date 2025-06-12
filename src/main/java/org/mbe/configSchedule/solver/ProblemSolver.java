@@ -8,12 +8,15 @@ import java.util.*;
 
 public class ProblemSolver {
 
-    private final CpModel model = new CpModel();
+    private final SchedulingProblem sp;
     // List<Integer> ist später {JobID, TaskID}, Map ist also <{JobID, TaskID}, TaskType-Objekt>
     // TaskID ist nur der Index der Task im Job, {JobID, TaskID} ist sozusagen die echte TaskID der Task
     private final Map<List<Integer>, TaskType> allTaskTypes = new HashMap<>();
 
-    private final SchedulingProblem sp;
+    private final CpModel baseModel = new CpModel();
+    private IntVar makespan;
+
+    private CpSolver makespanSolver;
 
     public ProblemSolver(SchedulingProblem sp) {
         this.sp = sp;
@@ -21,24 +24,21 @@ public class ProblemSolver {
     }
 
     public SolverReturn getFirstSolution() {
-        CpSolver solver = new CpSolver();
-
-        // Wenn auf Erfüllbarkeit geprüft wird, soll nach der ersten Lösung gestoppt werden
-        solver.getParameters().setStopAfterFirstSolution(true);
-
-        // Solven
-        return getSolverReturn(solver);
+        this.makespanSolver = new CpSolver();
+        this.makespanSolver.getParameters().setStopAfterFirstSolution(true);
+        return getSolverReturn(this.makespanSolver);
     }
 
     public SolverReturn getBestSolution() {
-        CpSolver solver = new CpSolver();
-
-        // Solven
-        return getSolverReturn(solver);
+        this.makespanSolver = new CpSolver();
+        return getSolverReturn(this.makespanSolver);
     }
 
     private SolverReturn getSolverReturn(CpSolver solver) {
-        CpSolverStatus status = solver.solve(model);
+        CpModel makespanModel = this.baseModel.getClone();
+        makespanModel.minimize(this.makespan);
+
+        CpSolverStatus status = solver.solve(makespanModel);
         Schedule schedule;
         if (status == CpSolverStatus.OPTIMAL || status == CpSolverStatus.FEASIBLE) {
             schedule = createSchedule(solver);
@@ -101,7 +101,7 @@ public class ProblemSolver {
         for (Machine machine : sp.getMachines()) {
             if (machine.isOptional()) {
                 optionalMachineTaskActives.put(machine, new ArrayList<>());
-                machine.setActive(model.newBoolVar("Machine_" + machine.getName() + "_active"));
+                machine.setActive(baseModel.newBoolVar("Machine_" + machine.getName() + "_active"));
             }
         }
 
@@ -124,36 +124,33 @@ public class ProblemSolver {
         // sodass sie eine duration von 0 haben und ganz am Anfang gestartet werden.
         // Da sie aber immer noch die letzte Task in einem Job sein können, und der Solver nicht denken soll,
         // dass das Ende des Jobs schon nach 0 Sekunden erreicht wird, erstellen wir (anders als vorher)
-        // die Constraint, dass objVar == max(possibleMaxEndtimes).
+        // die Constraint, dass makespan == max(possibleMaxEndtimes).
         // Daher werden alle Endzeiten jeder Task possibleMaxEndtimes hinzugefügt
         // Falls eine Task inaktiv ist, ist die Endzeit 0, falls aktiv ist sie die tatsächliche Endzeit
         List<IntVar> possibleMaxEndtimes = new ArrayList<>();
         for (TaskType taskType : allTaskTypes.values()) {
-            IntVar possibleEndTime = model.newIntVar(0, maxDuration, "possibleMaxEndtime_" + taskType.getName());
+            IntVar possibleEndTime = baseModel.newIntVar(0, maxDuration, "possibleMaxEndtime_" + taskType.getName());
             if (taskType.getTask().isOptional()) {
-                model.addEquality(possibleEndTime, taskType.getEnd()).onlyEnforceIf(taskType.getActive());
-                model.addEquality(possibleEndTime, 0).onlyEnforceIf(taskType.getActive().not());
+                baseModel.addEquality(possibleEndTime, taskType.getEnd()).onlyEnforceIf(taskType.getActive());
+                baseModel.addEquality(possibleEndTime, 0).onlyEnforceIf(taskType.getActive().not());
             } else {
-                model.addEquality(possibleEndTime, taskType.getEnd());
+                baseModel.addEquality(possibleEndTime, taskType.getEnd());
             }
             possibleMaxEndtimes.add(possibleEndTime);
         }
 
         // Zielvariable, nimmt am Ende die komplette Duration an und soll minimiert werden
-        IntVar objVar = model.newIntVar(0, maxDuration, "makespan");
-        model.addMaxEquality(objVar, possibleMaxEndtimes);
+        this.makespan = baseModel.newIntVar(0, maxDuration, "makespan");
+        baseModel.addMaxEquality(this.makespan, possibleMaxEndtimes);
 
         if (sp.getDeadline() >= 0)
-            model.addLessOrEqual(objVar, sp.getDeadline());
-
-        // objVar soll so klein wie möglich gehalten werden
-        model.minimize(objVar);
+            baseModel.addLessOrEqual(this.makespan, sp.getDeadline());
     }
 
     private void buildValidityConstraints(SchedulingProblem sp, Map<Machine, List<IntervalVar>> machineToIntervals) {
         // Intervalle (Tasks) auf einer Maschine dürfen sich nicht überlappen
         for (List<IntervalVar> intervalsOnMachine : machineToIntervals.values()) {
-            model.addNoOverlap(intervalsOnMachine);
+            baseModel.addNoOverlap(intervalsOnMachine);
         }
 
         // Tasks innerhalb eines Jobs dürfen nur nacheinander starten.
@@ -164,7 +161,7 @@ public class ProblemSolver {
                 List<Integer> prevKey = List.of(jobID, taskID);
                 List<Integer> nextKey = Arrays.asList(jobID, taskID + 1);
                 // Einschränkung, dass Task 2 aus Job 1 erst nach Beendigung von Task 1 aus Job 1 startet (Beispiel)
-                model.addGreaterOrEqual(allTaskTypes.get(nextKey).getStart(), allTaskTypes.get(prevKey).getEnd());
+                baseModel.addGreaterOrEqual(allTaskTypes.get(nextKey).getStart(), allTaskTypes.get(prevKey).getEnd());
             }
         }
     }
@@ -175,11 +172,11 @@ public class ProblemSolver {
         // dann soll die Maschine auch aktiv sein
         for (Machine machine : optionalMachineTaskActives.keySet()) {
             if (!optionalMachineTaskActives.get(machine).isEmpty()) {
-                BoolVar atLeastOneActive = model.newBoolVar(machine.getName() + "_atLeastOneActiveTask");
-                model.addMaxEquality(atLeastOneActive, optionalMachineTaskActives.get(machine));
-                model.addEquality(machine.getActive(), atLeastOneActive);
+                BoolVar atLeastOneActive = baseModel.newBoolVar(machine.getName() + "_atLeastOneActiveTask");
+                baseModel.addMaxEquality(atLeastOneActive, optionalMachineTaskActives.get(machine));
+                baseModel.addEquality(machine.getActive(), atLeastOneActive);
             } else {
-                model.addEquality(machine.getActive(), model.falseLiteral());
+                baseModel.addEquality(machine.getActive(), baseModel.falseLiteral());
             }
         }
     }
@@ -197,11 +194,11 @@ public class ProblemSolver {
                 tasksToExclude.add(nameToTaskType.get(excludeTaskName).getActive());
             }
 
-            BoolVar atLeastOneActive = model.newBoolVar(taskType.getName() + "_exclude_atLeastOneActive");
+            BoolVar atLeastOneActive = baseModel.newBoolVar(taskType.getName() + "_exclude_atLeastOneActive");
 
-            model.addMaxEquality(atLeastOneActive, tasksToExclude);
-            model.addEquality(taskType.getActive(), 1).onlyEnforceIf(atLeastOneActive.not());
-            model.addEquality(taskType.getActive(), 0).onlyEnforceIf(atLeastOneActive);
+            baseModel.addMaxEquality(atLeastOneActive, tasksToExclude);
+            baseModel.addEquality(taskType.getActive(), 1).onlyEnforceIf(atLeastOneActive.not());
+            baseModel.addEquality(taskType.getActive(), 0).onlyEnforceIf(atLeastOneActive);
         }
     }
 
@@ -212,7 +209,7 @@ public class ProblemSolver {
             for (Map.Entry<Integer, List<Task>> con : durationCons.entrySet()) {
                 int durationValue = con.getKey();
                 // BoolVar soll 1 annehmen, wenn alle benötigten Tasks für diese Duration aktiv sind, ansonsten 0
-                BoolVar allRequiredTasksActive = model.newBoolVar(taskType.getName() + "_durationConstraints_" + con.getKey());
+                BoolVar allRequiredTasksActive = baseModel.newBoolVar(taskType.getName() + "_durationConstraints_" + con.getKey());
 
                 // Liste mit den active-BoolVars der required TaskTypes
                 List<BoolVar> requiredBoolVars = new ArrayList<>();
@@ -230,21 +227,21 @@ public class ProblemSolver {
                     // This cannot be directly encoded for CP-SAT because we cannot set a boolean variable based on
                     // the equality of two other variables. Therefore, we need to use the channeling pattern as described here:
                     // https://github.com/google/or-tools/blob/stable/ortools/sat/docs/channeling.md#java-code
-                    BoolVar constraintDurationSelected = model.newBoolVar(taskType.getName() + "_constraintDurationSelected_" + con.getKey());
+                    BoolVar constraintDurationSelected = baseModel.newBoolVar(taskType.getName() + "_constraintDurationSelected_" + con.getKey());
 
                     // Set `constraintDurationSelected = (task.selectedDuration == durationValue)`
                     LinearExpr sizeExpr = taskType.getInterval().getSizeExpr();
-                    model.addEquality(sizeExpr, durationValue).onlyEnforceIf(constraintDurationSelected);
-                    model.addDifferent(sizeExpr, durationValue).onlyEnforceIf(constraintDurationSelected.not());
+                    baseModel.addEquality(sizeExpr, durationValue).onlyEnforceIf(constraintDurationSelected);
+                    baseModel.addDifferent(sizeExpr, durationValue).onlyEnforceIf(constraintDurationSelected.not());
 
-                    model.addGreaterOrEqual(taskType.getStart(), requiredTaskType.getEnd()).onlyEnforceIf(constraintDurationSelected);
+                    baseModel.addGreaterOrEqual(taskType.getStart(), requiredTaskType.getEnd()).onlyEnforceIf(constraintDurationSelected);
                 }
 
-                model.addMinEquality(allRequiredTasksActive, requiredBoolVars);
+                baseModel.addMinEquality(allRequiredTasksActive, requiredBoolVars);
 
                 // Falls eine der required Tasks nicht aktiv ist, darf die zugehörige Dauer auch nicht für
                 // die Task gewählt werden
-                model.addDifferent(taskType.getInterval().getSizeExpr(), durationValue).onlyEnforceIf(allRequiredTasksActive.not());
+                baseModel.addDifferent(taskType.getInterval().getSizeExpr(), durationValue).onlyEnforceIf(allRequiredTasksActive.not());
             }
         }
     }
@@ -304,8 +301,8 @@ public class ProblemSolver {
         // Für jede Task wird ein TaskType erstellt
         TaskType taskType = new TaskType(task);
         //Tasks dürfen zwischen 0 und maxDuration starten und enden
-        taskType.setStart(model.newIntVar(0, maxDuration, "start_" + taskIdentifier));
-        taskType.setEnd(model.newIntVar(0, maxDuration, "end_" + taskIdentifier));
+        taskType.setStart(baseModel.newIntVar(0, maxDuration, "start_" + taskIdentifier));
+        taskType.setEnd(baseModel.newIntVar(0, maxDuration, "end_" + taskIdentifier));
 
         long[] taskDurations = Arrays.stream(task.getDurations()).asLongStream().toArray();
         Domain durationsDomain = Domain.fromValues(taskDurations);
@@ -314,9 +311,9 @@ public class ProblemSolver {
             Domain unboundDurationsDomain = Domain.fromFlatIntervals(new long[] {unboundDurationsBound.get(), maxDuration});
             durationsDomain = durationsDomain.unionWith(unboundDurationsDomain);
         }
-        IntVar possibleDurations = model.newIntVarFromDomain(durationsDomain, task.getName() + "_duration");
+        IntVar possibleDurations = baseModel.newIntVarFromDomain(durationsDomain, task.getName() + "_duration");
 
-        BoolVar taskActive = model.newBoolVar(task.getName() + "_active");
+        BoolVar taskActive = baseModel.newBoolVar(task.getName() + "_active");
         taskType.setActive(taskActive);
 
         // Wenn eine Task optional ist, bekommt sie ein OptionalIntervalVar, sodass das Interval
@@ -324,7 +321,7 @@ public class ProblemSolver {
         // dafür hat das Interval den Task.active als Literal
         IntervalVar durationIntervalVar;
         if (task.isOptional()) {
-            durationIntervalVar = model.newOptionalIntervalVar(
+            durationIntervalVar = baseModel.newOptionalIntervalVar(
                     taskType.getStart(),
                     possibleDurations,
                     taskType.getEnd(),
@@ -333,7 +330,7 @@ public class ProblemSolver {
             );
         } else {
             // Wenn der Task nicht optional ist, wird ein normales IntervalVar erstellt, das immer performt.
-            durationIntervalVar = model.newIntervalVar(
+            durationIntervalVar = baseModel.newIntervalVar(
                     taskType.getStart(),
                     possibleDurations,
                     taskType.getEnd(),
@@ -341,7 +338,7 @@ public class ProblemSolver {
             );
 
             // Mandatory Tasks müssen immer aktiv sein
-            model.addEquality(taskType.getActive(), model.trueLiteral());
+            baseModel.addEquality(taskType.getActive(), baseModel.trueLiteral());
         }
         taskType.setInterval(durationIntervalVar);
         return taskType;

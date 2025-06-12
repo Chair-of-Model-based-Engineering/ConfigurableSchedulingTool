@@ -17,7 +17,7 @@ public class ProblemSolver {
 
     public ProblemSolver(SchedulingProblem sp) {
         this.sp = sp;
-        buildModel(sp);
+        buildModel();
     }
 
     public SolverReturn getFirstSolution() {
@@ -27,28 +27,28 @@ public class ProblemSolver {
         solver.getParameters().setStopAfterFirstSolution(true);
 
         // Solven
-        return getSolverReturn(sp, solver);
+        return getSolverReturn(solver);
     }
 
     public SolverReturn getBestSolution() {
         CpSolver solver = new CpSolver();
 
         // Solven
-        return getSolverReturn(sp, solver);
+        return getSolverReturn(solver);
     }
 
-    private SolverReturn getSolverReturn(SchedulingProblem sp, CpSolver solver) {
+    private SolverReturn getSolverReturn(CpSolver solver) {
         CpSolverStatus status = solver.solve(model);
         Schedule schedule;
         if (status == CpSolverStatus.OPTIMAL || status == CpSolverStatus.FEASIBLE) {
-            schedule = getSchedule(sp, solver);
+            schedule = createSchedule(solver);
         } else {
             schedule = null;
         }
         return new SolverReturn(solver.userTime(), status, schedule);
     }
 
-    private Schedule getSchedule(SchedulingProblem sp, CpSolver solver) {
+    private Schedule createSchedule(CpSolver solver) {
         Schedule schedule = new Schedule(solver.objectiveValue());
 
         for (int jobID = 0; jobID < sp.getJobs().size(); ++jobID) {
@@ -73,7 +73,7 @@ public class ProblemSolver {
         return schedule;
     }
 
-    private void buildModel(SchedulingProblem sp) {
+    private void buildModel() {
         // Used as the upper bound for the domain of task durations.
         // A negative number as the deadline represents a deadline of infinity in which case we calculate the
         // upper bound for task durations as the sum of all task durations.

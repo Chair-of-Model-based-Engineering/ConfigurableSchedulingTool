@@ -52,8 +52,8 @@ public class ConfigurationSolver {
                 Instant solveStart = Instant.now();
 
                 ProblemSolver problemSolver = new ProblemSolver(sp);
-                SolverReturn sr = problemSolver.getFirstSolution();
-
+                problemSolver.findFeasibleSolution();
+                SolverReturn sr = problemSolver.getSolverReturn();
                 Instant solveEnd = Instant.now();
 
                 long readTime = Duration.between(readStart, readEnd).toMillis();
@@ -110,7 +110,8 @@ public class ConfigurationSolver {
                 Instant solveStart = Instant.now();
 
                 ProblemSolver problemSolver = new ProblemSolver(sp);
-                SolverReturn sr = problemSolver.getBestSolution();
+                problemSolver.findOptimalSolution();
+                SolverReturn sr = problemSolver.getSolverReturn();
 
                 Instant solveEnd = Instant.now();
 

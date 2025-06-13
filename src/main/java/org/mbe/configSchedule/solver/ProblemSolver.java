@@ -18,23 +18,44 @@ public class ProblemSolver {
 
     private CpSolver makespanSolver;
 
+    private SolverReturn result;
+
     public ProblemSolver(SchedulingProblem sp) {
         this.sp = sp;
         buildModel();
     }
 
-    public SolverReturn getFirstSolution() {
+    /**
+     * Solves the scheduling problem feasibly.
+     *
+     * <p>The result can be got with a call to {@link #getSolverReturn()}.
+     */
+    public void findFeasibleSolution() {
         this.makespanSolver = new CpSolver();
         this.makespanSolver.getParameters().setStopAfterFirstSolution(true);
-        return getSolverReturn(this.makespanSolver);
+        createSolverReturn(this.makespanSolver);
     }
 
-    public SolverReturn getBestSolution() {
+    /**
+     * Solves the scheduling problem optimally.
+     *
+     * <p>The result can be got with a call to {@link #getSolverReturn()}.
+     */
+    public void findOptimalSolution() {
         this.makespanSolver = new CpSolver();
-        return getSolverReturn(this.makespanSolver);
+        createSolverReturn(this.makespanSolver);
     }
 
-    private SolverReturn getSolverReturn(CpSolver solver) {
+    /**
+     * Returns the {@link SolverReturn} containing all information from previous analyses calls.
+     *
+     * @return the result of previous analyses.
+     */
+    public SolverReturn getSolverReturn() {
+        return this.result;
+    }
+
+    private void createSolverReturn(CpSolver solver) {
         CpModel makespanModel = this.baseModel.getClone();
         makespanModel.minimize(this.makespan);
 
@@ -45,7 +66,7 @@ public class ProblemSolver {
         } else {
             schedule = null;
         }
-        return new SolverReturn(solver.userTime(), status, schedule);
+        this.result = new SolverReturn(solver.userTime(), status, schedule);
     }
 
     private Schedule createSchedule(CpSolver solver) {

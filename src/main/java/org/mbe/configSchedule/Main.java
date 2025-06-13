@@ -136,13 +136,14 @@ public class Main {
 
         Instant solveStart = Instant.now();
         ProblemSolver problemSolver = new ProblemSolver(sp);
-        SolverReturn sr;
         if (solveMode == SolveComplexity.FEASIBLE) {
-            sr = problemSolver.getFirstSolution();
+            problemSolver.findFeasibleSolution();
         } else {
-            sr = problemSolver.getBestSolution();
+            problemSolver.findOptimalSolution();
         }
         long solveTime = Duration.between(solveStart, Instant.now()).toMillis();
+
+        SolverReturn sr = problemSolver.getSolverReturn();
 
         System.out.println(sectionDivider);
         PrintSolution(sr);

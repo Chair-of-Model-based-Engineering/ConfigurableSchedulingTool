@@ -21,6 +21,7 @@ public class SolverReturn {
     private Schedule schedule;
 
     private UncertaintyResult perTaskUncertainty;
+    private UncertaintyResult summedUncertainty;
 
     /**
      * Creates new object of type SolverReturn.
@@ -87,20 +88,36 @@ public class SolverReturn {
     }
 
     /**
-     * Sets results of the uncertainty analysis.
+     * Sets results of the per task uncertainty analysis.
      *
-     * @param uncertaintyResult the result of the analysis of uncertainties.
+     * @param perTaskUncertainty the result of the analysis of uncertainties.
      */
-    public void setUncertaintyResult(UncertaintyResult uncertaintyResult) {
-        this.perTaskUncertainty = uncertaintyResult;
+    public void setPerTaskUncertainty(UncertaintyResult perTaskUncertainty) {
+        this.perTaskUncertainty = perTaskUncertainty;
     }
 
     /**
      * Returns the results of the analyses of the tasks' uncertainty.
      *
-     * @return a map of
+     * @return the results of the per task uncertainty analysis.
      */
-    public UncertaintyResult getUncertaintyResults() {
+    public UncertaintyResult getPerTaskUncertainty() {
         return this.perTaskUncertainty;
+    }
+
+    /**
+     * Returns the results of the summed uncertainty analysis.
+     */
+    public UncertaintyResult getSummedUncertainty() {
+        return summedUncertainty;
+    }
+
+    /**
+     * Sets results of the summed uncertainty analysis.
+     *
+     * @param summedUncertainty the result of the analysis of summed uncertainties.
+     */
+    public void setSummedUncertainty(UncertaintyResult summedUncertainty) {
+        this.summedUncertainty = summedUncertainty;
     }
 }

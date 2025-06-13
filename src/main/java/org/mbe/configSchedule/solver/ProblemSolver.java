@@ -16,6 +16,7 @@ public class ProblemSolver {
 
     private final CpModel baseModel = new CpModel();
     private IntVar makespan;
+    private int maxDuration;
 
     private CpSolver makespanSolver;
 
@@ -100,7 +101,7 @@ public class ProblemSolver {
         // A negative number as the deadline represents a deadline of infinity in which case we calculate the
         // upper bound for task durations as the sum of all task durations.
         // Adding 1 so tasks with unbound durations can assume an infeasible duration.
-        int maxDuration = 1 + (sp.getDeadline() >= 0 ?
+        this.maxDuration = 1 + (sp.getDeadline() >= 0 ?
                 sp.getDeadline() :
                 sp.getJobs().stream().flatMap(Collection::stream).mapToInt(Task::getMaximumDuration).sum());
 
@@ -376,7 +377,12 @@ public class ProblemSolver {
             return;
         }
 
-        HashMap<Task, Integer> taskUncertainty = new HashMap<>();
+        analyzeUncertaintyPerTask();
+        analyzeOverallUncertainty();
+    }
+
+    private void analyzeUncertaintyPerTask() {
+        Map<Task, Integer> taskUncertainty = new HashMap<>();
         for (TaskType uncertainTask : this.tasksWithUncertainty) {
             CpModel uncertaintyModel = this.baseModel.getClone();
             LinearExpr durationExpr = uncertainTask.getInterval().getSizeExpr();
@@ -389,6 +395,25 @@ public class ProblemSolver {
             // We only allow integer durations. Therefore, this should be an allowed cast.
             taskUncertainty.put(uncertainTask.getTask(), (int) solver.objectiveValue());
         }
-        this.result.setUncertaintyResult(new SolverReturn.UncertaintyResult(null, taskUncertainty));
+        this.result.setPerTaskUncertainty(new SolverReturn.UncertaintyResult(null, taskUncertainty));
+    }
+
+    private void analyzeOverallUncertainty() {
+        CpModel uncertaintyModel = this.baseModel.getClone();
+
+        // TODO: Somehow make this relative/percentage-based (maybe with LinearExpr.weightedSum and inverted weights based on relation to biggest uncertainty)
+        LinearExpr durationSum = LinearExpr.sum(this.tasksWithUncertainty.stream()
+                .map(tt -> tt.getInterval().getSizeExpr()).toArray(LinearArgument[]::new));
+        uncertaintyModel.maximize(durationSum);
+
+        CpSolver solver = new CpSolver();
+        solver.solve(uncertaintyModel);
+
+        Map<Task, Integer> taskDurations = new HashMap<>();
+        for (TaskType taskType : this.tasksWithUncertainty) {
+            taskDurations.put(taskType.getTask(), (int) solver.value(taskType.getInterval().getSizeExpr()));
+        }
+
+        this.result.setSummedUncertainty(new SolverReturn.UncertaintyResult(createSchedule(solver), taskDurations));
     }
 }

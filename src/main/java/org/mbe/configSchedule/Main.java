@@ -153,8 +153,8 @@ public class Main {
         PrintSolution(sr);
 
         System.out.println(sectionDivider);
-        System.out.println("Uncertainty results:");
-        Map<Task, Integer> uncertaintyResults = sr.getUncertaintyResults().taskUncertainty();
+        System.out.println("Uncertainty results (per task):");
+        Map<Task, Integer> uncertaintyResults = sr.getPerTaskUncertainty().taskUncertainty();
         for (Task uncertainTask : uncertaintyResults.keySet()) {
             System.out.printf(
                     "%s: %d (out of %s)%n",
@@ -163,6 +163,11 @@ public class Main {
                     uncertainTask.getUnboundDurations().map(d -> ">=" + d).orElse(Arrays.toString(uncertainTask.getDurations()))
             );
         }
+
+        System.out.println(sectionDivider);
+        System.out.println("Uncertainty results (summed):");
+        SolverReturn.UncertaintyResult summedUncertaintyResult = sr.getSummedUncertainty();
+        System.out.print(summedUncertaintyResult.schedule().generateOutputString());
 
         System.out.println(sectionDivider);
         // TODO: Is the solving time correct? Timing around the `solver.solve(model)` call in ProblemSolver yields times about twice as big.

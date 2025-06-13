@@ -143,10 +143,26 @@ public class Main {
         }
         long solveTime = Duration.between(solveStart, Instant.now()).toMillis();
 
+        Instant analysesStart = Instant.now();
+        problemSolver.analyzeUncertainty();
+        long analysesTime = Duration.between(analysesStart, Instant.now()).toMillis();
+
         SolverReturn sr = problemSolver.getSolverReturn();
 
         System.out.println(sectionDivider);
         PrintSolution(sr);
+
+        System.out.println(sectionDivider);
+        System.out.println("Uncertainty results:");
+        Map<Task, Integer> uncertaintyResults = sr.getUncertaintyResults();
+        for (Task uncertainTask : uncertaintyResults.keySet()) {
+            System.out.printf(
+                    "%s: %d (out of %s)%n",
+                    uncertainTask.getName(),
+                    uncertaintyResults.get(uncertainTask),
+                    uncertainTask.getUnboundDurations().map(d -> ">=" + d).orElse(Arrays.toString(uncertainTask.getDurations()))
+            );
+        }
 
         System.out.println(sectionDivider);
         // TODO: Is the solving time correct? Timing around the `solver.solve(model)` call in ProblemSolver yields times about twice as big.
@@ -154,9 +170,10 @@ public class Main {
                 Time:
                 Reading: %d ms
                 Solving with model setup: %d ms
-                Solving: %d ms
+                    Solving: %d ms
+                Analyzing: %d ms
                 Overall: %d ms
-                """, readTime, solveTime, (int) (sr.getTime() * 1000), readTime + solveTime);
+                """, readTime, solveTime, (int) (sr.getTime() * 1000), analysesTime, readTime + solveTime + analysesTime);
 
         if (sr.isAtLeastFeasible()) {
             WriteCSV(sr, solveMode, fileName);
@@ -231,7 +248,7 @@ public class Main {
         System.out.printf("""
                         Scheduling problem: %s
                         Deadline: %s
-
+                        
                         """,
                 sp.getName(),
                 sp.getDeadline() >= 0 ? String.valueOf(sp.getDeadline()) : "∞"

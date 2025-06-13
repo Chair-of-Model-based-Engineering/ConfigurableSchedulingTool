@@ -12,6 +12,7 @@ public class ProblemSolver {
     // List<Integer> ist später {JobID, TaskID}, Map ist also <{JobID, TaskID}, TaskType-Objekt>
     // TaskID ist nur der Index der Task im Job, {JobID, TaskID} ist sozusagen die echte TaskID der Task
     private final Map<List<Integer>, TaskType> allTaskTypes = new HashMap<>();
+    private final List<TaskType> tasksWithUncertainty = new ArrayList<>();
 
     private final CpModel baseModel = new CpModel();
     private IntVar makespan;
@@ -285,13 +286,14 @@ public class ProblemSolver {
 
                 // Wenn der optionale Task auf einer optionalen Maschine ausgeführt wird,
                 // so wird eine BoolVar für die Maschine zu optionalMachineTaskActives hinzugefügt
-                if (task.getMachine().isOptional()) {
+                if (task.getMachine().isOptional())
                     optionalMachineTaskActives.get(task.getMachine()).add(taskType.getActive());
-                }
 
-                if (!task.getExcludeTasks().isEmpty()) {
+                if (!task.getExcludeTasks().isEmpty())
                     excludingTasks.add(taskType);
-                }
+
+                if (task.getDurations().length > 1 || task.hasUnboundDurations())
+                    this.tasksWithUncertainty.add(taskType);
 
                 // Packt die Task mit (jobID, taskID) in die AlleTasks Map
                 List<Integer> key = Arrays.asList(jobID, taskID);
@@ -363,5 +365,28 @@ public class ProblemSolver {
         }
         taskType.setInterval(durationIntervalVar);
         return taskType;
+    }
+
+    /**
+     * Analyzes uncertainty of the scheduling problem.
+     */
+    public void analyzeUncertainty() {
+        // Analyzing uncertainty for problems without a deadline doesn't make sense.
+        if (this.sp.getDeadline() < 0) {
+            return;
+        }
+
+        for (TaskType uncertainTask : this.tasksWithUncertainty) {
+            CpModel uncertaintyModel = this.baseModel.getClone();
+            LinearExpr durationExpr = uncertainTask.getInterval().getSizeExpr();
+            uncertaintyModel.maximize(durationExpr);
+
+            // TODO: Add hints from known feasible/optimal solution to model
+
+            CpSolver solver = new CpSolver();
+            CpSolverStatus solverStatus = solver.solve(uncertaintyModel);
+            // We only allow integer durations. Therefore, this should be an allowed cast.
+            this.result.setUncertaintyResult(uncertainTask.getTask(), (int) solver.objectiveValue());
+        }
     }
 }

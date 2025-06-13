@@ -2,12 +2,16 @@ package org.mbe.configSchedule.util;
 
 import com.google.ortools.sat.CpSolverStatus;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
+// TODO: Maybe introduce SolverReturnFactory and keep SolverReturn immutable.
 public class SolverReturn {
     private Double time;
     private CpSolverStatus status;
     private Schedule schedule;
+    private final Map<Task, Integer> uncertaintyResults = new HashMap<>();
 
     /**
      * Creates new object of type SolverReturn.
@@ -71,5 +75,24 @@ public class SolverReturn {
      */
     public Optional<Schedule> getSchedule() {
         return Optional.ofNullable(schedule);
+    }
+
+    /**
+     * Sets the maximum duration with a feasible solution for the given task.
+     *
+     * @param task        the task for which to set the duration.
+     * @param maxDuration the maximum allowed duration.
+     */
+    public void setUncertaintyResult(Task task, int maxDuration) {
+        this.uncertaintyResults.put(task, maxDuration);
+    }
+
+    /**
+     * Returns the results of the analyses of the tasks' uncertainty.
+     *
+     * @return a map of
+     */
+    public Map<Task, Integer> getUncertaintyResults() {
+        return uncertaintyResults;
     }
 }

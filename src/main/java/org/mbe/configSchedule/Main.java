@@ -154,7 +154,7 @@ public class Main {
 
         System.out.println(sectionDivider);
         System.out.println("Uncertainty results:");
-        Map<Task, Integer> uncertaintyResults = sr.getUncertaintyResults();
+        Map<Task, Integer> uncertaintyResults = sr.getUncertaintyResults().taskUncertainty();
         for (Task uncertainTask : uncertaintyResults.keySet()) {
             System.out.printf(
                     "%s: %d (out of %s)%n",

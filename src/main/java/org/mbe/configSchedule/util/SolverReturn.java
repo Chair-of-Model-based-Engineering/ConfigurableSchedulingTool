@@ -2,16 +2,25 @@ package org.mbe.configSchedule.util;
 
 import com.google.ortools.sat.CpSolverStatus;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
 // TODO: Maybe introduce SolverReturnFactory and keep SolverReturn immutable.
 public class SolverReturn {
+    /**
+     * Represents the results of an uncertainty analysis of a scheduling problem.
+     *
+     * @param schedule        a schedule for the scheduling problem, possibly {@code null}.
+     * @param taskUncertainty the maximum duration with a feasible solution per task.
+     */
+    public record UncertaintyResult(Schedule schedule, Map<Task, Integer> taskUncertainty) {
+    }
+
     private Double time;
     private CpSolverStatus status;
     private Schedule schedule;
-    private final Map<Task, Integer> uncertaintyResults = new HashMap<>();
+
+    private UncertaintyResult perTaskUncertainty;
 
     /**
      * Creates new object of type SolverReturn.
@@ -78,13 +87,12 @@ public class SolverReturn {
     }
 
     /**
-     * Sets the maximum duration with a feasible solution for the given task.
+     * Sets results of the uncertainty analysis.
      *
-     * @param task        the task for which to set the duration.
-     * @param maxDuration the maximum allowed duration.
+     * @param uncertaintyResult the result of the analysis of uncertainties.
      */
-    public void setUncertaintyResult(Task task, int maxDuration) {
-        this.uncertaintyResults.put(task, maxDuration);
+    public void setUncertaintyResult(UncertaintyResult uncertaintyResult) {
+        this.perTaskUncertainty = uncertaintyResult;
     }
 
     /**
@@ -92,7 +100,7 @@ public class SolverReturn {
      *
      * @return a map of
      */
-    public Map<Task, Integer> getUncertaintyResults() {
-        return uncertaintyResults;
+    public UncertaintyResult getUncertaintyResults() {
+        return this.perTaskUncertainty;
     }
 }

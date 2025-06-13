@@ -376,6 +376,7 @@ public class ProblemSolver {
             return;
         }
 
+        HashMap<Task, Integer> taskUncertainty = new HashMap<>();
         for (TaskType uncertainTask : this.tasksWithUncertainty) {
             CpModel uncertaintyModel = this.baseModel.getClone();
             LinearExpr durationExpr = uncertainTask.getInterval().getSizeExpr();
@@ -386,7 +387,8 @@ public class ProblemSolver {
             CpSolver solver = new CpSolver();
             CpSolverStatus solverStatus = solver.solve(uncertaintyModel);
             // We only allow integer durations. Therefore, this should be an allowed cast.
-            this.result.setUncertaintyResult(uncertainTask.getTask(), (int) solver.objectiveValue());
+            taskUncertainty.put(uncertainTask.getTask(), (int) solver.objectiveValue());
         }
+        this.result.setUncertaintyResult(new SolverReturn.UncertaintyResult(null, taskUncertainty));
     }
 }

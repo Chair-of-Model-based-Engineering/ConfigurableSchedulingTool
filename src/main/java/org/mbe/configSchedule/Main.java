@@ -154,20 +154,13 @@ public class Main {
 
         System.out.println(sectionDivider);
         System.out.println("Uncertainty results (per task):");
-        Map<Task, Integer> uncertaintyResults = sr.getPerTaskUncertainty().taskUncertainty();
-        for (Task uncertainTask : uncertaintyResults.keySet()) {
-            System.out.printf(
-                    "%s: %d (out of %s)%n",
-                    uncertainTask.getName(),
-                    uncertaintyResults.get(uncertainTask),
-                    uncertainTask.getUnboundDurations().map(d -> ">=" + d).orElse(Arrays.toString(uncertainTask.getDurations()))
-            );
-        }
+        SolverReturn.UncertaintyResult perTaskUncertaintyResult = sr.getPerTaskUncertainty();
+        PrintUncertaintyResult(perTaskUncertaintyResult);
 
         System.out.println(sectionDivider);
         System.out.println("Uncertainty results (summed):");
         SolverReturn.UncertaintyResult summedUncertaintyResult = sr.getSummedUncertainty();
-        System.out.print(summedUncertaintyResult.schedule().generateOutputString());
+        PrintUncertaintyResult(summedUncertaintyResult);
 
         System.out.println(sectionDivider);
         // TODO: Is the solving time correct? Timing around the `solver.solve(model)` call in ProblemSolver yields times about twice as big.
@@ -295,6 +288,27 @@ public class Main {
             System.out.println("Solution:");
             System.out.println(schedule.get().generateOutputString());
             System.out.println("Schedule is " + sr.getStatus() + ", takes " + schedule.get().getMakespan());
+        }
+    }
+
+    /**
+     * Prints the results of an uncertainty analysis.
+     *
+     * @param uncertaintyResult the uncertainty analysis result.
+     */
+    private static void PrintUncertaintyResult(SolverReturn.UncertaintyResult uncertaintyResult) {
+        Schedule schedule = uncertaintyResult.schedule();
+        if (schedule != null) {
+            System.out.print(schedule.generateOutputString());
+        }
+        for (Task uncertainTask : uncertaintyResult.taskUncertainty().keySet()) {
+            System.out.printf(
+                    "%s: %d (out of %s%s)%n",
+                    uncertainTask.getName(),
+                    uncertaintyResult.taskUncertainty().get(uncertainTask),
+                    uncertainTask.getUnboundDurations().map(">=%d, "::formatted).orElse(""),
+                    Arrays.toString(uncertainTask.getDurations())
+            );
         }
     }
 

@@ -401,9 +401,16 @@ public class ProblemSolver {
     private void analyzeOverallUncertainty() {
         CpModel uncertaintyModel = this.baseModel.getClone();
 
-        // TODO: Somehow make this relative/percentage-based (maybe with LinearExpr.weightedSum and inverted weights based on relation to biggest uncertainty)
-        LinearExpr durationSum = LinearExpr.sum(this.tasksWithUncertainty.stream()
-                .map(tt -> tt.getInterval().getSizeExpr()).toArray(LinearArgument[]::new));
+        // Prioritize maximizing the duration of tasks with small uncertainty ranges.
+        LinearArgument[] array = this.tasksWithUncertainty.stream()
+                .map(tt -> tt.getInterval().getSizeExpr())
+                .toArray(LinearArgument[]::new);
+        long[] weights = this.tasksWithUncertainty.stream()
+                .map(TaskType::getTask)
+                .mapToLong(t -> (t.hasUnboundDurations() ? this.maxDuration : t.getMaximumDuration()) - t.getMinimumDuration())
+                .map(durationRange -> this.maxDuration - durationRange)
+                .toArray();
+        LinearExpr durationSum = LinearExpr.weightedSum(array, weights);
         uncertaintyModel.maximize(durationSum);
 
         CpSolver solver = new CpSolver();

@@ -12,8 +12,9 @@ public class SolverReturn {
      *
      * @param schedule        a schedule for the scheduling problem, possibly {@code null}.
      * @param taskUncertainty the maximum duration with a feasible solution per task.
+     * @param time            the time it took to create the results contained in this.
      */
-    public record UncertaintyResult(Schedule schedule, Map<Task, Integer> taskUncertainty) {
+    public record UncertaintyResult(Schedule schedule, Map<Task, Integer> taskUncertainty, double time) {
     }
 
     private Double time;

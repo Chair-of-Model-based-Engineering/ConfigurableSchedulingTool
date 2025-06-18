@@ -373,7 +373,8 @@ public class ProblemSolver {
      */
     public void analyzeUncertainty() {
         // Analyzing uncertainty for problems without a deadline doesn't make sense.
-        if (this.sp.getDeadline() < 0) {
+        // Analyzing uncertainty for problems without any uncertainty doesn't make sense.
+        if (this.sp.getDeadline() < 0 || this.tasksWithUncertainty.isEmpty()) {
             return;
         }
 
@@ -383,6 +384,7 @@ public class ProblemSolver {
 
     private void analyzeUncertaintyPerTask() {
         Map<Task, Integer> taskUncertainty = new HashMap<>();
+        double overallTime = 0;
         for (TaskType uncertainTask : this.tasksWithUncertainty) {
             CpModel uncertaintyModel = this.baseModel.getClone();
             LinearExpr durationExpr = uncertainTask.getInterval().getSizeExpr();
@@ -398,8 +400,9 @@ public class ProblemSolver {
             CpSolverStatus solverStatus = solver.solve(uncertaintyModel);
             // We only allow integer durations. Therefore, this should be an allowed cast.
             taskUncertainty.put(uncertainTask.getTask(), (int) solver.objectiveValue());
+            overallTime += solver.userTime();
         }
-        this.result.setPerTaskUncertainty(new SolverReturn.UncertaintyResult(null, taskUncertainty));
+        this.result.setPerTaskUncertainty(new SolverReturn.UncertaintyResult(null, taskUncertainty, overallTime));
     }
 
     private void analyzeOverallUncertainty() {
@@ -440,6 +443,6 @@ public class ProblemSolver {
             taskDurations.put(taskType.getTask(), (int) solver.value(taskType.getInterval().getSizeExpr()));
         }
 
-        this.result.setSummedUncertainty(new SolverReturn.UncertaintyResult(createSchedule(solver), taskDurations));
+        this.result.setSummedUncertainty(new SolverReturn.UncertaintyResult(createSchedule(solver), taskDurations, solver.userTime()));
     }
 }

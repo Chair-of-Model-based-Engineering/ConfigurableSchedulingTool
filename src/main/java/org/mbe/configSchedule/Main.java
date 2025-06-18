@@ -169,9 +169,18 @@ public class Main {
                 Reading: %d ms
                 Solving with model setup: %d ms
                     Solving: %d ms
-                Analyzing: %d ms
+                Analyzing with setup: %d ms
+                    Per-task-analysis: %d ms
+                    Summed-analysis: %d ms
                 Overall: %d ms
-                """, readTime, solveTime, (int) (sr.getTime() * 1000), analysesTime, readTime + solveTime + analysesTime);
+                """,
+                readTime,
+                solveTime,
+                (int) (sr.getTime() * 1000),
+                analysesTime,
+                (int) (perTaskUncertaintyResult.time() * 1000),
+                (int) (summedUncertaintyResult.time() * 1000),
+                readTime + solveTime + analysesTime);
 
         if (sr.isAtLeastFeasible()) {
             WriteCSV(sr, solveMode, fileName);

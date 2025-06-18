@@ -388,7 +388,11 @@ public class ProblemSolver {
             LinearExpr durationExpr = uncertainTask.getInterval().getSizeExpr();
             uncertaintyModel.maximize(durationExpr);
 
-            // TODO: Add hints from known feasible/optimal solution to model
+            if (this.result != null) {
+                IntVar domain = this.baseModel.getIntVarFromProtoIndex(uncertainTask.getInterval().getSizeExpr().getVariableIndex(0));
+                long knownPossibleDuration = this.makespanSolver.value(uncertainTask.getInterval().getSizeExpr());
+                uncertaintyModel.addHint(domain, knownPossibleDuration);
+            }
 
             CpSolver solver = new CpSolver();
             CpSolverStatus solverStatus = solver.solve(uncertaintyModel);
@@ -412,6 +416,21 @@ public class ProblemSolver {
                 .toArray();
         LinearExpr durationSum = LinearExpr.weightedSum(array, weights);
         uncertaintyModel.maximize(durationSum);
+
+        // TODO: Add hinting for each task duration from feasible solution and maximum per task duration
+        //       feasible solution as lower bound
+        //       maximum per task as upper bound
+        Map<Task, Integer> knownMaximumDurations = this.result.getPerTaskUncertainty().taskUncertainty();
+        for (TaskType taskType : this.tasksWithUncertainty) {
+            // Set hard upper bound for the duration from the known maximum duration of each task
+            int knownMaximumDuration = knownMaximumDurations.get(taskType.getTask());
+            uncertaintyModel.addLessOrEqual(taskType.getInterval().getSizeExpr(), knownMaximumDuration);
+
+            // Hinting a lower bound for the duration from the known optimal/feasible solution
+            IntVar domain = this.baseModel.getIntVarFromProtoIndex(taskType.getInterval().getSizeExpr().getVariableIndex(0));
+            long knownPossibleDuration = this.makespanSolver.value(taskType.getInterval().getSizeExpr());
+            uncertaintyModel.addHint(domain, knownPossibleDuration);
+        }
 
         CpSolver solver = new CpSolver();
         solver.solve(uncertaintyModel);

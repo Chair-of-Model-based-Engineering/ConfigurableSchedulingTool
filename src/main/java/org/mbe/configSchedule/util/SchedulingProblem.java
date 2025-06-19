@@ -7,23 +7,22 @@ import java.io.Serializable;
 import java.util.*;
 
 
-public class SchedulingProblem implements Serializable {
+public class SchedulingProblem {
     private final String name;
-    private List<List<Task>> jobs;
-    private List<Machine> machines;
-    private int deadline;
+    private final Collection<Task> tasks;
+    private final List<Machine> machines;
+    private final int deadline;
 
     /**
      * Creates new object of type SchedulingProblem.
      *
      * @param name     the name/identifier of the problem.
-     * @param jobs     a {@link List} of {@link List} of {@link Task Tasks}.
      * @param machines a {@link List} of {@link Machine Machines}.
      * @param deadline deadline of the scheduling problem.
      */
-    public SchedulingProblem(String name, List<List<Task>> jobs, List<Machine> machines, int deadline) {
+    public SchedulingProblem(String name, Collection<Task> tasks, Map<Task, List<Machine> machines, int deadline) {
         this.name = name;
-        this.jobs = jobs;
+        this.tasks = tasks;
         this.machines = machines;
         this.deadline = deadline;
     }
@@ -38,19 +37,10 @@ public class SchedulingProblem implements Serializable {
         UVLReader uvlReader = new UVLReader(featureModel);
         String name = uvlReader.parseName();
         int deadline = uvlReader.parseDeadline();
+        Collection<Task> tasks = uvlReader.parseTasks();
         List<Machine> machines = uvlReader.parseMachines();
-        List<List<Task>> jobs = uvlReader.parseJobs();
 
-        return new SchedulingProblem(name, jobs, machines, deadline);
-    }
-
-    /**
-     * Get jobs of scheduling problem.
-     *
-     * @return a {@link List} of {@link List} of {@link Task Tasks}.
-     */
-    public List<List<Task>> getJobs() {
-        return jobs;
+        return new SchedulingProblem(name, tasks, precedenceOrder, machines, deadline);
     }
 
     /**

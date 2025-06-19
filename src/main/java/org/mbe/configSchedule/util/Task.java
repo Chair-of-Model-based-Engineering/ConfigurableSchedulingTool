@@ -261,7 +261,7 @@ public class Task {
      * @param task {@link Task} to be added.
      */
     public void addTaskToDurationCon(int key, Task task) {
-        durationCons.get(key).add(task);
+        durationCons.computeIfAbsent(key, _ -> new ArrayList<>()).add(task);
     }
 
     /**

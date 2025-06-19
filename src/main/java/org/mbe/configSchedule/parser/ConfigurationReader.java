@@ -31,9 +31,9 @@ public class ConfigurationReader {
      * @param configPath The file-path to the configuration-file
      * @param modelPath  The file-path to the model-file
      * @return A SchedulingProblem-object
-     * @throws IOException if the model or configuration file cannot be read.
+     * @throws IOException                  if the model or configuration file cannot be read.
      * @throws ParserConfigurationException if no fitting {@link DocumentBuilder} can be found.
-     * @throws SAXException if the configuration XML cannot be parsed.
+     * @throws SAXException                 if the configuration XML cannot be parsed.
      */
     public SchedulingProblem ReadConfig(String configPath, String modelPath) throws IOException, ParserConfigurationException, SAXException, XPathExpressionException {
         this.jobs.clear();
@@ -66,13 +66,11 @@ public class ConfigurationReader {
             }
         }
 
-        for (List<Task> job : schedulingProblem.getJobs()) {
-            for (Task task : job) {
-                if (selectedFeatureNames.contains(task.getName()))
-                    task.setOptional(false);
-                if (selectedDurations.containsKey(task.getName()))
-                    task.setDurations(new int[] {selectedDurations.get(task.getName())});
-            }
+        for (Task task : schedulingProblem.getTasks()) {
+            if (selectedFeatureNames.contains(task.getName()))
+                task.setOptional(false);
+            if (selectedDurations.containsKey(task.getName()))
+                task.setDurations(new int[] {selectedDurations.get(task.getName())});
         }
 
         return schedulingProblem;

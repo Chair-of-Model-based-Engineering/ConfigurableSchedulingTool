@@ -3,13 +3,13 @@ package org.mbe.configSchedule.util;
 import de.vill.model.FeatureModel;
 import org.mbe.configSchedule.parser.UVLReader;
 
-import java.io.Serializable;
 import java.util.*;
 
 
 public class SchedulingProblem {
     private final String name;
     private final Collection<Task> tasks;
+    private final Map<Task, List<Task>> precedenceOrder;
     private final List<Machine> machines;
     private final int deadline;
 
@@ -20,9 +20,10 @@ public class SchedulingProblem {
      * @param machines a {@link List} of {@link Machine Machines}.
      * @param deadline deadline of the scheduling problem.
      */
-    public SchedulingProblem(String name, Collection<Task> tasks, Map<Task, List<Machine> machines, int deadline) {
+    public SchedulingProblem(String name, Collection<Task> tasks, Map<Task, List<Task>> precedenceOrder, List<Machine> machines, int deadline) {
         this.name = name;
         this.tasks = tasks;
+        this.precedenceOrder = precedenceOrder;
         this.machines = machines;
         this.deadline = deadline;
     }
@@ -38,6 +39,7 @@ public class SchedulingProblem {
         String name = uvlReader.parseName();
         int deadline = uvlReader.parseDeadline();
         Collection<Task> tasks = uvlReader.parseTasks();
+        Map<Task, List<Task>> precedenceOrder = uvlReader.parsePrecedenceOrder();
         List<Machine> machines = uvlReader.parseMachines();
 
         return new SchedulingProblem(name, tasks, precedenceOrder, machines, deadline);

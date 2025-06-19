@@ -16,12 +16,13 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+
 public final class UVLReader {
 
     private final FeatureModel featureModel;
 
     private final List<Machine> machines = new ArrayList<>();
-    private final Map<String, Task> allTasks = new HashMap<>();
+    private Map<String, Task> allTasks;
 
     /**
      * Constructs a new UVLReader for the given {@link FeatureModel}.
@@ -173,6 +174,7 @@ public final class UVLReader {
         addDurationConstraints(tasks, implicationConstraints);
         addExcludeConstraints(tasks, crossTreeConstraints);
 
+        this.allTasks = tasks;
         return tasks.values();
     }
 
@@ -279,6 +281,26 @@ public final class UVLReader {
                 break;
             }
         }
+    }
+
+    public Map<Task, List<Task>> parsePrecedenceOrder() {
+        Map<Task, List<Task>> precedenceOrder = new HashMap<>();
+        this.featureModel.getOwnConstraints()
+                .stream()
+                .filter(c -> c instanceof ImplicationConstraint)
+                .map(c -> (ImplicationConstraint) c)
+                .filter(ic -> ic.getLeft() instanceof LiteralConstraint && ic.getRight() instanceof LiteralConstraint)
+                .map(ic -> new String[] {getLiteralString(ic.getLeft()), getLiteralString(ic.getRight())})
+                .filter(names -> this.allTasks.containsKey(names[0]) && this.allTasks.containsKey(names[1]))
+                .forEach(names -> {
+                    Task dependentTask = this.allTasks.get(names[0]);
+                    Task dependencyTask = this.allTasks.get(names[1]);
+
+                    precedenceOrder.computeIfAbsent(dependentTask, _ -> new ArrayList<>())
+                            .add(dependencyTask);
+                });
+
+        return precedenceOrder;
     }
 
     /**

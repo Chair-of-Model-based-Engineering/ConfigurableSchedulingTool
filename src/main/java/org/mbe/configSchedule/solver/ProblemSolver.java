@@ -11,7 +11,7 @@ public class ProblemSolver {
     private final SchedulingProblem sp;
     // List<Integer> ist später {JobID, TaskID}, Map ist also <{JobID, TaskID}, TaskType-Objekt>
     // TaskID ist nur der Index der Task im Job, {JobID, TaskID} ist sozusagen die echte TaskID der Task
-    private final Map<List<Integer>, TaskType> allTaskTypes = new HashMap<>();
+    private final Map<Task, TaskType> allTaskTypes = new HashMap<>();
     private final List<TaskType> tasksWithUncertainty = new ArrayList<>();
 
     private final CpModel baseModel = new CpModel();
@@ -74,23 +74,15 @@ public class ProblemSolver {
     private Schedule createSchedule(CpSolver solver) {
         Schedule schedule = new Schedule(solver.objectiveValue());
 
-        for (int jobID = 0; jobID < sp.getJobs().size(); ++jobID) {
-            List<Task> job = sp.getJobs().get(jobID);
-            for (int taskID = 0; taskID < job.size(); ++taskID) {
-                Task task = job.get(taskID);
-                List<Integer> key = Arrays.asList(jobID, taskID);
+        for (TaskType taskType : this.allTaskTypes.values()) {
+            AssignedTask assignedTask = new AssignedTask(
+                    (int) solver.value(taskType.getStart()),
+                    (int) solver.value(taskType.getInterval().getSizeExpr()),
+                    taskType.getName());
 
-                AssignedTask assignedTask = new AssignedTask(
-                        jobID,
-                        taskID,
-                        (int) solver.value(allTaskTypes.get(key).getStart()),
-                        (int) solver.value(allTaskTypes.get(key).getInterval().getSizeExpr()),
-                        task.getName());
-
-                // Add task to machine's task list, if it is executed
-                if (!task.isOptional() || solver.value(allTaskTypes.get(key).getActive()) == 1) {
-                    schedule.addTaskToMachine(assignedTask, task.getMachine());
-                }
+            // Add task to machine's task list, if it is executed
+            if (!taskType.getTask().isOptional() || solver.value(taskType.getActive()) == 1) {
+                schedule.addTaskToMachine(assignedTask, taskType.getTask().getMachine());
             }
         }
         return schedule;
@@ -103,7 +95,7 @@ public class ProblemSolver {
         // Adding 1 so tasks with unbound durations can assume an infeasible duration.
         this.maxDuration = 1 + (sp.getDeadline() >= 0 ?
                 sp.getDeadline() :
-                sp.getJobs().stream().flatMap(Collection::stream).mapToInt(Task::getMaximumDuration).sum());
+                sp.getTasks().stream().mapToInt(Task::getMaximumDuration).sum());
 
         // Map mit Tasknamen als Key, genutzt für die Duration Constraints
         Map<String, TaskType> nameToTaskType = new HashMap<>();
@@ -176,15 +168,11 @@ public class ProblemSolver {
             baseModel.addNoOverlap(intervalsOnMachine);
         }
 
-        // Tasks innerhalb eines Jobs dürfen nur nacheinander starten.
         // NOTE: For tasks required by duration constraints, this is already handled below in buildDurationConstraints(...).
-        for (int jobID = 0; jobID < sp.getJobs().size(); ++jobID) {
-            List<Task> job = sp.getJobs().get(jobID);
-            for (int taskID = 0; taskID < job.size() - 1; ++taskID) {
-                List<Integer> prevKey = List.of(jobID, taskID);
-                List<Integer> nextKey = Arrays.asList(jobID, taskID + 1);
-                // Einschränkung, dass Task 2 aus Job 1 erst nach Beendigung von Task 1 aus Job 1 startet (Beispiel)
-                baseModel.addGreaterOrEqual(allTaskTypes.get(nextKey).getStart(), allTaskTypes.get(prevKey).getEnd());
+        for (Map.Entry<Task, List<Task>> precedenceEntry : sp.getPrecedenceOrder().entrySet()) {
+            TaskType dependent = this.allTaskTypes.get(precedenceEntry.getKey());
+            for (Task dependency : precedenceEntry.getValue()) {
+                baseModel.addGreaterOrEqual(dependent.getStart(), this.allTaskTypes.get(dependency).getEnd());
             }
         }
     }
@@ -277,56 +265,48 @@ public class ProblemSolver {
             Map<String, TaskType> nameToTaskType,
             List<TaskType> taskTypesWithDurationConstraints,
             Map<Machine, List<IntervalVar>> machineToIntervals) {
-        for (int jobID = 0; jobID < sp.getJobs().size(); ++jobID) {
-            List<Task> job = sp.getJobs().get(jobID);
-            // Iteriert durch Tasks des aktuellen Jobs
-            for (int taskID = 0; taskID < job.size(); ++taskID) {
-                Task task = job.get(taskID);
+        for (Task task : sp.getTasks()) {
+            TaskType taskType = createTaskType(task, maxDuration);
 
-                TaskType taskType = createTaskType(task, jobID + "_" + taskID, maxDuration);
+            // Wenn der optionale Task auf einer optionalen Maschine ausgeführt wird,
+            // so wird eine BoolVar für die Maschine zu optionalMachineTaskActives hinzugefügt
+            if (task.getMachine().isOptional())
+                optionalMachineTaskActives.get(task.getMachine()).add(taskType.getActive());
 
-                // Wenn der optionale Task auf einer optionalen Maschine ausgeführt wird,
-                // so wird eine BoolVar für die Maschine zu optionalMachineTaskActives hinzugefügt
-                if (task.getMachine().isOptional())
-                    optionalMachineTaskActives.get(task.getMachine()).add(taskType.getActive());
+            if (!task.getExcludeTasks().isEmpty())
+                excludingTasks.add(taskType);
 
-                if (!task.getExcludeTasks().isEmpty())
-                    excludingTasks.add(taskType);
+            if (task.getDurations().length > 1 || task.hasUnboundDurations())
+                this.tasksWithUncertainty.add(taskType);
 
-                if (task.getDurations().length > 1 || task.hasUnboundDurations())
-                    this.tasksWithUncertainty.add(taskType);
+            // Packt die Task mit (jobID, taskID) in die AlleTasks Map
+            allTaskTypes.put(task, taskType);
+            nameToTaskType.put(task.getName(), taskType);
 
-                // Packt die Task mit (jobID, taskID) in die AlleTasks Map
-                List<Integer> key = Arrays.asList(jobID, taskID);
-                allTaskTypes.put(key, taskType);
-                nameToTaskType.put(task.getName(), taskType);
-
-                // Wenn die Task eine Duration hat, die nur gewählt werden darf, wenn eine andere Task ausgeführt wird
-                if (task.getDurationCons() != null && !task.getDurationCons().isEmpty()) {
-                    taskTypesWithDurationConstraints.add(taskType);
-                }
-
-                // Falls noch keine ArrayList für die Maschine vorhanden ist, wird eine neue erstellt
-                machineToIntervals.computeIfAbsent(task.getMachine(), (Machine m) -> new ArrayList<>());
-                machineToIntervals.get(task.getMachine()).add(taskType.getInterval());
+            // Wenn die Task eine Duration hat, die nur gewählt werden darf, wenn eine andere Task ausgeführt wird
+            if (task.getDurationCons() != null && !task.getDurationCons().isEmpty()) {
+                taskTypesWithDurationConstraints.add(taskType);
             }
+
+            // Falls noch keine ArrayList für die Maschine vorhanden ist, wird eine neue erstellt
+            machineToIntervals.computeIfAbsent(task.getMachine(), (Machine m) -> new ArrayList<>());
+            machineToIntervals.get(task.getMachine()).add(taskType.getInterval());
         }
     }
 
     /**
      * Create the {@link TaskType} for a task.
      *
-     * @param task           the task for which to create the TaskType
-     * @param taskIdentifier the identifier for the task.
-     * @param maxDuration    the maximumDuration of the scheduling problem
+     * @param task        the task for which to create the TaskType
+     * @param maxDuration the maximumDuration of the scheduling problem
      * @return a fitting TaskType
      */
-    private TaskType createTaskType(Task task, String taskIdentifier, int maxDuration) {
+    private TaskType createTaskType(Task task, int maxDuration) {
         // Für jede Task wird ein TaskType erstellt
         TaskType taskType = new TaskType(task);
         //Tasks dürfen zwischen 0 und maxDuration starten und enden
-        taskType.setStart(baseModel.newIntVar(0, maxDuration, "start_" + taskIdentifier));
-        taskType.setEnd(baseModel.newIntVar(0, maxDuration, "end_" + taskIdentifier));
+        taskType.setStart(baseModel.newIntVar(0, maxDuration, "start_" + task.getName()));
+        taskType.setEnd(baseModel.newIntVar(0, maxDuration, "end_" + task.getName()));
 
         long[] taskDurations = Arrays.stream(task.getDurations()).asLongStream().toArray();
         Domain durationsDomain = Domain.fromValues(taskDurations);
@@ -335,9 +315,9 @@ public class ProblemSolver {
             Domain unboundDurationsDomain = Domain.fromFlatIntervals(new long[] {unboundDurationsBound.get(), maxDuration});
             durationsDomain = durationsDomain.unionWith(unboundDurationsDomain);
         }
-        IntVar possibleDurations = baseModel.newIntVarFromDomain(durationsDomain, task.getName() + "_duration");
+        IntVar possibleDurations = baseModel.newIntVarFromDomain(durationsDomain, "duration_" + task.getName());
 
-        BoolVar taskActive = baseModel.newBoolVar(task.getName() + "_active");
+        BoolVar taskActive = baseModel.newBoolVar("active_" + task.getName());
         taskType.setActive(taskActive);
 
         // Wenn eine Task optional ist, bekommt sie ein OptionalIntervalVar, sodass das Interval
@@ -350,7 +330,7 @@ public class ProblemSolver {
                     possibleDurations,
                     taskType.getEnd(),
                     taskType.getActive(),
-                    "interval_" + taskIdentifier
+                    "interval_" + task.getName()
             );
         } else {
             // Wenn der Task nicht optional ist, wird ein normales IntervalVar erstellt, das immer performt.
@@ -358,7 +338,7 @@ public class ProblemSolver {
                     taskType.getStart(),
                     possibleDurations,
                     taskType.getEnd(),
-                    "interval_" + taskIdentifier
+                    "interval_" + task.getName()
             );
 
             // Mandatory Tasks müssen immer aktiv sein

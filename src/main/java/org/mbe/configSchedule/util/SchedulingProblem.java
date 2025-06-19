@@ -5,7 +5,7 @@ import org.mbe.configSchedule.parser.UVLReader;
 
 import java.util.*;
 
-
+@SuppressWarnings("ClassCanBeRecord")
 public class SchedulingProblem {
     private final String name;
     private final Collection<Task> tasks;
@@ -73,5 +73,26 @@ public class SchedulingProblem {
      */
     public String getName() {
         return name;
+    }
+
+    /**
+     * Gets the precedence order between the tasks.
+     *
+     * <p>The key is the dependent task and the value is the list of dependencies.
+     *
+     * @return the precedence order between the tasks.
+     * @see #getTasks()
+     */
+    public Map<Task, List<Task>> getPrecedenceOrder() {
+        return precedenceOrder;
+    }
+
+    /**
+     * {@return all tasks of the scheduling problem}
+     *
+     * @see #getPrecedenceOrder()
+     */
+    public Collection<Task> getTasks() {
+        return tasks;
     }
 }

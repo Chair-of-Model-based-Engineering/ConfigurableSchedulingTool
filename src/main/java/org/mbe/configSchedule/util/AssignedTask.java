@@ -7,8 +7,6 @@ import java.util.Comparator;
  */
 @SuppressWarnings("ClassCanBeRecord")
 public class AssignedTask implements Comparable<AssignedTask> {
-    private final int jobID;
-    private final int taskID;
     private final int start;
     private final int duration;
     private final String name;
@@ -16,36 +14,14 @@ public class AssignedTask implements Comparable<AssignedTask> {
     /**
      * Creates new a new assigned task.
      *
-     * @param jobID    ID of the corresponding Job.
-     * @param taskID   ID of this task.
      * @param start    point in time when this task started its execution.
      * @param duration duration of this task.
      * @param name     name of this task.
      */
-    public AssignedTask(int jobID, int taskID, int start, int duration, String name) {
-        this.jobID = jobID;
-        this.taskID = taskID;
+    public AssignedTask(int start, int duration, String name) {
         this.start = start;
         this.name = name;
         this.duration = duration;
-    }
-
-    /**
-     * Gets the job ID.
-     *
-     * @return jobID
-     */
-    public int getJobID() {
-        return jobID;
-    }
-
-    /**
-     * Gets the ID of this task.
-     *
-     * @return taskID
-     */
-    public int getTaskID() {
-        return taskID;
     }
 
     /**

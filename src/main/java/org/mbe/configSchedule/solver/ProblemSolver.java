@@ -372,9 +372,7 @@ public class ProblemSolver {
      * Analyzes uncertainty of the scheduling problem.
      */
     public void analyzeUncertainty() {
-        // Analyzing uncertainty for problems without a deadline doesn't make sense.
-        // Analyzing uncertainty for problems without any uncertainty doesn't make sense.
-        if (this.sp.getDeadline() < 0 || this.tasksWithUncertainty.isEmpty()) {
+        if (this.sp.getDeadline() < 0 || this.tasksWithUncertainty.isEmpty() || !this.result.isAtLeastFeasible()) {
             return;
         }
 

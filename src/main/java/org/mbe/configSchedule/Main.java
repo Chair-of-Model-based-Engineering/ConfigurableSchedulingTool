@@ -165,24 +165,27 @@ public class Main {
         System.out.println(sectionDivider);
         // TODO: Is the solving time correct? Timing around the `solver.solve(model)` call in ProblemSolver yields times about twice as big.
         System.out.printf("""
-                Time:
-                Reading: %d ms
-                Solving with model setup: %d ms
-                    Solving: %d ms
-                Analyzing with setup: %d ms
-                    Per-task-analysis: %d ms
-                    Summed-analysis: %d ms
-                Overall: %d ms
-                """,
+                        Time: %d ms
+                        Reading: %d ms
+                        Solving with model setup: %d ms
+                            Solving: %d ms
+                        
+                        """,
+                readTime + solveTime + analysesTime,
                 readTime,
                 solveTime,
-                (int) (sr.getTime() * 1000),
-                analysesTime,
-                (int) (perTaskUncertaintyResult.time() * 1000),
-                (int) (summedUncertaintyResult.time() * 1000),
-                readTime + solveTime + analysesTime);
+                (int) (sr.getTime() * 1000));
 
         if (sr.isAtLeastFeasible()) {
+            System.out.printf("""
+                            Analyzing with setup: %d ms
+                            Per-task-analysis: %d ms
+                            Summed-analysis: %d ms
+                            """,
+                    analysesTime,
+                    (int) (perTaskUncertaintyResult.time() * 1000),
+                    (int) (summedUncertaintyResult.time() * 1000));
+
             WriteCSV(sr, solveMode, fileName);
         }
     }
@@ -306,6 +309,10 @@ public class Main {
      * @param uncertaintyResult the uncertainty analysis result.
      */
     private static void PrintUncertaintyResult(SolverReturn.UncertaintyResult uncertaintyResult) {
+        if (uncertaintyResult == null) {
+            System.out.println("Not performed.");
+            return;
+        }
         Schedule schedule = uncertaintyResult.schedule();
         if (schedule != null) {
             System.out.print(schedule.generateOutputString());

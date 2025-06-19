@@ -246,7 +246,7 @@ public class Main {
 
         System.out.printf("%nReading problem: %s%n", name);
         FeatureModel fm = UVLReader.read(filePath);
-        return new SchedulingProblem(fm);
+        return SchedulingProblem.fromFeatureModel(fm);
     }
 
     /**

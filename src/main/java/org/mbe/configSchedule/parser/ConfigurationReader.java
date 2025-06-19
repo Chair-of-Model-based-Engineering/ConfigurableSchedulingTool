@@ -41,7 +41,7 @@ public class ConfigurationReader {
         this.deadline = -1;
 
         FeatureModel featureModel = UVLReader.read(Path.of(modelPath));
-        SchedulingProblem schedulingProblem = new SchedulingProblem(featureModel);
+        SchedulingProblem schedulingProblem = SchedulingProblem.fromFeatureModel(featureModel);
 
         DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
         Document configDoc = builder.parse(new File(configPath));

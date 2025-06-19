@@ -29,15 +29,19 @@ public class SchedulingProblem implements Serializable {
     }
 
     /**
-     * Creates new objrct of type Scheduling problem from a feature model.
+     * Factory method for creating a SchedulingProblem from a {@link FeatureModel}.
      *
-     * @param featureModel parsed feature model.
+     * @param featureModel the feature model to parse.
+     * @return the scheduling problem as described by the feature model.
      */
-    public SchedulingProblem(FeatureModel featureModel) {
-        this.name = UVLReader.parseName(featureModel);
-        this.deadline = UVLReader.parseDeadline(featureModel);
-        this.machines = UVLReader.parseMachines(featureModel);
-        this.jobs = UVLReader.parseJobs(featureModel, machines);
+    public static SchedulingProblem fromFeatureModel(FeatureModel featureModel) {
+        UVLReader uvlReader = new UVLReader(featureModel);
+        String name = uvlReader.parseName();
+        int deadline = uvlReader.parseDeadline();
+        List<Machine> machines = uvlReader.parseMachines();
+        List<List<Task>> jobs = uvlReader.parseJobs();
+
+        return new SchedulingProblem(name, jobs, machines, deadline);
     }
 
     /**

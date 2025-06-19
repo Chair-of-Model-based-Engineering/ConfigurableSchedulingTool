@@ -264,26 +264,25 @@ public class Main {
                 sp.getDeadline() >= 0 ? String.valueOf(sp.getDeadline()) : "∞"
         );
 
-        int jobIndex = 0;
-        for (List<Task> job : sp.getJobs()) {
-            System.out.printf("Job %d:%n", jobIndex);
-            for (Task task : job) {
-                String taskDurationConsString = task.getDurationCons().entrySet().stream().map(entry -> {
-                    String taskList = entry.getValue().stream().map(Task::getName).collect(Collectors.joining(", "));
-                    return "%d -> {%s}".formatted(entry.getKey(), taskList);
-                }).collect(Collectors.joining(", "));
+        for (Task task : sp.getTasks()) {
+            String dependenciesString = sp.getPrecedenceOrder().getOrDefault(task, new ArrayList<>()).stream()
+                    .map(Task::getName)
+                    .collect(Collectors.joining(", "));
+            String taskDurationConsString = task.getDurationCons().entrySet().stream().map(entry -> {
+                String taskList = entry.getValue().stream().map(Task::getName).collect(Collectors.joining(", "));
+                return "%d -> {%s}".formatted(entry.getKey(), taskList);
+            }).collect(Collectors.joining(", "));
 
-                System.out.printf("%s => m: %s, o: %b, d: %s, ud: %s, e: %s, d: {%s}%n",
-                        task.getName(),
-                        task.getMachine().getName(),
-                        task.isOptional(),
-                        Arrays.toString(task.getDurations()),
-                        task.getUnboundDurations().map(String::valueOf).orElse("-"),
-                        task.getExcludeTasks().toString(),
-                        taskDurationConsString
-                );
-            }
-            jobIndex++;
+            System.out.printf("%s => m: %s, o: %b, deps: {%s}, d: %s, ud: %s, e: %s, d: {%s}%n",
+                    task.getName(),
+                    task.getMachine().getName(),
+                    task.isOptional(),
+                    dependenciesString,
+                    Arrays.toString(task.getDurations()),
+                    task.getUnboundDurations().map(String::valueOf).orElse("-"),
+                    task.getExcludeTasks().toString(),
+                    taskDurationConsString
+            );
         }
     }
 

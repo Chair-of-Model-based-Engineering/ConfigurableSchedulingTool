@@ -8,10 +8,7 @@ import org.mbe.configSchedule.util.Task;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
 import java.util.stream.IntStream;
 
 import static java.lang.Math.floor;
@@ -53,6 +50,7 @@ public class SPGenerator {
         }
 
         // Fill the necessary lists (jobs and machines)
+        // TODO: Generate MSPs
         // TODO: Generate non-continuous durations somewhere (probably in the standard jobs)
         createMachines(machineCount, machines);
         createStandardJobs(taskCount, jobCount, machineCount, durationOutlierCount, machines, jobs, mandatoryTasksWithVarDuration);
@@ -60,8 +58,18 @@ public class SPGenerator {
         createAlternativeTasks(altCount, altGroupCount, machineCount, machines, jobs, optionalTasks);
         createDurationConstraints(optionalTasks, mandatoryTasksWithVarDuration, durationConstraints, maxDurationRequires);
 
+        List<Task> tasks = jobs.stream().flatMap(Collection::stream).toList();
+        Map<Task, List<Task>> precedenceOrder = new HashMap<>();
+        for (List<Task> job : jobs) {
+            for (int i = 1; i < job.size(); i++) {
+                Task dependent = job.get(i);
+                Task dependency = job.get(i - 1);
+                precedenceOrder.put(dependent, List.of(dependency));
+            }
+        }
+
         // Create a SchedulingProblem from the beforehand created lists
-        SchedulingProblem sp = new SchedulingProblem(name, jobs, machines, deadline);
+        SchedulingProblem sp = new SchedulingProblem(name, tasks, precedenceOrder, machines, deadline);
         String problemUVL = parseToUVL(sp);
 
         PathPreferences prefs = new PathPreferences();
@@ -407,7 +415,7 @@ public class SPGenerator {
         uvlString.append("\t\tmandatory").append(System.lineSeparator());
         uvlString.append("\t\t\t\"dl = ").append(sp.getDeadline()).append("\"").append(System.lineSeparator());
 
-        List<String>[] cons = parseTasks(sp.getJobs(), uvlString);
+        List<String>[] cons = parseTasks(sp, uvlString);
         parseMachines(sp.getMachines(), uvlString);
         parseConstraints(cons, uvlString);
 
@@ -417,92 +425,88 @@ public class SPGenerator {
     /**
      * Parses the tasks of the jobs with their characterisitics, e.g. duration. Appends the features to the String started in parseToUVL
      *
-     * @param jobs      Contains every job and task of the problem
+     * @param sp        Contains the generated scheduling problem
      * @param uvlString The UVL-string to be appended
      * @return Returns constraints for task order, excluding tasks, durations and machine
      */
-    private static List<String>[] parseTasks(List<List<Task>> jobs, StringBuilder uvlString) {
+    private static List<String>[] parseTasks(SchedulingProblem sp, StringBuilder uvlString) {
         uvlString.append("\t\t\tP {abstract true}").append(System.lineSeparator());
 
-        List<List<Task>> mandatoryJobs = new ArrayList<>();
-        List<List<Task>> optionalJobs = new ArrayList<>();
+        List<Task> mandatoryTasks = new ArrayList<>();
+        List<Task> optionalTasks = new ArrayList<>();
 
         List<String> taskOrderCons = new ArrayList<>();
         List<String> excludeCons = new ArrayList<>();
         List<String> durationCons = new ArrayList<>();
         List<String> machineCons = new ArrayList<>();
 
-        for (List<Task> job : jobs) {
-            if (job.getFirst().isOptional()) {
-                optionalJobs.add(job);
+        for (Task task : sp.getTasks()) {
+            if (task.isOptional()) {
+                optionalTasks.add(task);
             } else {
-                mandatoryJobs.add(job);
+                mandatoryTasks.add(task);
             }
         }
 
         uvlString.append("\t\t\t\tmandatory").append(System.lineSeparator());
-        for (List<Task> job : mandatoryJobs) {
-            for (int i = 0; i < job.size(); i++) {
-                Task task = job.get(i);
-                parseTask(task, uvlString, machineCons);
+        for (Task task : mandatoryTasks) {
+            parseTask(task, uvlString, machineCons);
 
-                // Add constraint for the task order in the job
-                if (i < job.size() - 1) {
-                    taskOrderCons.add("\t%s => %s%n".formatted(job.get(i + 1).getName(), task.getName()));
-                }
+            for (Task dependency : sp.getPrecedenceOrder().getOrDefault(task, new ArrayList<>())) {
+                taskOrderCons.add("\t%s => %s%n".formatted(task.getName(), dependency.getName()));
+            }
 
-                // Task-duration-constraints
-                if (!task.getDurationCons().isEmpty()) {
-                    for (Map.Entry<Integer, List<Task>> taskDurationCon : task.getDurationCons().entrySet()) {
-                        List<Task> requiredTasks = taskDurationCon.getValue();
-                        for (Task requiredTask : requiredTasks) {
-                            durationCons.add("\t\"d%s = %d\" => %s%n".formatted(task.getName(), taskDurationCon.getKey(), requiredTask.getName()));
-                        }
+            // Task-duration-constraints
+            if (!task.getDurationCons().isEmpty()) {
+                for (Map.Entry<Integer, List<Task>> taskDurationCon : task.getDurationCons().entrySet()) {
+                    List<Task> requiredTasks = taskDurationCon.getValue();
+                    for (Task requiredTask : requiredTasks) {
+                        durationCons.add("\t\"d%s = %d\" => %s%n".formatted(task.getName(), taskDurationCon.getKey(), requiredTask.getName()));
                     }
                 }
-
             }
+
         }
 
         List<String> excludeTasksAlreadyHandled = new ArrayList<>();
         uvlString.append("\t\t\t\toptional").append(System.lineSeparator());
-        for (List<Task> job : optionalJobs) {
-            for (Task task : job) {
-                parseTask(task, uvlString, machineCons);
+        for (Task task : optionalTasks) {
+            parseTask(task, uvlString, machineCons);
 
-                if (!task.getExcludeTasks().isEmpty() && !excludeTasksAlreadyHandled.contains(task.getName())) {
-                    excludeTasksAlreadyHandled.addAll(task.getExcludeTasks());
+            if (!task.getExcludeTasks().isEmpty() && !excludeTasksAlreadyHandled.contains(task.getName())) {
+                excludeTasksAlreadyHandled.addAll(task.getExcludeTasks());
 
-                    List<String> alternativeGroup = new ArrayList<>(task.getExcludeTasks());
-                    alternativeGroup.add(task.getName());
+                List<String> alternativeGroup = new ArrayList<>(task.getExcludeTasks());
+                alternativeGroup.add(task.getName());
 
-                    StringBuilder excludeConString = new StringBuilder();
-                    excludeConString.append("\t");
-                    for (int i = 0; i < alternativeGroup.size(); i++) {
-                        excludeConString.append("(");
-                        for (int j = 0; j < alternativeGroup.size(); j++) {
-                            if (i == j) {
-                                excludeConString.append(alternativeGroup.get(j));
-                            } else {
-                                excludeConString.append("!" + alternativeGroup.get(j));
-                            }
-
-                            if (j < alternativeGroup.size() - 1) {
-                                excludeConString.append(" & ");
-                            }
+                StringBuilder excludeConString = new StringBuilder();
+                excludeConString.append("\t");
+                for (int i = 0; i < alternativeGroup.size(); i++) {
+                    excludeConString.append("(");
+                    for (int j = 0; j < alternativeGroup.size(); j++) {
+                        if (i == j) {
+                            excludeConString.append(alternativeGroup.get(j));
+                        } else {
+                            excludeConString.append("!").append(alternativeGroup.get(j));
                         }
-                        excludeConString.append(")");
-                        if (i < alternativeGroup.size() - 1) {
-                            excludeConString.append(" | ");
+
+                        if (j < alternativeGroup.size() - 1) {
+                            excludeConString.append(" & ");
                         }
                     }
-                    excludeConString.append(System.lineSeparator());
-
-                    excludeCons.add(excludeConString.toString());
+                    excludeConString.append(")");
+                    if (i < alternativeGroup.size() - 1) {
+                        excludeConString.append(" | ");
+                    }
                 }
+                excludeConString.append(System.lineSeparator());
+
+                excludeCons.add(excludeConString.toString());
             }
         }
 
+
+        @SuppressWarnings("unchecked")
         List<String>[] cons = new List[4];
         cons[0] = taskOrderCons;
         cons[1] = excludeCons;

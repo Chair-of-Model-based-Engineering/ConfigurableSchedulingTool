@@ -169,18 +169,18 @@ public class Main {
                         Reading: %d ms
                         Solving with model setup: %d ms
                             Solving: %d ms
-                        
+
                         """,
                 readTime + solveTime + analysesTime,
                 readTime,
                 solveTime,
                 (int) (sr.getTime() * 1000));
 
-        if (sr.isAtLeastFeasible()) {
+        if (perTaskUncertaintyResult != null && summedUncertaintyResult != null) {
             System.out.printf("""
                             Analyzing with setup: %d ms
-                            Per-task-analysis: %d ms
-                            Summed-analysis: %d ms
+	                            Per-task-analysis: %d ms
+	                            Summed-analysis: %d ms
                             """,
                     analysesTime,
                     (int) (perTaskUncertaintyResult.time() * 1000),

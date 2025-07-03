@@ -66,7 +66,7 @@ public final class UVLReader {
      * @return the deadline value or -1
      */
     public static int parseDeadline(FeatureModel featureModel) {
-        int deadline = -1;
+        int deadline;
 
         Optional<Feature> deadlineFeature = featureModel.getRootFeature().getChildren()
                 .stream()
@@ -75,12 +75,19 @@ public final class UVLReader {
                 .findAny();
         if (deadlineFeature.isPresent()) {
             String deadlineFeatureName = deadlineFeature.get().getFeatureName();
-            try {
-                String[] deadlineParts = deadlineFeatureName.split(" = ");
-                deadline = Integer.parseInt(deadlineParts[deadlineParts.length - 1]);
-            } catch (NumberFormatException _) {
-                System.err.printf("Could not determine deadline from feature '%s'%n", deadlineFeatureName);
+            String[] deadlineParts = deadlineFeatureName.split(" = ");
+            String rightSide = deadlineParts[deadlineParts.length - 1];
+            if ("*".equals(rightSide)) {
+                deadline = -1;
+            } else {
+                try {
+                    deadline = Integer.parseInt(rightSide);
+                } catch (NumberFormatException e) {
+                    throw new RuntimeException("Could not determine deadline from feature '%s'".formatted(deadlineFeatureName), e);
+                }
             }
+        } else {
+            throw new RuntimeException("Deadline feature missing");
         }
         return deadline;
     }

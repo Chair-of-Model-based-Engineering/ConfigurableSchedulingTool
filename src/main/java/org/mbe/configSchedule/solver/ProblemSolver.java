@@ -5,6 +5,7 @@ import com.google.ortools.util.Domain;
 import org.mbe.configSchedule.util.*;
 
 import java.util.*;
+import java.util.stream.IntStream;
 
 public class ProblemSolver {
 
@@ -358,6 +359,7 @@ public class ProblemSolver {
 
         analyzeUncertaintyPerTask();
         analyzeOverallUncertainty();
+        decisionTree();
     }
 
     private void analyzeUncertaintyPerTask() {
@@ -419,5 +421,56 @@ public class ProblemSolver {
         }
 
         this.result.setSummedUncertainty(new SolverReturn.UncertaintyResult(createSchedule(solver), taskDurations, solver.userTime()));
+    }
+
+    private void decisionTree() {
+        //noinspection OptionalGetWithoutIsPresent // We only analyze scheduling problems with solutions
+        Schedule makespanSchedule = this.result.getSchedule().get();
+        List<Machine> machines = this.sp.getMachines();
+
+        TaskType taskType;
+        int machineNr = 0;
+        do {
+            // TODO: Search for uncertain tasks not at first position on a machine.
+            AssignedTask assignedTask = makespanSchedule.getTasks(machines.get(machineNr)).getFirst();
+            taskType = this.allTaskTypes.get(assignedTask.getTask());
+            machineNr++;
+            if (machineNr == machines.size()) {
+                return;
+            }
+        } while (taskType.getTask().getDurations().length <= 1 && !taskType.getTask().hasUnboundDurations());
+        System.out.println("taskType = " + taskType.getName());
+
+        Integer maximumPossibleDuration = this.result.getPerTaskUncertainty().taskUncertainty().get(taskType.getTask());
+
+        IntStream uncertainDurations = Arrays.stream(taskType.getTask().getDurations()).filter(
+                d -> d <= maximumPossibleDuration
+        );
+        IntStream unboundDurations = taskType.getTask().getUnboundDurations().stream().flatMapToInt(
+                lowerBound -> IntStream.rangeClosed(lowerBound, maximumPossibleDuration)
+        );
+        IntStream durations = IntStream.concat(uncertainDurations, unboundDurations).sorted().distinct();
+
+        DecisionTree.TaskDecisions taskDecisions = new DecisionTree.TaskDecisions(taskType.getTask());
+        IntVar domain = this.baseModel.getIntVarFromProtoIndex(taskType.getInterval().getSizeExpr().getVariableIndex(0));
+        double time = 0;
+        for (PrimitiveIterator.OfInt it = durations.iterator(); it.hasNext(); ) {
+            int duration = it.next();
+            CpModel model = this.baseModel.getClone();
+            model.addEquality(domain, duration);
+
+            CpSolver solver = new CpSolver();
+            CpSolverStatus solverStatus = solver.solve(model);
+            if (solverStatus == CpSolverStatus.INFEASIBLE) {
+                System.err.printf(
+                        "The model is not solvable for the duration %d of task %s despite being solvable with a larger duration%n",
+                        duration, taskType.getName());
+                continue;
+            }
+            time += solver.userTime();
+
+            Schedule schedule = createSchedule(solver);
+            taskDecisions.addDecision(duration, schedule);
+        }
     }
 }

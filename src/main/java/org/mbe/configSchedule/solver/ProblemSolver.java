@@ -78,7 +78,7 @@ public class ProblemSolver {
             AssignedTask assignedTask = new AssignedTask(
                     (int) solver.value(taskType.getStart()),
                     (int) solver.value(taskType.getInterval().getSizeExpr()),
-                    taskType.getName());
+                    taskType.getTask());
 
             // Add task to machine's task list, if it is executed
             if (!taskType.getTask().isOptional() || solver.value(taskType.getActive()) == 1) {

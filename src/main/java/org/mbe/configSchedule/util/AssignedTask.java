@@ -1,7 +1,5 @@
 package org.mbe.configSchedule.util;
 
-import java.util.Comparator;
-
 /**
  * Represents a final task in a schedule.
  */
@@ -9,19 +7,19 @@ import java.util.Comparator;
 public class AssignedTask implements Comparable<AssignedTask> {
     private final int start;
     private final int duration;
-    private final String name;
+    private final Task task;
 
     /**
      * Creates new a new assigned task.
      *
      * @param start    point in time when this task started its execution.
      * @param duration duration of this task.
-     * @param name     name of this task.
+     * @param task     name of this task.
      */
-    public AssignedTask(int start, int duration, String name) {
+    public AssignedTask(int start, int duration, Task task) {
         this.start = start;
-        this.name = name;
         this.duration = duration;
+        this.task = task;
     }
 
     /**
@@ -48,7 +46,14 @@ public class AssignedTask implements Comparable<AssignedTask> {
      * @return name.
      */
     public String getName() {
-        return name;
+        return this.task.getName();
+    }
+
+    /**
+     * {@return the task represented by this assigned task}
+     */
+    public Task getTask() {
+        return task;
     }
 
     /**

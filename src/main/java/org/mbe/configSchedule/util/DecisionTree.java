@@ -4,7 +4,7 @@ import java.util.*;
 import java.util.function.BiPredicate;
 import java.util.stream.Collectors;
 
-public record DecisionTree(double time, org.mbe.configSchedule.util.DecisionTree.TaskDecisions root) {
+public record DecisionTree(double time, DecisionTree.TaskDecisions root) {
     /**
      * Represents a schedule without times and only the order of tasks
      *
@@ -33,14 +33,19 @@ public record DecisionTree(double time, org.mbe.configSchedule.util.DecisionTree
             return this.taskOrder.equals(other.taskOrder);
         }
 
-        public String outputString() {
-            StringBuilder output = new StringBuilder();
+        public String outputString(String machineSep) {
+            List<StringBuilder> output = new ArrayList<>();
             for (Machine machine : this.taskOrder.keySet()) {
-                output.append(machine.getName()).append(": ");
-                output.append(this.taskOrder.get(machine).stream().map(Task::getName).collect(Collectors.joining(", ")));
-                output.append(System.lineSeparator());
+                StringBuilder machineString = new StringBuilder();
+                machineString.append(machine.getName()).append(": ");
+                machineString.append(this.taskOrder.get(machine).stream().map(Task::getName).collect(Collectors.joining(", ")));
+                output.add(machineString);
             }
-            return output.toString();
+            return String.join(machineSep, output);
+        }
+
+        public String outputString() {
+            return outputString(System.lineSeparator());
         }
     }
 
@@ -113,6 +118,40 @@ public record DecisionTree(double time, org.mbe.configSchedule.util.DecisionTree
             return i;
         }
 
+        String print(int indent) {
+            StringBuilder out = new StringBuilder();
+            String indention = " ".repeat(indent * 4);
+            for (Integer decisionDuration : this.nextDecision.keySet()) {
+                String scheduleString;
+                try {
+                    scheduleString = getScheduleForDuration(decisionDuration).outputString("; ");
+                } catch (NullPointerException e) {
+                    scheduleString = "infeasible";
+                }
+                out.append("%s- %d: %s (%s)%n".formatted(
+                        indention,
+                        decisionDuration,
+                        getNextLevelForDuration(decisionDuration).getTask().getName(),
+                        scheduleString
+                ));
+                out.append(getNextLevelForDuration(decisionDuration).print(indent + 1));
+            }
+            if (this.nextDecision.isEmpty()) {
+                for (int i = 0; i < this.decisionDurations.size(); i++) {
+                    SimpleSchedule schedule = this.schedules.get(i);
+                    out.append("%s- %d: %s%n".formatted(
+                            indention,
+                            this.decisionDurations.get(i),
+                            schedule != null ? schedule.outputString("; ") : "infeasible"
+                    ));
+                }
+            }
+            return out.toString();
+        }
     }
 
+    public void print() {
+        System.out.println(this.root.getTask().getName());
+        System.out.println(this.root.print(0));
+    }
 }

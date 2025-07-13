@@ -490,6 +490,7 @@ public class ProblemSolver {
 
         }
 
+        // TODO: Get next level task from (simple) schedule
         TaskType nextLevelTaskType;
         try {
             nextLevelTaskType = orderedTasks.get(processedTasks.size()+1);

@@ -120,8 +120,8 @@ public class Task {
             return this.unboundDurations.orElse(0);
         else
             return this.unboundDurations
-                    .map(lowerBound -> Math.max(lowerBound, this.durations[this.durations.length-1]))
-                    .orElseGet(() -> this.durations[this.durations.length-1]);
+                    .map(lowerBound -> Math.max(lowerBound, this.durations[this.durations.length - 1]))
+                    .orElseGet(() -> this.durations[this.durations.length - 1]);
     }
 
     /**
@@ -151,6 +151,15 @@ public class Task {
             this.durations[this.durations.length - 1] = duration;
             Arrays.sort(this.durations);
         }
+    }
+
+    /**
+     * Returns whether the task's duration is uncertain.
+     *
+     * @return {@code true} if the task has more than one possible duration, {@code false} otherwise.
+     */
+    public boolean hasUncertainDurations() {
+        return this.durations.length > 1 || hasUnboundDurations();
     }
 
     /**
@@ -277,5 +286,18 @@ public class Task {
                 this.unboundDurations.map(String::valueOf).orElse("-"),
                 Optional.ofNullable(this.machine).map(Machine::getName).orElse("-"),
                 this.optional);
+    }
+
+    public boolean hasDuration(int duration) {
+        if (this.unboundDurations.isPresent() && this.unboundDurations.get() <= duration) {
+            return true;
+        }
+
+        for (int d : this.durations) {
+            if (d == duration)
+                return true;
+        }
+
+        return false;
     }
 }

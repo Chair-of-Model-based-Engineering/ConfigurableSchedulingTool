@@ -1,9 +1,10 @@
 package org.mbe.configSchedule.util;
 
 import java.util.*;
+import java.util.function.BiPredicate;
 import java.util.stream.Collectors;
 
-public class DecisionTree {
+public record DecisionTree(double time, org.mbe.configSchedule.util.DecisionTree.TaskDecisions root) {
     /**
      * Represents a schedule without times and only the order of tasks
      *
@@ -46,29 +47,72 @@ public class DecisionTree {
     public static class TaskDecisions {
         private final Task task;
         private final List<Integer> decisionDurations = new ArrayList<>();
-        // For nextSchedules and nextDecisions:
         // Each entry at index i corresponds to the interval of durations in decisionDurations i-1 to i
-        private final List<SimpleSchedule> nextSchedules = new ArrayList<>();
-        private final List<TaskDecisions> nextDecisions = new ArrayList<>();
+        private final List<SimpleSchedule> schedules = new ArrayList<>();
+
+        private final Map<Integer, TaskDecisions> nextDecision = new HashMap<>();
 
         public TaskDecisions(Task task) {
             this.task = task;
         }
 
         public void addDecision(int decisionDuration, Schedule leftSchedule) {
-            int i = Collections.binarySearch(this.decisionDurations, decisionDuration);
-            if (i < 0)
-                i = -i - 1;
+            addDecision(
+                    decisionDuration,
+                    SimpleSchedule.fromSchedule(leftSchedule),
+                    (i, simpleSchedule) -> SimpleSchedule.fromSchedule(leftSchedule).equals(simpleSchedule)
+            );
+        }
 
-            SimpleSchedule simpleSchedule = SimpleSchedule.fromSchedule(leftSchedule);
+        public void addInfeasibleDecision(int decisionDuration) {
+            addDecision(
+                    decisionDuration,
+                    null,
+                    (i, _) -> this.schedules.get(i - 1) == null
+            );
+        }
 
-            if (!this.nextSchedules.isEmpty() && this.nextSchedules.get(i - 1).equals(simpleSchedule)) {
+        private void addDecision(int decisionDuration, SimpleSchedule simpleSchedule, BiPredicate<Integer, SimpleSchedule> shouldBeMerged) {
+            int i = getDurationIndex(decisionDuration);
+            if (!this.schedules.isEmpty() && shouldBeMerged.test(i, simpleSchedule)) {
                 this.decisionDurations.set(i - 1, decisionDuration);
             } else {
-
-                this.decisionDurations.add(i , decisionDuration);
-                this.nextSchedules.add(i, SimpleSchedule.fromSchedule(leftSchedule));
+                this.decisionDurations.add(i, decisionDuration);
+                this.schedules.add(i, simpleSchedule);
             }
         }
+
+        public void addNextLevel(int decisionDuration, TaskDecisions nextLevel) {
+            this.nextDecision.put(decisionDuration, nextLevel);
+        }
+
+        public Task getTask() {
+            return task;
+        }
+
+        public List<Integer> getDecisionDurations() {
+            return decisionDurations;
+        }
+
+        public SimpleSchedule getScheduleForDuration(int duration) {
+            return this.schedules.get(getDurationIndex(duration));
+        }
+
+        public TaskDecisions getNextLevelForDuration(int duration) {
+            return this.nextDecision.get(duration);
+        }
+
+        public Collection<TaskDecisions> getNextLevels() {
+            return this.nextDecision.values();
+        }
+
+        private int getDurationIndex(int duration) {
+            int i = Collections.binarySearch(this.decisionDurations, duration);
+            if (i < 0)
+                i = -i - 1;
+            return i;
+        }
+
     }
+
 }

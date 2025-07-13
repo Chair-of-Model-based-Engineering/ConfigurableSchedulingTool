@@ -23,6 +23,7 @@ public class SolverReturn {
 
     private UncertaintyResult perTaskUncertainty;
     private UncertaintyResult summedUncertainty;
+    private DecisionTree decisionTree;
 
     /**
      * Creates new object of type SolverReturn.
@@ -107,7 +108,7 @@ public class SolverReturn {
     }
 
     /**
-     * Returns the results of the summed uncertainty analysis.
+     * {@return the results of the summed uncertainty analysis}
      */
     public UncertaintyResult getSummedUncertainty() {
         return summedUncertainty;
@@ -121,4 +122,13 @@ public class SolverReturn {
     public void setSummedUncertainty(UncertaintyResult summedUncertainty) {
         this.summedUncertainty = summedUncertainty;
     }
+
+    public DecisionTree getDecisionTree() {
+        return decisionTree;
+    }
+
+    public void setDecisionTree(DecisionTree decisionTree) {
+        this.decisionTree = decisionTree;
+    }
+
 }

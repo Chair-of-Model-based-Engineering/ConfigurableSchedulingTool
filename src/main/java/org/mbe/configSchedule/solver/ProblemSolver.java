@@ -384,24 +384,21 @@ public class ProblemSolver {
     }
 
     private void analyzeOverallUncertainty() {
+        Map<Task, Integer> knownMaximumDurations = this.result.getPerTaskUncertainty().taskUncertainty();
+
         CpModel uncertaintyModel = this.baseModel.getClone();
 
         // Prioritize maximizing the duration of tasks with small uncertainty ranges.
-        LinearArgument[] array = this.tasksWithUncertainty.stream()
+        LinearArgument[] durationVariables = this.tasksWithUncertainty.stream()
                 .map(tt -> tt.getInterval().getSizeExpr())
                 .toArray(LinearArgument[]::new);
         long[] weights = this.tasksWithUncertainty.stream()
                 .map(TaskType::getTask)
-                .mapToLong(t -> (t.hasUnboundDurations() ? this.maxDuration : t.getMaximumDuration()) - t.getMinimumDuration())
-                .map(durationRange -> this.maxDuration - durationRange)
+                .mapToLong(t -> this.maxDuration - (knownMaximumDurations.get(t) - t.getMinimumDuration()))
                 .toArray();
-        LinearExpr durationSum = LinearExpr.weightedSum(array, weights);
+        LinearExpr durationSum = LinearExpr.weightedSum(durationVariables, weights);
         uncertaintyModel.maximize(durationSum);
 
-        // TODO: Add hinting for each task duration from feasible solution and maximum per task duration
-        //       feasible solution as lower bound
-        //       maximum per task as upper bound
-        Map<Task, Integer> knownMaximumDurations = this.result.getPerTaskUncertainty().taskUncertainty();
         for (TaskType taskType : this.tasksWithUncertainty) {
             // Set hard upper bound for the duration from the known maximum duration of each task
             int knownMaximumDuration = knownMaximumDurations.get(taskType.getTask());

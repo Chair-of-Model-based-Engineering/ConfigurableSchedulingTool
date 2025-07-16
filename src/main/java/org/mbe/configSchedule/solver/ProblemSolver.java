@@ -371,7 +371,7 @@ public class ProblemSolver {
             uncertaintyModel.maximize(durationExpr);
 
             if (this.result != null) {
-                IntVar domain = this.baseModel.getIntVarFromProtoIndex(uncertainTask.getInterval().getSizeExpr().getVariableIndex(0));
+                IntVar domain = uncertaintyModel.getIntVarFromProtoIndex(uncertainTask.getInterval().getSizeExpr().getVariableIndex(0));
                 long knownPossibleDuration = this.makespanSolver.value(uncertainTask.getInterval().getSizeExpr());
                 uncertaintyModel.addHint(domain, knownPossibleDuration);
             }
@@ -407,7 +407,7 @@ public class ProblemSolver {
             uncertaintyModel.addLessOrEqual(taskType.getInterval().getSizeExpr(), knownMaximumDuration);
 
             // Hinting a lower bound for the duration from the known optimal/feasible solution
-            IntVar domain = this.baseModel.getIntVarFromProtoIndex(taskType.getInterval().getSizeExpr().getVariableIndex(0));
+            IntVar domain = uncertaintyModel.getIntVarFromProtoIndex(taskType.getInterval().getSizeExpr().getVariableIndex(0));
             long knownPossibleDuration = this.makespanSolver.value(taskType.getInterval().getSizeExpr());
             uncertaintyModel.addHint(domain, knownPossibleDuration);
         }

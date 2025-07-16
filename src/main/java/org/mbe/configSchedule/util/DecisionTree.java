@@ -128,10 +128,10 @@ public record DecisionTree(double time, DecisionTree.TaskDecisions root) {
                 } catch (NullPointerException e) {
                     scheduleString = "infeasible";
                 }
-                out.append("%s- %d: %s (%s)%n".formatted(
+                out.append("%s- %s %d: %s%n".formatted(
                         indention,
+                        this.task.getName(),
                         decisionDuration,
-                        getNextLevelForDuration(decisionDuration).getTask().getName(),
                         scheduleString
                 ));
                 out.append(getNextLevelForDuration(decisionDuration).print(indent + 1));
@@ -139,8 +139,9 @@ public record DecisionTree(double time, DecisionTree.TaskDecisions root) {
             if (this.nextDecision.isEmpty()) {
                 for (int i = 0; i < this.decisionDurations.size(); i++) {
                     SimpleSchedule schedule = this.schedules.get(i);
-                    out.append("%s- %d: %s%n".formatted(
+                    out.append("%s- %s %d: %s%n".formatted(
                             indention,
+                            this.task.getName(),
                             this.decisionDurations.get(i),
                             schedule != null ? schedule.outputString("; ") : "infeasible"
                     ));
@@ -151,7 +152,6 @@ public record DecisionTree(double time, DecisionTree.TaskDecisions root) {
     }
 
     public void print() {
-        System.out.println(this.root.getTask().getName());
         System.out.println(this.root.print(0));
     }
 }

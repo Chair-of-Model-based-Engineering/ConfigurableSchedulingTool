@@ -476,6 +476,8 @@ public class ProblemSolver {
             int duration = it.next();
             CpModel model = fixedTasksModel.getClone();
             model.addEquality(domain, duration);
+            IntVar makespan = fixedTasksModel.getIntVarFromProtoIndex(this.makespan.getIndex());
+            model.minimize(makespan);
 
             CpSolver solver = new CpSolver();
             CpSolverStatus solverStatus = solver.solve(model);
@@ -487,7 +489,6 @@ public class ProblemSolver {
                 taskDecisions.addDecision(duration, schedule);
             }
             this.decisionTreeTime += solver.userTime();
-
         }
 
         // TODO: Get next level task from (simple) schedule

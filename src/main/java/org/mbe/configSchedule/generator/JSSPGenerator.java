@@ -46,11 +46,10 @@ public class JSSPGenerator extends SPGenerator {
         List<Task> mandatoryTasksWithVarDuration = new ArrayList<>();
 
         if (jobCount > taskCount) {
-            System.out.println("Please enter more tasks than jobs");
+            System.err.println("Please enter more tasks than jobs");
         }
 
         // Fill the necessary lists (jobs and machines)
-        // TODO: Generate non-continuous durations somewhere (probably in the standard jobs)
         createMachines(machineCount, machines);
         createStandardJobs(taskCount, jobCount, machineCount, durationOutlierCount, machines, jobs, mandatoryTasksWithVarDuration);
         createOptionalTasks(optionalCount, machineCount, machines, jobs, optionalTasks);
@@ -95,7 +94,7 @@ public class JSSPGenerator extends SPGenerator {
      */
     private void createStandardJobs(int taskCount, int jobCount, int machineCount, int durationOutlierCount,
                                     List<Machine> machines, List<List<Task>> jobs, List<Task> mandatoryTasksWithVarDuration) {
-        double tasksPerJobD = taskCount / jobCount;
+        double tasksPerJobD = (double) taskCount / jobCount;
         int tasksPerJob = (int) floor(tasksPerJobD);
         int restTasks = taskCount % tasksPerJob;
         int tasksInJob;
@@ -115,7 +114,6 @@ public class JSSPGenerator extends SPGenerator {
             }
 
             for (int j = 0; j < tasksInJob; j++) {
-
                 Task task = new Task();
                 task.setName("p" + taskID);
                 taskID++;
@@ -123,21 +121,17 @@ public class JSSPGenerator extends SPGenerator {
 
                 // If there are equal to or more durationOutlier than tasks to be created,
                 // then the task has to be an outlier
-                if (((taskCount - taskID) == durationOutlierCount) && (durationOutlierCount > 0)) {
-                    setRandomDurations(task, 4, 6, 10, mandatoryTasksWithVarDuration);
+                boolean onlyOutliersLeft = (taskCount - taskID) <= durationOutlierCount;
+                boolean outLierChance = this.random.nextBoolean();
+                if (durationOutlierCount > 0 && (onlyOutliersLeft || outLierChance)) {
+                    setRandomDurations(task, 4, 6, 10, 4);
                     durationOutlierCount--;
                 } else {
-                    // Tasks duration still has the chance to be an outlier
-                    int outLierChance = this.random.nextInt(2);
-                    // 0 = Outlier, 1 = not an outlier
-                    if (outLierChance == 0 && durationOutlierCount > 0) {
-                        setRandomDurations(task, 4, 6, 10, mandatoryTasksWithVarDuration);
-                        durationOutlierCount--;
+                    setRandomDurations(task, 4, 1, 5, 0);
+                }
 
-                        // No outlier
-                    } else {
-                        setRandomDurations(task, 4, 1, 5, mandatoryTasksWithVarDuration);
-                    }
+                if (task.hasUncertainDurations() && !task.hasUnboundDurations()) {
+                    mandatoryTasksWithVarDuration.add(task);
                 }
 
                 task.setOptional(false);
@@ -364,6 +358,7 @@ public class JSSPGenerator extends SPGenerator {
      * @param sp SchedulingProblem-Object for which the UVL-file is to be created
      * @return String in the format of a UVL-file
      */
+    @Override
     protected String parseToUVL(SchedulingProblem sp) {
         StringBuilder uvlString = new StringBuilder();
         uvlString.append("features").append(System.lineSeparator());
@@ -387,6 +382,8 @@ public class JSSPGenerator extends SPGenerator {
      */
     private List<String>[] parseTasks(SchedulingProblem sp, StringBuilder uvlString) {
         uvlString.append("\t\t\tP {abstract true}").append(System.lineSeparator());
+
+        // TODO: Parse unbound durations
 
         List<Task> mandatoryTasks = new ArrayList<>();
         List<Task> optionalTasks = new ArrayList<>();

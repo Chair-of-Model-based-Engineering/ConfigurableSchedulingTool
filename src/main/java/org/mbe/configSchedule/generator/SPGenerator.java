@@ -25,21 +25,32 @@ public abstract class SPGenerator {
         }
     }
 
-    protected void setRandomDurations(Task task, int maxAmount, int minimum, int variability, List<Task> mandatoryTasksWithVarDuration) {
-        // Should duration be variable?
+    /**
+     * Generate durations for the given task.
+     *
+     * <p>There is a 50% chance for generating multiple durations or only a single one.
+     *
+     * @param task                   the task for which to generate durations.
+     * @param maxAmount              the maximum amount of durations.
+     * @param minimum                the minimum duration.
+     * @param variability            the variability of the durations on top of the minimum amount.
+     * @param unboundDurationsChance the inverse chance to generate unbound durations.
+     */
+    protected void setRandomDurations(Task task, int maxAmount, int minimum, int variability, int unboundDurationsChance) {
         boolean variableDurationChance = this.random.nextBoolean();
-        // 0 = Variable duration, 1 = static duration
         if (variableDurationChance) {
-            int durationCount = this.random.nextInt(maxAmount) + 1;
+            int durationCount = this.random.nextInt(1, maxAmount + 1);
             for (int i = 0; i < durationCount; i++) {
-                task.addDuration(this.random.nextInt(variability) + minimum);
+                task.addDuration(this.random.nextInt(minimum, variability + 1));
             }
-
-            // Add tasks to mandatory tasks for the duration constraints
-            mandatoryTasksWithVarDuration.add(task);
         } else {
-            int duration = this.random.nextInt(variability) + minimum;
+            int duration = this.random.nextInt(minimum, variability + 1);
             task.setDurations(new int[] {duration});
+        }
+
+        if (unboundDurationsChance > 0 && this.random.nextInt(unboundDurationsChance) == 0) {
+            int lowerBound = this.random.nextInt(minimum, variability + 1);
+            task.setUnboundDurations(lowerBound);
         }
     }
 

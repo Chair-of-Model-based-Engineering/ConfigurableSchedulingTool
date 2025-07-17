@@ -54,6 +54,21 @@ public abstract class SPGenerator {
         }
     }
 
+    protected Task createRandomTask(String name, boolean optional, List<Machine> machines, boolean isOutlier) {
+        Task task = new Task();
+        task.setName(name);
+        task.setMachine(machines.get(this.random.nextInt(machines.size())));
+
+        if (isOutlier) {
+            setRandomDurations(task, 4, 6, 10, 4);
+        } else {
+            setRandomDurations(task, 4, 1, 5, 0);
+        }
+
+        task.setOptional(optional);
+        return task;
+    }
+
     /**
      * Parses the given scheduling problem to the UVL-format
      *

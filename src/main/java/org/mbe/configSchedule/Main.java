@@ -3,7 +3,7 @@ package org.mbe.configSchedule;
 import com.google.ortools.Loader;
 import com.opencsv.CSVWriter;
 import de.vill.model.FeatureModel;
-import org.mbe.configSchedule.generator.SPGenerator;
+import org.mbe.configSchedule.generator.JSSPGenerator;
 import org.mbe.configSchedule.parser.UVLReader;
 import org.mbe.configSchedule.solver.ConfigurationSolver;
 import org.mbe.configSchedule.solver.ProblemSolver;
@@ -41,9 +41,9 @@ public class Main {
 
         if (!(args.length == 12 || args.length == 2 || args.length == 3 || args.length == 4)) {
             System.err.println("""
-                    Wrong command or wrong amount of arguments\s
+                    Wrong command or wrong amount of arguments
                     To generate a problem: generate <jobCount> <taskCount> <durationOutlier> \
-                    <machineCount> <optionalCount> <altCount> <altGroupCount> <deadline> <durationConstraints> <maxDurationRequires> <name>\s
+                    <machineCount> <optionalCount> <altCount> <altGroupCount> <deadline> <durationConstraints> <maxDurationRequires> <name>
                     To solve a problem: solve [o or f] <name>""");
             return;
         }
@@ -55,7 +55,7 @@ public class Main {
                 for (int i = 1; i < args.length - 1; i++) {
                     intParameter[i - 1] = Integer.parseInt(args[i]);
                 }
-                SPGenerator spgenerator = new SPGenerator();
+                JSSPGenerator spgenerator = new JSSPGenerator();
                 spgenerator.generateProblem(intParameter[0], intParameter[1], intParameter[2], intParameter[3], intParameter[4], intParameter[5],
                         intParameter[6], intParameter[7], intParameter[8], intParameter[9], args[11]);
 

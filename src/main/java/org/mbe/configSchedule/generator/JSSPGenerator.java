@@ -241,16 +241,22 @@ public class JSSPGenerator extends SPGenerator {
     private void parseTask(Task task, StringBuilder uvlString, List<String> machineCons) {
         uvlString.append("\t\t\t\t\t").append(task.getName()).append(System.lineSeparator());
 
-        String durationStringTemplate = "\t\t\t\t\t\t\t\"d%s = %d\"%n";
-        if (task.getDurations().length == 1) {
-            uvlString.append("\t\t\t\t\t\tmandatory").append(System.lineSeparator());
-            uvlString.append(durationStringTemplate.formatted(task.getName(), task.getMinimumDuration()));
-        } else {
-            uvlString.append("\t\t\t\t\t\talternative").append(System.lineSeparator());
-            for (int duration : task.getDurations()) {
-                uvlString.append(durationStringTemplate.formatted(task.getName(), duration));
-            }
+        List<String> durationFeatureStrings = new ArrayList<>();
+
+        String durationStringTemplate = "\t\t\t\t\t\t\t\"d" + task.getName() + " = %d\"";
+        for (int duration : task.getDurations()) {
+            durationFeatureStrings.add(durationStringTemplate.formatted(duration));
         }
+        String unboundDurationStringTemplate = durationStringTemplate.replace("=", ">=");
+        task.getUnboundDurations().ifPresent(
+                integer -> durationFeatureStrings.add(unboundDurationStringTemplate.formatted(integer))
+        );
+
+        uvlString.append("\t\t\t\t\t\t");
+        uvlString.append(durationFeatureStrings.size() == 1 ? "mandatory" : "alternative");
+        uvlString.append(System.lineSeparator());
+        uvlString.append(String.join(System.lineSeparator(), durationFeatureStrings));
+        uvlString.append(System.lineSeparator());
 
         machineCons.add("\t%s => %s%n".formatted(task.getName(), task.getMachine().getName()));
     }

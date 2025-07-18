@@ -206,26 +206,4 @@ public abstract class SPGenerator {
 
         return alternativeTaskGroups;
     }
-
-    /**
-     * Parses the given scheduling problem to the UVL-format
-     *
-     * @param sp SchedulingProblem-Object for which the UVL-file is to be created
-     * @return String in the format of a UVL-file
-     */
-    protected abstract String parseToUVL(SchedulingProblem sp);
-
-    protected void writeToFile(SchedulingProblem sp) throws IOException {
-        String problemUVL = parseToUVL(sp);
-
-        PathPreferences prefs = new PathPreferences();
-        Path path = Path.of(prefs.getProblemSavePath());
-
-        if (!Files.exists(path)) {
-            Files.createDirectories(path);
-        }
-
-        Path filepath = path.resolve(sp.getName() + ".uvl");
-        Files.writeString(filepath, problemUVL);
-    }
 }

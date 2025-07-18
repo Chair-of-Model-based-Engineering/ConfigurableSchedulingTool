@@ -4,6 +4,8 @@ import com.google.ortools.Loader;
 import com.opencsv.CSVWriter;
 import de.vill.model.FeatureModel;
 import org.mbe.configSchedule.generator.JSSPGenerator;
+import org.mbe.configSchedule.generator.MSPGenerator;
+import org.mbe.configSchedule.generator.UVLWriter;
 import org.mbe.configSchedule.parser.UVLReader;
 import org.mbe.configSchedule.solver.ConfigurationSolver;
 import org.mbe.configSchedule.solver.ProblemSolver;
@@ -39,30 +41,44 @@ public class Main {
         Loader.loadNativeLibraries();
         PathPreferences prefs = new PathPreferences();
 
-        if (!(args.length == 12 || args.length == 2 || args.length == 3 || args.length == 4)) {
+        if (!(args.length == 12 || args.length == 11 || args.length == 2 || args.length == 3 || args.length == 4)) {
             System.err.println("""
                     Wrong command or wrong amount of arguments
-                    To generate a problem: generate <jobCount> <taskCount> <durationOutlier> \
-                    <machineCount> <optionalCount> <altCount> <altGroupCount> <deadline> <durationConstraints> <maxDurationRequires> <name>
+                    To generate a problem:
+                        - JSSP: generate <name>_jssp <jobCount> <taskCount> <durationOutlier> <machineCount> <optionalCount> <altCount> <altGroupCount> <deadline> <durationConstraints> <maxDurationRequires>
+                        - MSP: generate <name> <taskCount> <durationOutlier> <machineCount> <optionalCount> <altCount> <altGroupCount> <deadline> <durationConstraints> <maxDurationRequires>
                     To solve a problem: solve [o or f] <name>""");
             return;
         }
 
         switch (args[0]) {
             case "generate" -> {
-                // Parse some arguments to integers
-                int[] intParameter = new int[10];
-                for (int i = 1; i < args.length - 1; i++) {
-                    intParameter[i - 1] = Integer.parseInt(args[i]);
+                String name = args[1];
+                SchedulingProblem sp;
+                // TODO: This should take advantage of polymorphism of the generator classes with SPGenerator and an abstract generateProblem() method
+                if (name.endsWith("_jssp")) {
+                    int[] intParameter = new int[10];
+                    for (int i = 2; i < args.length; i++) {
+                        intParameter[i - 2] = Integer.parseInt(args[i]);
+                    }
+                    JSSPGenerator jsspGenerator = new JSSPGenerator();
+                    sp = jsspGenerator.generateProblem(intParameter[0], intParameter[1], intParameter[2], intParameter[3], intParameter[4], intParameter[5],
+                            intParameter[6], intParameter[7], intParameter[8], intParameter[9], name);
+                } else {
+                    int[] intParameter = new int[9];
+                    for (int i = 2; i < args.length; i++) {
+                        intParameter[i - 2] = Integer.parseInt(args[i]);
+                    }
+                    MSPGenerator mspGenerator = new MSPGenerator();
+                    sp = mspGenerator.generateProblem(intParameter[0], intParameter[1], intParameter[2], intParameter[3], intParameter[4], intParameter[5],
+                            intParameter[6], intParameter[7], intParameter[8], name);
                 }
-                JSSPGenerator spgenerator = new JSSPGenerator();
-                spgenerator.generateProblem(intParameter[0], intParameter[1], intParameter[2], intParameter[3], intParameter[4], intParameter[5],
-                        intParameter[6], intParameter[7], intParameter[8], intParameter[9], args[11]);
+                new UVLWriter().writeToFile(sp);
 
                 System.out.printf("""
                         Problem saved as %1$s.uvl
                         To solve use: solve [o|f] %1$s.uvl
-                        """, args[11]);
+                        """, name);
             }
             case "solve" -> {
                 SolveComplexity solveMode;

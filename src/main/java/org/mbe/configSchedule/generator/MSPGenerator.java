@@ -22,9 +22,10 @@ public class MSPGenerator extends SPGenerator {
      * @param durationConstraints  Number of duration constraints
      * @param maxDurationRequires  Maximum number of duration constraints originating from one task
      * @param name                 Name of the problem
+     * @return the generated scheduling problem.
      * @throws IOException
      */
-    public void generateProblem(int taskCount,
+    public SchedulingProblem generateProblem(int taskCount,
                                 int durationOutlierCount, int machineCount, int optionalCount,
                                 int altCount, int altGroupCount, int deadline, int durationConstraints, int maxDurationRequires, String name) throws IOException {
         List<Task> tasks = new ArrayList<>();
@@ -44,8 +45,7 @@ public class MSPGenerator extends SPGenerator {
         tasks.addAll(optionalTasks);
         tasks.addAll(alternativeTaskGroups.stream().flatMap(Arrays::stream).distinct().toList());
 
-        SchedulingProblem sp = new SchedulingProblem(name, tasks, precedenceOrder, machines, deadline);
-        new UVLWriter().writeToFile(sp);
+        return new SchedulingProblem(name, tasks, precedenceOrder, machines, deadline);
     }
 
     private void createMandatoryTasks(int taskCount,

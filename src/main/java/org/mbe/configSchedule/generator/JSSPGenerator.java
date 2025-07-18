@@ -26,9 +26,10 @@ public class JSSPGenerator extends SPGenerator {
      * @param durationConstraints  Number of duration constraints
      * @param maxDurationRequires  Maximum number of duration constraints originating from one task
      * @param name                 Name of the problem
+     * @return the generated scheduling problem.
      * @throws IOException
      */
-    public void generateProblem(int jobCount, int taskCount,
+    public SchedulingProblem generateProblem(int jobCount, int taskCount,
                                 int durationOutlierCount, int machineCount, int optionalCount,
                                 int altCount, int altGroupCount, int deadline, int durationConstraints, int maxDurationRequires, String name) throws IOException {
         List<List<Task>> jobs = new ArrayList<>();
@@ -62,8 +63,7 @@ public class JSSPGenerator extends SPGenerator {
             }
         }
 
-        SchedulingProblem sp = new SchedulingProblem(name + "_jssp", tasks, precedenceOrder, machines, deadline);
-        new UVLWriter().writeToFile(sp);
+        return new SchedulingProblem(name, tasks, precedenceOrder, machines, deadline);
     }
 
     /**

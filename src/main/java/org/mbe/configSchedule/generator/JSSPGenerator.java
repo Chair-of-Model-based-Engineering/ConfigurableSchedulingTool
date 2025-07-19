@@ -30,8 +30,8 @@ public class JSSPGenerator extends SPGenerator {
      * @throws IOException
      */
     public SchedulingProblem generateProblem(int jobCount, int taskCount,
-                                int durationOutlierCount, int machineCount, int optionalCount,
-                                int altCount, int altGroupCount, int deadline, int durationConstraints, int maxDurationRequires, String name) throws IOException {
+                                             int durationOutlierCount, int machineCount, int optionalCount,
+                                             int altCount, int altGroupCount, int deadline, int durationConstraints, int maxDurationRequires, String name) throws IOException {
         List<List<Task>> jobs = new ArrayList<>();
 
         if (jobCount > taskCount) {
@@ -103,7 +103,8 @@ public class JSSPGenerator extends SPGenerator {
                 boolean onlyOutliersLeft = (taskCount - taskID) <= durationOutlierCount;
                 boolean outLierChance = this.random.nextBoolean();
                 boolean isOutlier = durationOutlierCount > 0 && (onlyOutliersLeft || outLierChance);
-                durationOutlierCount--;
+                if (isOutlier)
+                    durationOutlierCount--;
 
                 Task task = createRandomTask("p" + taskID, false, machines, isOutlier);
                 if (task.hasUncertainDurations() && !task.hasUnboundDurations()) {

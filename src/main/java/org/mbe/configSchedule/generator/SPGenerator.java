@@ -65,7 +65,7 @@ public abstract class SPGenerator {
         task.setMachine(machines.get(this.random.nextInt(machines.size())));
 
         if (isOutlier) {
-            setRandomDurations(task, 4, 6, 10, 4);
+            setRandomDurations(task, 4, 6, 10, 2);
         } else {
             setRandomDurations(task, 4, 1, 5, 0);
         }

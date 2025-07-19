@@ -2,6 +2,7 @@ package org.mbe.configSchedule.util;
 
 import com.google.ortools.sat.CpSolverStatus;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -11,10 +12,10 @@ public class SolverReturn {
      * Represents the results of an uncertainty analysis of a scheduling problem.
      *
      * @param schedule        a schedule for the scheduling problem, possibly {@code null}.
-     * @param taskUncertainty the maximum duration with a feasible solution per task.
+     * @param taskUncertainty all durations per task with a solution.
      * @param time            the time it took to create the results contained in this.
      */
-    public record UncertaintyResult(Schedule schedule, Map<Task, Integer> taskUncertainty, double time) {
+    public record UncertaintyResult(Schedule schedule, Map<Task, List<Integer>> taskUncertainty, double time) {
     }
 
     private Double time;

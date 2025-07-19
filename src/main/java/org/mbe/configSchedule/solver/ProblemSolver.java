@@ -5,6 +5,7 @@ import com.google.ortools.util.Domain;
 import org.mbe.configSchedule.util.*;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -363,30 +364,52 @@ public class ProblemSolver {
     }
 
     private void analyzeUncertaintyPerTask() {
-        Map<Task, Integer> taskUncertainty = new HashMap<>();
-        double overallTime = 0;
+        Map<Task, List<Integer>> taskUncertainty = new HashMap<>();
+        AtomicReference<Double> overallTime = new AtomicReference<>(0.0);
         for (TaskType uncertainTask : this.tasksWithUncertainty) {
-            CpModel uncertaintyModel = this.baseModel.getClone();
+            CpModel maximumDurationModel = this.baseModel.getClone();
             LinearExpr durationExpr = uncertainTask.getInterval().getSizeExpr();
-            uncertaintyModel.maximize(durationExpr);
+            maximumDurationModel.maximize(durationExpr);
 
             if (this.result != null) {
-                IntVar domain = uncertaintyModel.getIntVarFromProtoIndex(uncertainTask.getInterval().getSizeExpr().getVariableIndex(0));
+                IntVar domain = maximumDurationModel.getIntVarFromProtoIndex(uncertainTask.getInterval().getSizeExpr().getVariableIndex(0));
                 long knownPossibleDuration = this.makespanSolver.value(uncertainTask.getInterval().getSizeExpr());
-                uncertaintyModel.addHint(domain, knownPossibleDuration);
+                maximumDurationModel.addHint(domain, knownPossibleDuration);
             }
 
             CpSolver solver = new CpSolver();
-            CpSolverStatus solverStatus = solver.solve(uncertaintyModel);
+            CpSolverStatus _ = solver.solve(maximumDurationModel);
+            overallTime.updateAndGet(v -> v + solver.userTime());
             // We only allow integer durations. Therefore, this should be an allowed cast.
-            taskUncertainty.put(uncertainTask.getTask(), (int) solver.objectiveValue());
-            overallTime += solver.userTime();
+            int maximumDuration = (int) solver.objectiveValue();
+
+            List<Integer> possibleDurations = new ArrayList<>();
+
+            IntStream uncertainDurations = Arrays.stream(uncertainTask.getTask().getDurations()).filter(
+                    d -> d < maximumDuration
+            );
+            IntStream unboundDurations = uncertainTask.getTask().getUnboundDurations().stream().flatMapToInt(
+                    lowerBound -> IntStream.range(lowerBound, maximumDuration)
+            );
+            IntStream.concat(uncertainDurations, unboundDurations).sorted().distinct().forEachOrdered(duration -> {
+                CpModel durationModel = this.baseModel.getClone();
+                IntVar domain = durationModel.getIntVarFromProtoIndex(uncertainTask.getInterval().getSizeExpr().getVariableIndex(0));
+                durationModel.addEquality(domain, duration);
+
+                // Not maximizing anything in the durationModel because we only care if it is solvable in any way.
+                CpSolverStatus status = solver.solve(durationModel);
+                overallTime.updateAndGet(v -> v + solver.userTime());
+                if (status == CpSolverStatus.OPTIMAL || status == CpSolverStatus.FEASIBLE)
+                    possibleDurations.add(duration);
+            });
+            possibleDurations.add(maximumDuration);
+            taskUncertainty.put(uncertainTask.getTask(), possibleDurations);
         }
-        this.result.setPerTaskUncertainty(new SolverReturn.UncertaintyResult(null, taskUncertainty, overallTime));
+        this.result.setPerTaskUncertainty(new SolverReturn.UncertaintyResult(null, taskUncertainty, overallTime.get()));
     }
 
     private void analyzeOverallUncertainty() {
-        Map<Task, Integer> knownMaximumDurations = this.result.getPerTaskUncertainty().taskUncertainty();
+        Map<Task, List<Integer>> knownMaximumDurations = this.result.getPerTaskUncertainty().taskUncertainty();
 
         CpModel uncertaintyModel = this.baseModel.getClone();
 
@@ -396,14 +419,15 @@ public class ProblemSolver {
                 .toArray(LinearArgument[]::new);
         long[] weights = this.tasksWithUncertainty.stream()
                 .map(TaskType::getTask)
-                .mapToLong(t -> this.maxDuration - (knownMaximumDurations.get(t) - t.getMinimumDuration()))
+                // TODO: Replace with actual amount of possible durations
+                .mapToLong(t -> this.maxDuration - (knownMaximumDurations.get(t).getLast() - t.getMinimumDuration()))
                 .toArray();
         LinearExpr durationSum = LinearExpr.weightedSum(durationVariables, weights);
         uncertaintyModel.maximize(durationSum);
 
         for (TaskType taskType : this.tasksWithUncertainty) {
             // Set hard upper bound for the duration from the known maximum duration of each task
-            int knownMaximumDuration = knownMaximumDurations.get(taskType.getTask());
+            int knownMaximumDuration = knownMaximumDurations.get(taskType.getTask()).getLast();
             uncertaintyModel.addLessOrEqual(taskType.getInterval().getSizeExpr(), knownMaximumDuration);
 
             // Hinting a lower bound for the duration from the known optimal/feasible solution
@@ -415,9 +439,9 @@ public class ProblemSolver {
         CpSolver solver = new CpSolver();
         solver.solve(uncertaintyModel);
 
-        Map<Task, Integer> taskDurations = new HashMap<>();
+        Map<Task, List<Integer>> taskDurations = new HashMap<>();
         for (TaskType taskType : this.tasksWithUncertainty) {
-            taskDurations.put(taskType.getTask(), (int) solver.value(taskType.getInterval().getSizeExpr()));
+            taskDurations.put(taskType.getTask(), List.of((int) solver.value(taskType.getInterval().getSizeExpr())));
         }
 
         this.result.setSummedUncertainty(new SolverReturn.UncertaintyResult(createSchedule(solver), taskDurations, solver.userTime()));
@@ -454,16 +478,6 @@ public class ProblemSolver {
             HashMap<TaskType, Integer> processedTasks,
             List<TaskType> orderedTasks
     ) {
-        Integer maximumPossibleDuration = this.result.getPerTaskUncertainty().taskUncertainty().get(taskType.getTask());
-
-        IntStream uncertainDurations = Arrays.stream(taskType.getTask().getDurations()).filter(
-                d -> d <= maximumPossibleDuration
-        );
-        IntStream unboundDurations = taskType.getTask().getUnboundDurations().stream().flatMapToInt(
-                lowerBound -> IntStream.rangeClosed(lowerBound, maximumPossibleDuration)
-        );
-        IntStream durations = IntStream.concat(uncertainDurations, unboundDurations).sorted().distinct();
-
         CpModel fixedTasksModel = this.baseModel.getClone();
         for (Map.Entry<TaskType, Integer> entry : processedTasks.entrySet()) {
             IntVar previousDomain = fixedTasksModel.getIntVarFromProtoIndex(entry.getKey().getInterval().getSizeExpr().getVariableIndex(0));
@@ -472,8 +486,9 @@ public class ProblemSolver {
 
         DecisionTree.TaskDecisions taskDecisions = new DecisionTree.TaskDecisions(taskType.getTask());
         IntVar domain = fixedTasksModel.getIntVarFromProtoIndex(taskType.getInterval().getSizeExpr().getVariableIndex(0));
-        for (PrimitiveIterator.OfInt it = durations.iterator(); it.hasNext(); ) {
-            int duration = it.next();
+
+        List<Integer> possibleDurations = this.result.getPerTaskUncertainty().taskUncertainty().get(taskType.getTask());
+        for (Integer duration : possibleDurations) {
             CpModel model = fixedTasksModel.getClone();
             model.addEquality(domain, duration);
             IntVar makespan = fixedTasksModel.getIntVarFromProtoIndex(this.makespan.getIndex());
@@ -494,7 +509,7 @@ public class ProblemSolver {
         // TODO: Get next level task from (simple) schedule
         TaskType nextLevelTaskType;
         try {
-            nextLevelTaskType = orderedTasks.get(processedTasks.size()+1);
+            nextLevelTaskType = orderedTasks.get(processedTasks.size() + 1);
         } catch (IndexOutOfBoundsException e) {
             return taskDecisions;
         }

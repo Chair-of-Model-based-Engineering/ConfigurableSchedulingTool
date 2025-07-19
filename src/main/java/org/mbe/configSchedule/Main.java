@@ -348,7 +348,7 @@ public class Main {
         }
         for (Task uncertainTask : uncertaintyResult.taskUncertainty().keySet()) {
             System.out.printf(
-                    "%s: %d (out of %s%s)%n",
+                    "%s: %s (out of %s%s)%n",
                     uncertainTask.getName(),
                     uncertaintyResult.taskUncertainty().get(uncertainTask),
                     uncertainTask.getUnboundDurations().map(">=%d, "::formatted).orElse(""),

@@ -61,6 +61,7 @@ public class ProblemSolver {
 
     private void createSolverReturn(CpSolver solver) {
         CpModel makespanModel = this.baseModel.getClone();
+        makespanModel.getBuilder().setName("Makespan");
         makespanModel.minimize(this.makespan);
 
         CpSolverStatus status = solver.solve(makespanModel);
@@ -371,6 +372,7 @@ public class ProblemSolver {
         AtomicReference<Double> overallTime = new AtomicReference<>(0.0);
         for (TaskType uncertainTask : this.tasksWithUncertainty) {
             CpModel maximumDurationModel = this.baseModel.getClone();
+            maximumDurationModel.getBuilder().setName("Maximum Duration " + uncertainTask.getName());
             LinearExpr durationExpr = uncertainTask.getInterval().getSizeExpr();
             maximumDurationModel.maximize(durationExpr);
 
@@ -397,6 +399,7 @@ public class ProblemSolver {
             );
             IntStream.concat(uncertainDurations, unboundDurations).sorted().distinct().forEachOrdered(duration -> {
                 CpModel durationModel = this.baseModel.getClone();
+                durationModel.getBuilder().setName("Possible Duration %s = %d".formatted(uncertainTask.getName(), duration));
                 IntVar domain = durationModel.getIntVarFromProtoIndex(uncertainTask.getIntervalDomainIndex());
                 durationModel.addEquality(domain, duration);
 
@@ -416,6 +419,7 @@ public class ProblemSolver {
         Map<Task, List<Integer>> possibleDurationsOfTasks = this.result.getPerTaskUncertainty().taskUncertainty();
 
         this.normalizedModel = this.baseModel.getClone();
+        this.normalizedModel.getBuilder().setName("Normalized model");
         for (TaskType taskType : this.tasksWithUncertainty) {
             IntVar domain = this.normalizedModel.getIntVarFromProtoIndex(taskType.getIntervalDomainIndex());
 
@@ -448,6 +452,7 @@ public class ProblemSolver {
         LinearExpr durationSum = LinearExpr.weightedSum(durationVariables, weights);
 
         CpModel uncertaintyModel = this.normalizedModel.getClone();
+        uncertaintyModel.getBuilder().setName("Summed uncertainty model");
         uncertaintyModel.maximize(durationSum);
 
         CpSolver solver = new CpSolver();
@@ -504,6 +509,7 @@ public class ProblemSolver {
         List<Integer> possibleDurations = this.result.getPerTaskUncertainty().taskUncertainty().get(taskType.getTask());
         for (Integer duration : possibleDurations) {
             CpModel model = fixedTasksModel.getClone();
+            model.getBuilder().setName("Decision Tree %s = %d %s".formatted(taskType.getName(), duration, processedTasks.values()));
             model.addEquality(domain, duration);
             IntVar makespan = fixedTasksModel.getIntVarFromProtoIndex(this.makespan.getIndex());
             model.minimize(makespan);

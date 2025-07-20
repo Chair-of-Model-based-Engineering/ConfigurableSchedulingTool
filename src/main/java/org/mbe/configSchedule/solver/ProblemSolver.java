@@ -429,32 +429,26 @@ public class ProblemSolver {
     }
 
     private void analyzeOverallUncertainty() {
-        Map<Task, List<Integer>> knownMaximumDurations = this.result.getPerTaskUncertainty().taskUncertainty();
+        Map<Task, List<Integer>> possibleDurations = this.result.getPerTaskUncertainty().taskUncertainty();
 
-        CpModel uncertaintyModel = this.baseModel.getClone();
-
-        // Prioritize maximizing the duration of tasks with small uncertainty ranges.
         LinearArgument[] durationVariables = this.tasksWithUncertainty.stream()
                 .map(tt -> tt.getInterval().getSizeExpr())
                 .toArray(LinearArgument[]::new);
         long[] weights = this.tasksWithUncertainty.stream()
                 .map(TaskType::getTask)
-                // TODO: Replace with actual amount of possible durations
-                .mapToLong(t -> this.maxDuration - (knownMaximumDurations.get(t).getLast() - t.getMinimumDuration()))
+                .mapToLong(t -> possibleDurations.get(t).size())
+                .toArray();
+        long sum = Arrays.stream(weights).sum();
+        weights = Arrays.stream(weights)
+                // LinearExpr.weightedSum can only take long[] as coefficients so we compute percentages
+                .map(d -> Math.round(100 * ((float) d / sum)))
+                // Inverting the percentage to prioritize maximizing the duration of tasks with small uncertainty ranges.
+                .map(w -> 100 - w)
                 .toArray();
         LinearExpr durationSum = LinearExpr.weightedSum(durationVariables, weights);
+
+        CpModel uncertaintyModel = this.normalizedModel.getClone();
         uncertaintyModel.maximize(durationSum);
-
-        for (TaskType taskType : this.tasksWithUncertainty) {
-            // Set hard upper bound for the duration from the known maximum duration of each task
-            int knownMaximumDuration = knownMaximumDurations.get(taskType.getTask()).getLast();
-            uncertaintyModel.addLessOrEqual(taskType.getInterval().getSizeExpr(), knownMaximumDuration);
-
-            // Hinting a lower bound for the duration from the known optimal/feasible solution
-            IntVar domain = uncertaintyModel.getIntVarFromProtoIndex(taskType.getInterval().getSizeExpr().getVariableIndex(0));
-            long knownPossibleDuration = this.makespanSolver.value(taskType.getInterval().getSizeExpr());
-            uncertaintyModel.addHint(domain, knownPossibleDuration);
-        }
 
         CpSolver solver = new CpSolver();
         solver.solve(uncertaintyModel);
@@ -498,7 +492,7 @@ public class ProblemSolver {
             HashMap<TaskType, Integer> processedTasks,
             List<TaskType> orderedTasks
     ) {
-        CpModel fixedTasksModel = this.baseModel.getClone();
+        CpModel fixedTasksModel = this.normalizedModel.getClone();
         for (Map.Entry<TaskType, Integer> entry : processedTasks.entrySet()) {
             IntVar previousDomain = fixedTasksModel.getIntVarFromProtoIndex(entry.getKey().getInterval().getSizeExpr().getVariableIndex(0));
             fixedTasksModel.addEquality(previousDomain, entry.getValue());

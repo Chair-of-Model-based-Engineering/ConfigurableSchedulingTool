@@ -375,7 +375,7 @@ public class ProblemSolver {
             maximumDurationModel.maximize(durationExpr);
 
             if (this.result != null) {
-                IntVar domain = maximumDurationModel.getIntVarFromProtoIndex(uncertainTask.getInterval().getSizeExpr().getVariableIndex(0));
+                IntVar domain = maximumDurationModel.getIntVarFromProtoIndex(uncertainTask.getIntervalDomainIndex());
                 long knownPossibleDuration = this.makespanSolver.value(uncertainTask.getInterval().getSizeExpr());
                 maximumDurationModel.addHint(domain, knownPossibleDuration);
             }
@@ -397,7 +397,7 @@ public class ProblemSolver {
             );
             IntStream.concat(uncertainDurations, unboundDurations).sorted().distinct().forEachOrdered(duration -> {
                 CpModel durationModel = this.baseModel.getClone();
-                IntVar domain = durationModel.getIntVarFromProtoIndex(uncertainTask.getInterval().getSizeExpr().getVariableIndex(0));
+                IntVar domain = durationModel.getIntVarFromProtoIndex(uncertainTask.getIntervalDomainIndex());
                 durationModel.addEquality(domain, duration);
 
                 // Not maximizing anything in the durationModel because we only care if it is solvable in any way.
@@ -417,7 +417,7 @@ public class ProblemSolver {
 
         this.normalizedModel = this.baseModel.getClone();
         for (TaskType taskType : this.tasksWithUncertainty) {
-            IntVar domain = this.normalizedModel.getIntVarFromProtoIndex(taskType.getInterval().getSizeExpr().getVariableIndex(0));
+            IntVar domain = this.normalizedModel.getIntVarFromProtoIndex(taskType.getIntervalDomainIndex());
 
             // `addAllDomain` below only allows a correctly "formatted" array of longs as argument.
             // For more details refer to the documentation of the method.
@@ -494,12 +494,12 @@ public class ProblemSolver {
     ) {
         CpModel fixedTasksModel = this.normalizedModel.getClone();
         for (Map.Entry<TaskType, Integer> entry : processedTasks.entrySet()) {
-            IntVar previousDomain = fixedTasksModel.getIntVarFromProtoIndex(entry.getKey().getInterval().getSizeExpr().getVariableIndex(0));
+            IntVar previousDomain = fixedTasksModel.getIntVarFromProtoIndex(entry.getKey().getIntervalDomainIndex());
             fixedTasksModel.addEquality(previousDomain, entry.getValue());
         }
 
         DecisionTree.TaskDecisions taskDecisions = new DecisionTree.TaskDecisions(taskType.getTask());
-        IntVar domain = fixedTasksModel.getIntVarFromProtoIndex(taskType.getInterval().getSizeExpr().getVariableIndex(0));
+        IntVar domain = fixedTasksModel.getIntVarFromProtoIndex(taskType.getIntervalDomainIndex());
 
         List<Integer> possibleDurations = this.result.getPerTaskUncertainty().taskUncertainty().get(taskType.getTask());
         for (Integer duration : possibleDurations) {

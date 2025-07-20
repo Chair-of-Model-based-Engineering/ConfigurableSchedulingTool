@@ -78,6 +78,15 @@ public class TaskType {
     }
 
     /**
+     * {@return the index of the interval's domain in the underlying {@link com.google.ortools.sat.CpModelProto}}
+     * @implSpec This is a shortcut for {@code this.interval.getSizeExpr().getVariableIndex(0)}
+     */
+    public int getIntervalDomainIndex() {
+        // SizeExpr is an AffineExpression which only allows 0 as an argument to getVariableIndex
+        return this.interval.getSizeExpr().getVariableIndex(0);
+    }
+
+    /**
      * Returns whether the task is active or not.
      *
      * @return value of type {@link BoolVar}.

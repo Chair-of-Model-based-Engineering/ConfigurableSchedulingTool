@@ -16,9 +16,9 @@ public class ProblemSolver {
     private final List<TaskType> tasksWithUncertainty = new ArrayList<>();
 
     private final CpModel baseModel = new CpModel();
-    private IntVar makespan;
-    private int maxDuration;
+    private CpModel normalizedModel;
 
+    private IntVar makespan;
     private CpSolver makespanSolver;
 
     private SolverReturn result;
@@ -95,7 +95,7 @@ public class ProblemSolver {
         // A negative number as the deadline represents a deadline of infinity in which case we calculate the
         // upper bound for task durations as the sum of all task durations.
         // Adding 1 so tasks with unbound durations can assume an infeasible duration.
-        this.maxDuration = 1 + (sp.getDeadline() >= 0 ?
+        int maxDuration = 1 + (sp.getDeadline() >= 0 ?
                 sp.getDeadline() :
                 sp.getTasks().stream().mapToInt(Task::getMaximumDuration).sum());
 
@@ -359,6 +359,9 @@ public class ProblemSolver {
         }
 
         analyzeUncertaintyPerTask();
+
+        buildNormalizedModel();
+
         analyzeOverallUncertainty();
         createDecisionTree();
     }
@@ -385,6 +388,7 @@ public class ProblemSolver {
 
             List<Integer> possibleDurations = new ArrayList<>();
 
+            // We don't need to solve for maximumDuration because we already know that the model is solvable with it.
             IntStream uncertainDurations = Arrays.stream(uncertainTask.getTask().getDurations()).filter(
                     d -> d < maximumDuration
             );
@@ -406,6 +410,22 @@ public class ProblemSolver {
             taskUncertainty.put(uncertainTask.getTask(), possibleDurations);
         }
         this.result.setPerTaskUncertainty(new SolverReturn.UncertaintyResult(null, taskUncertainty, overallTime.get()));
+    }
+
+    private void buildNormalizedModel() {
+        Map<Task, List<Integer>> possibleDurationsOfTasks = this.result.getPerTaskUncertainty().taskUncertainty();
+
+        this.normalizedModel = this.baseModel.getClone();
+        for (TaskType taskType : this.tasksWithUncertainty) {
+            IntVar domain = this.normalizedModel.getIntVarFromProtoIndex(taskType.getInterval().getSizeExpr().getVariableIndex(0));
+
+            // `addAllDomain` below only allows a correctly "formatted" array of longs as argument.
+            // For more details refer to the documentation of the method.
+            // Furthermore, `Domain.fromValues` expects a `long[]` but `addAllDomain` expects `Iterable<Long>`.
+            long[] possibleDurations = possibleDurationsOfTasks.get(taskType.getTask()).stream().mapToLong(Long::valueOf).toArray();
+            List<Long> newDomain = Arrays.stream(Domain.fromValues(possibleDurations).flattenedIntervals()).boxed().toList();
+            domain.getBuilder().clearDomain().addAllDomain(newDomain);
+        }
     }
 
     private void analyzeOverallUncertainty() {

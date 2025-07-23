@@ -6,6 +6,7 @@ import org.mbe.configSchedule.util.*;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -292,7 +293,7 @@ public class ProblemSolver {
             }
 
             // Falls noch keine ArrayList für die Maschine vorhanden ist, wird eine neue erstellt
-            machineToIntervals.computeIfAbsent(task.getMachine(), (Machine m) -> new ArrayList<>());
+            machineToIntervals.computeIfAbsent(task.getMachine(), _ -> new ArrayList<>());
             machineToIntervals.get(task.getMachine()).add(taskType.getInterval());
         }
     }
@@ -388,30 +389,39 @@ public class ProblemSolver {
             // We only allow integer durations. Therefore, this should be an allowed cast.
             int maximumDuration = (int) solver.objectiveValue();
 
-            List<Integer> possibleDurations = new ArrayList<>();
-
-            // We don't need to solve for maximumDuration because we already know that the model is solvable with it.
             IntStream uncertainDurations = Arrays.stream(uncertainTask.getTask().getDurations()).filter(
                     d -> d < maximumDuration
             );
             IntStream unboundDurations = uncertainTask.getTask().getUnboundDurations().stream().flatMapToInt(
                     lowerBound -> IntStream.range(lowerBound, maximumDuration)
             );
-            IntStream.concat(uncertainDurations, unboundDurations).sorted().distinct().forEachOrdered(duration -> {
-                CpModel durationModel = this.baseModel.getClone();
-                durationModel.getBuilder().setName("Possible Duration %s = %d".formatted(uncertainTask.getName(), duration));
-                IntVar domain = durationModel.getIntVarFromProtoIndex(uncertainTask.getIntervalDomainIndex());
-                durationModel.addEquality(domain, duration);
+            List<Integer> possibleDurations = IntStream.concat(uncertainDurations, unboundDurations)
+                    .sorted().distinct()
+                    .filter(duration -> {
+                        // We only need to check durations `d` with duration constraints separately.
+                        // If the dependency of the duration `d` has a big duration, the model might not be solvable with `d`
+                        // despite `d` being smaller than `maximumDuration`.
+                        if (!uncertainTask.getTask().getDurationCons().containsKey(duration))
+                            return true;
 
-                // Not maximizing anything in the durationModel because we only care if it is solvable in any way.
-                CpSolverStatus status = solver.solve(durationModel);
-                overallTime.updateAndGet(v -> v + solver.userTime());
-                if (status == CpSolverStatus.OPTIMAL || status == CpSolverStatus.FEASIBLE)
-                    possibleDurations.add(duration);
-            });
+                        CpModel durationModel = this.baseModel.getClone();
+                        durationModel.getBuilder().setName("Solvable duration constraint check %s = %d".formatted(uncertainTask.getName(), duration));
+                        IntVar domain = durationModel.getIntVarFromProtoIndex(uncertainTask.getIntervalDomainIndex());
+                        durationModel.addEquality(domain, duration);
+
+                        // Not maximizing anything in the durationModel because we only care if it is solvable in any way.
+                        CpSolverStatus status = solver.solve(durationModel);
+                        overallTime.updateAndGet(v -> v + solver.userTime());
+                        return status == CpSolverStatus.OPTIMAL || status == CpSolverStatus.FEASIBLE;
+                    })
+                    .boxed()
+                    .collect(Collectors.toCollection(ArrayList::new));
+            // We already know that maximumDuration is a possible duration, no matter if there are duration constraints on it
             possibleDurations.add(maximumDuration);
+
             taskUncertainty.put(uncertainTask.getTask(), possibleDurations);
         }
+
         this.result.setPerTaskUncertainty(new SolverReturn.UncertaintyResult(null, taskUncertainty, overallTime.get()));
     }
 

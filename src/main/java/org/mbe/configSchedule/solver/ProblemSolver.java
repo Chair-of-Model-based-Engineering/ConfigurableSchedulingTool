@@ -448,18 +448,21 @@ public class ProblemSolver {
         LinearArgument[] durationVariables = this.tasksWithUncertainty.stream()
                 .map(tt -> tt.getInterval().getSizeExpr())
                 .toArray(LinearArgument[]::new);
-        long[] weights = this.tasksWithUncertainty.stream()
+        long[] possibleDurationsArray = this.tasksWithUncertainty.stream()
                 .map(TaskType::getTask)
                 .mapToLong(t -> possibleDurations.get(t).size())
                 .toArray();
-        long sum = Arrays.stream(weights).sum();
-        weights = Arrays.stream(weights)
-                // LinearExpr.weightedSum can only take long[] as coefficients so we compute percentages
-                .map(d -> Math.round(100 * ((float) d / sum)))
+        long sum = Arrays.stream(possibleDurationsArray).sum();
+        double[] weights = Arrays.stream(possibleDurationsArray)
                 // Inverting the percentage to prioritize maximizing the duration of tasks with small uncertainty ranges.
-                .map(w -> 100 - w)
+                .mapToDouble(d -> 1 - (float) d / sum)
                 .toArray();
-        LinearExpr durationSum = LinearExpr.weightedSum(durationVariables, weights);
+        // Unfortunately, I have not found a more elegant way to get the coefficients to sum up to 1 in the end.
+        double weightSum = 1 / Arrays.stream(weights).sum();
+        // LinearExpr.weightedSum can only take long[] as coefficients so we compute percentages
+        long[] coefficients = Arrays.stream(weights).mapToLong(w -> Math.round(100 * w * weightSum)).toArray();
+
+        LinearExpr durationSum = LinearExpr.weightedSum(durationVariables, coefficients);
 
         CpModel uncertaintyModel = this.normalizedModel.getClone();
         uncertaintyModel.getBuilder().setName("Summed uncertainty model");

@@ -445,28 +445,26 @@ public class ProblemSolver {
     private void analyzeOverallUncertainty() {
         Map<Task, List<Integer>> possibleDurations = this.result.getPerTaskUncertainty().taskUncertainty();
 
-        LinearArgument[] durationVariables = this.tasksWithUncertainty.stream()
-                .map(tt -> tt.getInterval().getSizeExpr())
-                .toArray(LinearArgument[]::new);
-        long[] possibleDurationsArray = this.tasksWithUncertainty.stream()
+        CpModel uncertaintyModel = this.normalizedModel.getClone();
+        uncertaintyModel.getBuilder().setName("Summed uncertainty model");
+
+        IntVar[] durationVariables = this.tasksWithUncertainty.stream()
+                .map(tt -> uncertaintyModel.getIntVarFromProtoIndex(tt.getIntervalDomainIndex()))
+                .toArray(IntVar[]::new);
+        long[] possibleDurationsSizes = this.tasksWithUncertainty.stream()
                 .map(TaskType::getTask)
                 .mapToLong(t -> possibleDurations.get(t).size())
                 .toArray();
-        long sum = Arrays.stream(possibleDurationsArray).sum();
-        double[] weights = Arrays.stream(possibleDurationsArray)
+        long sum = Arrays.stream(possibleDurationsSizes).sum();
+        double[] weights = Arrays.stream(possibleDurationsSizes)
                 // Inverting the percentage to prioritize maximizing the duration of tasks with small uncertainty ranges.
                 .mapToDouble(d -> 1 - (float) d / sum)
                 .toArray();
         // Unfortunately, I have not found a more elegant way to get the coefficients to sum up to 1 in the end.
         double weightSum = 1 / Arrays.stream(weights).sum();
-        // LinearExpr.weightedSum can only take long[] as coefficients so we compute percentages
-        long[] coefficients = Arrays.stream(weights).mapToLong(w -> Math.round(100 * w * weightSum)).toArray();
+        double[] coefficients = Arrays.stream(weights).map(w -> w * weightSum).toArray();
 
-        LinearExpr durationSum = LinearExpr.weightedSum(durationVariables, coefficients);
-
-        CpModel uncertaintyModel = this.normalizedModel.getClone();
-        uncertaintyModel.getBuilder().setName("Summed uncertainty model");
-        uncertaintyModel.maximize(durationSum);
+        uncertaintyModel.maximize(DoubleLinearExpr.weightedSum(durationVariables, coefficients));
 
         CpSolver solver = new CpSolver();
         solver.solve(uncertaintyModel);

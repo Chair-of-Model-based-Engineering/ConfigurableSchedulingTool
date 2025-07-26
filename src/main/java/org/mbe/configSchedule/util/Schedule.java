@@ -95,7 +95,7 @@ public class Schedule {
                     // Add spaces to output to align columns.
                     solLineTasks.append(String.format("%-15s", name));
 
-                    String solTmp = "[" + assignedTask.getStart() + "," + (assignedTask.getStart() + assignedTask.getDuration()) + "]";
+                    String solTmp = "[" + assignedTask.getStart() + "," + (assignedTask.getStart() + assignedTask.getDuration()) + ")";
                     // Add spaces to output to align columns.
                     solLine.append(String.format("%-15s", solTmp));
                 }

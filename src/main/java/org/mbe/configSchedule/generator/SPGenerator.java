@@ -1,13 +1,8 @@
 package org.mbe.configSchedule.generator;
 
 import org.mbe.configSchedule.util.Machine;
-import org.mbe.configSchedule.util.PathPreferences;
-import org.mbe.configSchedule.util.SchedulingProblem;
 import org.mbe.configSchedule.util.Task;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.*;
 
 import static java.lang.Math.floor;

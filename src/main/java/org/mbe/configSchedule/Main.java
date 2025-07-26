@@ -32,12 +32,12 @@ public class Main {
 
     public enum SolveComplexity {
         FEASIBLE,
-        OPTIMAL;
+        OPTIMAL
     }
 
     private final static String sectionDivider = System.lineSeparator() + "***********************";
 
-    public static void main(String[] args) throws ParserConfigurationException, IOException, SAXException, XPathExpressionException, ClassNotFoundException {
+    public static void main(String[] args) throws ParserConfigurationException, IOException, SAXException, XPathExpressionException {
         Loader.loadNativeLibraries();
         PathPreferences prefs = new PathPreferences();
 

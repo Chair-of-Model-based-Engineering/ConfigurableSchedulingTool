@@ -23,11 +23,10 @@ public class MSPGenerator extends SPGenerator {
      * @param maxDurationRequires  Maximum number of duration constraints originating from one task
      * @param name                 Name of the problem
      * @return the generated scheduling problem.
-     * @throws IOException
      */
     public SchedulingProblem generateProblem(int taskCount,
                                 int durationOutlierCount, int machineCount, int optionalCount,
-                                int altCount, int altGroupCount, int deadline, int durationConstraints, int maxDurationRequires, String name) throws IOException {
+                                int altCount, int altGroupCount, int deadline, int durationConstraints, int maxDurationRequires, String name) {
         List<Task> tasks = new ArrayList<>();
         Map<Task, List<Task>> precedenceOrder = new HashMap<>();
 

@@ -24,6 +24,7 @@ public class ProblemSolver {
 
     private SolverReturn result;
     private double decisionTreeTime;
+    private Map<Task, List<Integer>> taskPossibleDurations;
 
     public ProblemSolver(SchedulingProblem sp) {
         this.sp = sp;
@@ -422,12 +423,13 @@ public class ProblemSolver {
             taskUncertainty.put(uncertainTask.getTask(), possibleDurations);
         }
 
-        this.result.setPerTaskUncertainty(new SolverReturn.UncertaintyResult(null, taskUncertainty, overallTime.get()));
+        this.taskPossibleDurations = taskUncertainty;
+
+        if (this.result != null)
+            this.result.setPerTaskUncertainty(new SolverReturn.UncertaintyResult(null, taskUncertainty, overallTime.get()));
     }
 
     private void buildNormalizedModel() {
-        Map<Task, List<Integer>> possibleDurationsOfTasks = this.result.getPerTaskUncertainty().taskUncertainty();
-
         this.normalizedModel = this.baseModel.getClone();
         this.normalizedModel.getBuilder().setName("Normalized model");
         for (TaskType taskType : this.tasksWithUncertainty) {
@@ -436,15 +438,13 @@ public class ProblemSolver {
             // `addAllDomain` below only allows a correctly "formatted" array of longs as argument.
             // For more details refer to the documentation of the method.
             // Furthermore, `Domain.fromValues` expects a `long[]` but `addAllDomain` expects `Iterable<Long>`.
-            long[] possibleDurations = possibleDurationsOfTasks.get(taskType.getTask()).stream().mapToLong(Long::valueOf).toArray();
+            long[] possibleDurations = this.taskPossibleDurations.get(taskType.getTask()).stream().mapToLong(Long::valueOf).toArray();
             List<Long> newDomain = Arrays.stream(Domain.fromValues(possibleDurations).flattenedIntervals()).boxed().toList();
             domain.getBuilder().clearDomain().addAllDomain(newDomain);
         }
     }
 
     private void analyzeOverallUncertainty() {
-        Map<Task, List<Integer>> possibleDurations = this.result.getPerTaskUncertainty().taskUncertainty();
-
         CpModel uncertaintyModel = this.normalizedModel.getClone();
         uncertaintyModel.getBuilder().setName("Summed uncertainty model");
 
@@ -453,7 +453,7 @@ public class ProblemSolver {
                 .toArray(IntVar[]::new);
         long[] possibleDurationsSizes = this.tasksWithUncertainty.stream()
                 .map(TaskType::getTask)
-                .mapToLong(t -> possibleDurations.get(t).size())
+                .mapToLong(t -> this.taskPossibleDurations.get(t).size())
                 .toArray();
         long sum = Arrays.stream(possibleDurationsSizes).sum();
         double[] weights = Arrays.stream(possibleDurationsSizes)
@@ -517,8 +517,7 @@ public class ProblemSolver {
         DecisionTree.TaskDecisions taskDecisions = new DecisionTree.TaskDecisions(taskType.getTask());
         IntVar domain = fixedTasksModel.getIntVarFromProtoIndex(taskType.getIntervalDomainIndex());
 
-        List<Integer> possibleDurations = this.result.getPerTaskUncertainty().taskUncertainty().get(taskType.getTask());
-        for (Integer duration : possibleDurations) {
+        for (Integer duration : this.taskPossibleDurations.get(taskType.getTask())) {
             CpModel model = fixedTasksModel.getClone();
             model.getBuilder().setName("Decision Tree %s = %d %s".formatted(taskType.getName(), duration, processedTasks.values()));
             model.addEquality(domain, duration);

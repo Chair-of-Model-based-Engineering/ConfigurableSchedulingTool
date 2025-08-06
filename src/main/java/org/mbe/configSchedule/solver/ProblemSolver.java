@@ -353,6 +353,7 @@ public class ProblemSolver {
         return taskType;
     }
 
+    // TODO: Move everything below to a separate class
     /**
      * Analyzes uncertainty of the scheduling problem.
      */
@@ -471,7 +472,9 @@ public class ProblemSolver {
 
         Map<Task, List<Integer>> taskDurations = new HashMap<>();
         for (TaskType taskType : this.tasksWithUncertainty) {
-            taskDurations.put(taskType.getTask(), List.of((int) solver.value(taskType.getInterval().getSizeExpr())));
+            BoolVar activeVar = uncertaintyModel.getBoolVarFromProtoIndex(taskType.getActive().getIndex());
+            IntVar domain = uncertaintyModel.getIntVarFromProtoIndex(taskType.getIntervalDomainIndex());
+            taskDurations.put(taskType.getTask(), solver.booleanValue(activeVar) ? List.of((int) solver.value(domain)) : List.of());
         }
 
         this.result.setSummedUncertainty(new SolverReturn.UncertaintyResult(createSchedule(solver), taskDurations, solver.userTime()));

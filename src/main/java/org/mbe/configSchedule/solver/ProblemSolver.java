@@ -490,7 +490,7 @@ public class ProblemSolver {
         int machineNr = 0;
         for (int i = 0; i < this.allTaskTypes.size(); i++) {
             List<AssignedTask> assignedTasks = makespanSchedule.getTasks(machines.get(machineNr));
-            if (taskNr < assignedTasks.size()) {
+            if (assignedTasks != null && taskNr < assignedTasks.size()) {
                 AssignedTask assignedTask = assignedTasks.get(taskNr);
                 if (assignedTask.getTask().hasUncertainDurations())
                     orderedTasks.add(this.allTaskTypes.get(assignedTask.getTask()));

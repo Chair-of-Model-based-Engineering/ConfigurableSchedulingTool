@@ -52,6 +52,11 @@ public class ProblemSolver {
         createSolverReturn(this.makespanSolver);
     }
 
+    public void findOptimalSolution(Set<ScheduleStructure> structureSets) {
+        this.makespanSolver = new CpSolver();
+        createSolverReturn(this.makespanSolver, structureSets);
+    }
+
     /**
      * Returns the {@link SolverReturn} containing all information from previous analyses calls.
      *
@@ -91,6 +96,70 @@ public class ProblemSolver {
             }
         }
         return schedule;
+    }
+
+    private void createSolverReturn(CpSolver solver, Set<ScheduleStructure> structureSet) {
+        CpModel makespanModel = this.baseModel.getClone();
+        makespanModel.getBuilder().setName("Makespan");
+        makespanModel.minimize(this.makespan);
+
+        //Check known structures
+        for(ScheduleStructure structure : structureSet)
+        {
+            CpModel clone = makespanModel.getClone();
+            addStructureConstrains(clone,structure);
+            CpSolverStatus status = solver.solve(clone); //check with extra constrains from previous configurations
+            if (status == CpSolverStatus.OPTIMAL || status == CpSolverStatus.FEASIBLE)
+            {
+                Schedule schedule = createSchedule(solver);
+                if(structure.sameStructure(new ScheduleStructure(schedule)))
+                {
+                    this.result = new SolverReturn(solver.userTime(), status, schedule, structure);
+                    return;
+                }
+            }
+        }
+        //No existing valid structures
+        CpSolverStatus status = solver.solve(makespanModel);
+        Schedule schedule = createSchedule(solver);
+        ScheduleStructure newStructure = new ScheduleStructure(schedule);
+        this.result = new SolverReturn(solver.userTime(), status, schedule, newStructure);
+    }
+
+    private void addStructureConstrains(CpModel model, ScheduleStructure structure)
+    {
+        for(Machine machine : structure.getMachines())
+        {
+            List<Task> orderedTasks = structure.getTaskOrder(machine);
+
+            for(int i = 0; i < orderedTasks.size() - 1; i++)
+            {
+                Task firstTask = orderedTasks.get(i);
+                Task secondTask = orderedTasks.get(i + 1);
+
+                TaskType firstType = null;
+                TaskType secondType = null;
+
+                for (TaskType type : allTaskTypes.values()) {
+                    if (type.getName().equals(firstTask.getName())) {
+                        firstType = type;
+                    }
+                    if (type.getName().equals(secondTask.getName())) {
+                        secondType = type;
+                    }
+                }
+
+                if(firstType == null || secondType == null)
+                {
+                    throw new NullPointerException("TaskType is null for either/both: " + firstType.getName() + "or/and " + secondType.getName());
+                }
+
+                IntVar endFirst = firstType.getEnd();
+                IntVar secondStart = secondType.getStart();
+
+                model.addGreaterOrEqual(secondStart,endFirst);
+            }
+        }
     }
 
     private void buildModel() {

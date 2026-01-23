@@ -21,6 +21,7 @@ public class SolverReturn {
     private Double time;
     private CpSolverStatus status;
     private Schedule schedule;
+    private ScheduleStructure structure;
 
     private UncertaintyResult perTaskUncertainty;
     private UncertaintyResult summedUncertainty;
@@ -37,6 +38,13 @@ public class SolverReturn {
         this.time = time;
         this.status = status;
         this.schedule = schedule;
+    }
+
+    public SolverReturn(double time, CpSolverStatus status, Schedule schedule, ScheduleStructure structure) {
+        this.time = time;
+        this.status = status;
+        this.schedule = schedule;
+        this.structure = structure;
     }
 
     /**
@@ -130,6 +138,11 @@ public class SolverReturn {
 
     public void setDecisionTree(DecisionTree decisionTree) {
         this.decisionTree = decisionTree;
+    }
+
+    public ScheduleStructure getStructure()
+    {
+        return structure;
     }
 
 }

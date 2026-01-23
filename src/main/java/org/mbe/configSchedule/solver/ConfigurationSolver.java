@@ -2,9 +2,7 @@ package org.mbe.configSchedule.solver;
 
 import com.google.ortools.sat.CpSolverStatus;
 import org.mbe.configSchedule.parser.ConfigurationReader;
-import org.mbe.configSchedule.util.ConfigurationSolverReturn;
-import org.mbe.configSchedule.util.SchedulingProblem;
-import org.mbe.configSchedule.util.SolverReturn;
+import org.mbe.configSchedule.util.*;
 import org.xml.sax.SAXException;
 
 import javax.xml.parsers.ParserConfigurationException;
@@ -13,6 +11,8 @@ import java.io.File;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
 
 
 public class ConfigurationSolver {
@@ -99,6 +99,7 @@ public class ConfigurationSolver {
             long sumTimeRead = 0;
             long sumTimeSolve = 0;
             int bestIteration = -1;
+            Map<ScheduleStructure, Integer> amountStructures = new HashMap<>();
 
             for (File file : directoryFiles) {
                 String filePath = file.getPath();
@@ -110,8 +111,10 @@ public class ConfigurationSolver {
                 Instant solveStart = Instant.now();
 
                 ProblemSolver problemSolver = new ProblemSolver(sp);
-                problemSolver.findOptimalSolution();
+                problemSolver.findOptimalSolution(amountStructures.keySet());
                 SolverReturn sr = problemSolver.getSolverReturn();
+
+                amountStructures.merge(sr.getStructure(),1, Integer::sum);
 
                 Instant solveEnd = Instant.now();
 
@@ -132,6 +135,11 @@ public class ConfigurationSolver {
                 sumTimeSolve += solveTime;
             }
 
+            amountStructures.forEach((structure, amount) -> {
+                System.out.println("Amount: " + amount);
+                System.out.println(structure);
+            });
+            System.out.println(amountStructures.size());
             if (bestIteration != -1) {
                 ConfigurationSolverReturn csr = new ConfigurationSolverReturn(true, bestResult, sumTimeRead, sumTimeSolve, sumTimeRead + sumTimeSolve, bestIteration, iteration);
                 return csr;

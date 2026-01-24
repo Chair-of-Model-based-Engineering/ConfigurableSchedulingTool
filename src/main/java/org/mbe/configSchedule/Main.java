@@ -7,7 +7,9 @@ import org.mbe.configSchedule.generator.JSSPGenerator;
 import org.mbe.configSchedule.generator.MSPGenerator;
 import org.mbe.configSchedule.generator.UVLWriter;
 import org.mbe.configSchedule.parser.UVLReader;
+import org.mbe.configSchedule.solver.BaseModel;
 import org.mbe.configSchedule.solver.ConfigurationSolver;
+import org.mbe.configSchedule.solver.ProblemAnalyzer;
 import org.mbe.configSchedule.solver.ProblemSolver;
 import org.mbe.configSchedule.util.*;
 import org.xml.sax.SAXException;
@@ -151,7 +153,8 @@ public class Main {
         PrintProblem(sp);
 
         Instant solveStart = Instant.now();
-        ProblemSolver problemSolver = new ProblemSolver(sp);
+        BaseModel model = new BaseModel(sp);
+        ProblemSolver problemSolver = new ProblemSolver(model);
         if (solveMode == SolveComplexity.FEASIBLE) {
             problemSolver.findFeasibleSolution();
         } else {
@@ -160,7 +163,8 @@ public class Main {
         long solveTime = Duration.between(solveStart, Instant.now()).toMillis();
 
         Instant analysesStart = Instant.now();
-        problemSolver.analyzeUncertainty();
+        ProblemAnalyzer problemAnalyzer = new ProblemAnalyzer(model, problemSolver.getSolverReturn());
+        problemAnalyzer.analyzeUncertainty();
         long analysesTime = Duration.between(analysesStart, Instant.now()).toMillis();
 
         SolverReturn sr = problemSolver.getSolverReturn();

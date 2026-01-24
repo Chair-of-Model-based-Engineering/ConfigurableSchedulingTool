@@ -51,7 +51,7 @@ public class ConfigurationSolver {
 
                 Instant solveStart = Instant.now();
 
-                ProblemSolver problemSolver = new ProblemSolver(sp);
+                ProblemSolver problemSolver = new ProblemSolver(new BaseModel(sp));
                 problemSolver.findFeasibleSolution();
                 SolverReturn sr = problemSolver.getSolverReturn();
                 Instant solveEnd = Instant.now();
@@ -110,7 +110,7 @@ public class ConfigurationSolver {
 
                 Instant solveStart = Instant.now();
 
-                ProblemSolver problemSolver = new ProblemSolver(sp);
+                ProblemSolver problemSolver = new ProblemSolver(new BaseModel(sp));
                 problemSolver.findOptimalSolution(amountStructures.keySet());
                 SolverReturn sr = problemSolver.getSolverReturn();
 

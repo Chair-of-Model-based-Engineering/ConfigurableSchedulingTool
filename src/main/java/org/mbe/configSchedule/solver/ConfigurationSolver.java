@@ -12,7 +12,9 @@ import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 
 public class ConfigurationSolver {
@@ -99,7 +101,7 @@ public class ConfigurationSolver {
             long sumTimeRead = 0;
             long sumTimeSolve = 0;
             int bestIteration = -1;
-            Map<ScheduleStructure, Integer> amountStructures = new HashMap<>();
+            Set<ScheduleStructure> amountStructures = new HashSet<>();
 
             for (File file : directoryFiles) {
                 String filePath = file.getPath();
@@ -111,10 +113,10 @@ public class ConfigurationSolver {
                 Instant solveStart = Instant.now();
 
                 ProblemSolver problemSolver = new ProblemSolver(new BaseModel(sp));
-                problemSolver.findOptimalSolution(amountStructures.keySet());
+                problemSolver.findOptimalSolution(amountStructures);
                 SolverReturn sr = problemSolver.getSolverReturn();
 
-                amountStructures.merge(sr.getStructure(),1, Integer::sum);
+                amountStructures.add(sr.getStructure());
 
                 Instant solveEnd = Instant.now();
 
@@ -135,10 +137,7 @@ public class ConfigurationSolver {
                 sumTimeSolve += solveTime;
             }
 
-            amountStructures.forEach((structure, amount) -> {
-                System.out.println("Amount: " + amount);
-                System.out.println(structure);
-            });
+            System.out.println(amountStructures);
             System.out.println(amountStructures.size());
             if (bestIteration != -1) {
                 ConfigurationSolverReturn csr = new ConfigurationSolverReturn(true, bestResult, sumTimeRead, sumTimeSolve, sumTimeRead + sumTimeSolve, bestIteration, iteration);

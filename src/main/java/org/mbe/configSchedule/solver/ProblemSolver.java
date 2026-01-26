@@ -97,7 +97,7 @@ public class ProblemSolver {
             if (status == CpSolverStatus.OPTIMAL || status == CpSolverStatus.FEASIBLE)
             {
                 Schedule schedule = createSchedule(this.baseModel, solver);
-                if(structure.sameStructure(new ScheduleStructure(schedule)))
+                if(structure.equals(new ScheduleStructure(schedule)))
                 {
                     this.result = new SolverReturn(solver.userTime(), status, schedule, structure);
                     return;

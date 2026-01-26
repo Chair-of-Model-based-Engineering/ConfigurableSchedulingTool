@@ -17,6 +17,7 @@ public class BaseModel {
 
     private final Map<Task, TaskType> allTaskTypes = new HashMap<>();
     private final List<TaskType> tasksWithUncertainty = new ArrayList<>();
+    private final List<TaskType> optionalTasks = new ArrayList<>();
 
     private final CpModel model = new CpModel();
 
@@ -28,6 +29,7 @@ public class BaseModel {
      */
     public BaseModel(SchedulingProblem sp) {
         this.sp = sp;
+        this.model.getBuilder().setName("Base model");
         buildModel();
     }
 
@@ -225,6 +227,9 @@ public class BaseModel {
             if (task.getDurations().length > 1 || task.hasUnboundDurations())
                 this.tasksWithUncertainty.add(taskType);
 
+            if (task.isOptional())
+                this.optionalTasks.add(taskType);
+
             // Packt die Task mit (jobID, taskID) in die AlleTasks Map
             allTaskTypes.put(task, taskType);
             nameToTaskType.put(task.getName(), taskType);
@@ -304,14 +309,18 @@ public class BaseModel {
     }
 
     public List<TaskType> getTasksWithUncertainty() {
-        return tasksWithUncertainty;
+        return this.tasksWithUncertainty;
+    }
+
+    public List<TaskType> getOptionalTasks() {
+        return this.optionalTasks;
     }
 
     public Map<Task, TaskType> getAllTaskTypes() {
-        return allTaskTypes;
+        return this.allTaskTypes;
     }
 
     public SchedulingProblem getSchedulingProblem() {
-        return sp;
+        return this.sp;
     }
 }

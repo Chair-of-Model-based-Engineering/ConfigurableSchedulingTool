@@ -45,16 +45,29 @@ public class ProblemAnalyzer {
         for (TaskType uncertainTask : this.baseModel.getTasksWithUncertainty()) {
             CpModel maximumDurationModel = this.baseModel.getModel().getClone();
             maximumDurationModel.getBuilder().setName("Maximum Duration " + uncertainTask.getName());
+
+            // Force the task to be active. This only has an effect if the task is optional.
+            BoolVar activeVar = maximumDurationModel.getBoolVarFromProtoIndex(uncertainTask.getActive().getIndex());
+            maximumDurationModel.addEquality(activeVar, 1);
+
             LinearExpr durationExpr = uncertainTask.getInterval().getSizeExpr();
             maximumDurationModel.maximize(durationExpr);
 
             CpSolver solver = new CpSolver();
-            CpSolverStatus _ = solver.solve(maximumDurationModel);
+            CpSolverStatus status = solver.solve(maximumDurationModel);
             overallTime.updateAndGet(v -> v + solver.userTime());
+
+            if (status != CpSolverStatus.OPTIMAL && status != CpSolverStatus.FEASIBLE) {
+                taskUncertainty.put(uncertainTask.getTask(), List.of());
+                continue;
+            }
+
             // We only allow integer durations. Therefore, this should be an allowed cast.
             int maximumDuration = (int) solver.objectiveValue();
 
             IntStream uncertainDurations = Arrays.stream(uncertainTask.getTask().getDurations()).filter(
+                    // Since we already know that the model is solvable with d == maximumDuration,
+                    // we don't have to check it again
                     d -> d < maximumDuration
             );
             IntStream unboundDurations = uncertainTask.getTask().getUnboundDurations().stream().flatMapToInt(
@@ -71,15 +84,20 @@ public class ProblemAnalyzer {
 
                         CpModel durationModel = this.baseModel.getModel().getClone();
                         durationModel.getBuilder().setName("Solvable duration constraint check %s = %d".formatted(uncertainTask.getName(), duration));
+
                         IntVar domain = durationModel.getIntVarFromProtoIndex(uncertainTask.getIntervalDomainIndex());
                         durationModel.addEquality(domain, duration);
 
+                        BoolVar activeVar_ = durationModel.getBoolVarFromProtoIndex(uncertainTask.getActive().getIndex());
+                        durationModel.addEquality(activeVar_, 1);
+
                         // Not maximizing anything in the durationModel because we only care if it is solvable in any way.
-                        CpSolverStatus status = solver.solve(durationModel);
+                        CpSolverStatus status_ = solver.solve(durationModel);
                         overallTime.updateAndGet(v -> v + solver.userTime());
-                        return status == CpSolverStatus.OPTIMAL || status == CpSolverStatus.FEASIBLE;
+                        return status_ == CpSolverStatus.OPTIMAL || status_ == CpSolverStatus.FEASIBLE;
                     })
                     .boxed()
+                    // Need mutable List, so we can still add the maximum duration
                     .collect(Collectors.toCollection(ArrayList::new));
             // We already know that maximumDuration is a possible duration, no matter if there are duration constraints on it
             possibleDurations.add(maximumDuration);

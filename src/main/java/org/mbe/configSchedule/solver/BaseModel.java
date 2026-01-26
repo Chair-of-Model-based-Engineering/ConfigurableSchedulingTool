@@ -115,6 +115,9 @@ public class BaseModel {
         for (Map.Entry<Task, List<Task>> precedenceEntry : sp.getPrecedenceOrder().entrySet()) {
             TaskType dependent = this.allTaskTypes.get(precedenceEntry.getKey());
             for (Task dependency : precedenceEntry.getValue()) {
+                if (dependency.isOptional()) {
+                    model.addEquality(dependent.getActive(), this.allTaskTypes.get(dependency).getActive());
+                }
                 model.addGreaterOrEqual(dependent.getStart(), this.allTaskTypes.get(dependency).getEnd());
             }
         }

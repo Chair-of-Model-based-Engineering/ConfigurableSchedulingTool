@@ -37,8 +37,6 @@ public class ProblemAnalyzer {
         analyzeUncertaintyPerTask();
 
         buildNormalizedModel();
-
-        analyzeOverallUncertainty();
     }
 
     private void analyzeUncertaintyPerTask() {
@@ -108,41 +106,6 @@ public class ProblemAnalyzer {
             List<Long> newDomain = Arrays.stream(Domain.fromValues(possibleDurations).flattenedIntervals()).boxed().toList();
             domain.getBuilder().clearDomain().addAllDomain(newDomain);
         }
-    }
-
-    private void analyzeOverallUncertainty() {
-        CpModel uncertaintyModel = this.normalizedModel.getClone();
-        uncertaintyModel.getBuilder().setName("Summed uncertainty model");
-
-        IntVar[] durationVariables = this.baseModel.getTasksWithUncertainty().stream()
-                .map(tt -> uncertaintyModel.getIntVarFromProtoIndex(tt.getIntervalDomainIndex()))
-                .toArray(IntVar[]::new);
-        long[] possibleDurationsSizes = this.baseModel.getTasksWithUncertainty().stream()
-                .map(TaskType::getTask)
-                .mapToLong(t -> this.taskPossibleDurations.get(t).size())
-                .toArray();
-        long sum = Arrays.stream(possibleDurationsSizes).sum();
-        double[] weights = Arrays.stream(possibleDurationsSizes)
-                // Inverting the percentage to prioritize maximizing the duration of tasks with small uncertainty ranges.
-                .mapToDouble(d -> 1 - (float) d / sum)
-                .toArray();
-        // Unfortunately, I have not found a more elegant way to get the coefficients to sum up to 1 in the end.
-        double weightSum = 1 / Arrays.stream(weights).sum();
-        double[] coefficients = Arrays.stream(weights).map(w -> w * weightSum).toArray();
-
-        uncertaintyModel.maximize(DoubleLinearExpr.weightedSum(durationVariables, coefficients));
-
-        CpSolver solver = new CpSolver();
-        solver.solve(uncertaintyModel);
-
-        Map<Task, List<Integer>> taskDurations = new HashMap<>();
-        for (TaskType taskType : this.baseModel.getTasksWithUncertainty()) {
-            BoolVar activeVar = uncertaintyModel.getBoolVarFromProtoIndex(taskType.getActive().getIndex());
-            IntVar domain = uncertaintyModel.getIntVarFromProtoIndex(taskType.getIntervalDomainIndex());
-            taskDurations.put(taskType.getTask(), solver.booleanValue(activeVar) ? List.of((int) solver.value(domain)) : List.of());
-        }
-
-        this.solverReturn.setSummedUncertainty(new SolverReturn.UncertaintyResult(ProblemSolver.createSchedule(this.baseModel, solver), taskDurations, solver.userTime()));
     }
 
 }

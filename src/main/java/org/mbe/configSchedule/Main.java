@@ -173,14 +173,9 @@ public class Main {
         PrintSolution(sr);
 
         System.out.println(sectionDivider);
-        System.out.println("Uncertainty results (per task):");
+        System.out.println("Uncertainty results:");
         SolverReturn.UncertaintyResult perTaskUncertaintyResult = sr.getPerTaskUncertainty();
         PrintUncertaintyResult(perTaskUncertaintyResult);
-
-        System.out.println(sectionDivider);
-        System.out.println("Uncertainty results (summed):");
-        SolverReturn.UncertaintyResult summedUncertaintyResult = sr.getSummedUncertainty();
-        PrintUncertaintyResult(summedUncertaintyResult);
 
         System.out.println(sectionDivider);
         // TODO: Is the solving time correct? Timing around the `solver.solve(model)` call in ProblemSolver yields times about twice as big.
@@ -195,15 +190,13 @@ public class Main {
                 solveTime,
                 (int) (sr.getTime() * 1000));
 
-        if (perTaskUncertaintyResult != null && summedUncertaintyResult != null) {
+        if (perTaskUncertaintyResult != null) {
             System.out.printf("""
                             Analyzing with setup: %d ms
-                                Per-task-analysis solver time: %d ms
-                                Summed-analysis solver time: %d ms
+                                Solver time: %d ms
                             """,
                     analysesTime,
-                    (int) (perTaskUncertaintyResult.time() * 1000),
-                    (int) (summedUncertaintyResult.time() * 1000)
+                    (int) (perTaskUncertaintyResult.time() * 1000)
             );
 
             WriteCSV(sr, solveMode, fileName);

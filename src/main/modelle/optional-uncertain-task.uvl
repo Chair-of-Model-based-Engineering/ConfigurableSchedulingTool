@@ -1,0 +1,48 @@
+features
+	test_as {featuredescription__ '10', abstract true}
+		mandatory
+			"dl = 10"
+			P {abstract true}
+				mandatory
+					p1
+						mandatory
+							"dp1 = 3"
+
+				optional
+					po1 // dead feature
+						alternative
+							"dpo1 = 10"
+							"dpo1 = 11"
+					po2 // false optional (required by mandatory task p1)
+						alternative
+							"dpo2 = 3"
+							"dpo2 = 4"
+					po3 // Optional task with uncertain durations
+						alternative
+							"dpo3 = 1"
+							"dpo3 = 2"
+					po4 // Optional task without uncertain duration
+						mandatory
+							"dpo4 = 1"
+					pa1
+						alternative
+							"dpa1 = 2"
+							"dpa1 = 3"
+							"dpa1 = 4"
+					pa2
+						mandatory
+							"dpa2 = 5"
+			M {abstract true}
+				mandatory
+					m1
+					m2
+constraints
+	p1 => po2
+	p1 => m1
+	po1 => m2
+	po2 => m2
+	po3 => m1
+	po4 => m1
+	pa1 => m2
+	pa2 => m1
+	(pa1 & !pa2) | (!pa1 & pa2)

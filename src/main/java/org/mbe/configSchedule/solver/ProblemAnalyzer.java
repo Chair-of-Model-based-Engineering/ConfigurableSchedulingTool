@@ -8,7 +8,6 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
 /**
  * A class for analyzing a given problem on its solvability with respect to the tasks' configurable durations.
@@ -19,7 +18,6 @@ public class ProblemAnalyzer {
     private final SolverReturn solverReturn;
     private Map<Task, List<Integer>> taskPossibleDurations;
     private CpModel normalizedModel;
-    private double decisionTreeTime;
 
     public ProblemAnalyzer(BaseModel baseModel, SolverReturn solverReturn) {
         this.baseModel = baseModel;
@@ -41,7 +39,6 @@ public class ProblemAnalyzer {
         buildNormalizedModel();
 
         analyzeOverallUncertainty();
-        createDecisionTree();
     }
 
     private void analyzeUncertaintyPerTask() {
@@ -148,91 +145,4 @@ public class ProblemAnalyzer {
         this.solverReturn.setSummedUncertainty(new SolverReturn.UncertaintyResult(ProblemSolver.createSchedule(this.baseModel, solver), taskDurations, solver.userTime()));
     }
 
-    private void createDecisionTree() {
-        //noinspection OptionalGetWithoutIsPresent // We only analyze scheduling problems with solutions
-        Schedule makespanSchedule = this.solverReturn.getSchedule().get();
-        List<Machine> machines = this.baseModel.getSchedulingProblem().getMachines();
-
-        List<TaskType> orderedTasks = new ArrayList<>(this.baseModel.getAllTaskTypes().size());
-        int taskNr = 0;
-        int machineNr = 0;
-        for (int i = 0; i < this.baseModel.getAllTaskTypes().size(); i++) {
-            List<AssignedTask> assignedTasks = makespanSchedule.getTasks(machines.get(machineNr));
-            if (assignedTasks != null && taskNr < assignedTasks.size()) {
-                AssignedTask assignedTask = assignedTasks.get(taskNr);
-                if (assignedTask.getTask().hasUncertainDurations())
-                    orderedTasks.add(this.baseModel.getAllTaskTypes().get(assignedTask.getTask()));
-            }
-
-            if (++machineNr == machines.size()) {
-                taskNr++;
-                machineNr = 0;
-            }
-        }
-
-        DecisionTree.TaskDecisions root = createDecisionTreeRecursive(orderedTasks.getFirst(), new HashMap<>(), orderedTasks);
-        this.solverReturn.setDecisionTree(new DecisionTree(this.decisionTreeTime, root));
-    }
-
-    private DecisionTree.TaskDecisions createDecisionTreeRecursive(
-            TaskType taskType,
-            HashMap<TaskType, Integer> processedTasks,
-            List<TaskType> orderedTasks
-    ) {
-        CpModel fixedTasksModel = this.normalizedModel.getClone();
-        for (Map.Entry<TaskType, Integer> entry : processedTasks.entrySet()) {
-            IntVar previousDomain = fixedTasksModel.getIntVarFromProtoIndex(entry.getKey().getIntervalDomainIndex());
-            fixedTasksModel.addEquality(previousDomain, entry.getValue());
-        }
-
-        DecisionTree.TaskDecisions taskDecisions = new DecisionTree.TaskDecisions(taskType.getTask());
-        IntVar domain = fixedTasksModel.getIntVarFromProtoIndex(taskType.getIntervalDomainIndex());
-
-        for (Integer duration : this.taskPossibleDurations.get(taskType.getTask())) {
-            CpModel model = fixedTasksModel.getClone();
-            model.getBuilder().setName("Decision Tree %s = %d %s".formatted(taskType.getName(), duration, processedTasks.values()));
-            model.addEquality(domain, duration);
-            IntVar makespan = fixedTasksModel.getIntVarFromProtoIndex(this.baseModel.getMakespanVar().getIndex());
-            model.minimize(makespan);
-
-            CpSolver solver = new CpSolver();
-            CpSolverStatus solverStatus = solver.solve(model);
-            if (solverStatus == CpSolverStatus.INFEASIBLE) {
-                // The model is not solvable with the durations found during previous rounds.
-                taskDecisions.addInfeasibleDecision(duration);
-            } else {
-                Schedule schedule = ProblemSolver.createSchedule(this.baseModel, solver);
-                taskDecisions.addDecision(duration, schedule);
-            }
-            this.decisionTreeTime += solver.userTime();
-        }
-
-        // TODO: Get next level task from (simple) schedule
-        TaskType nextLevelTaskType;
-        try {
-            nextLevelTaskType = orderedTasks.get(processedTasks.size() + 1);
-        } catch (IndexOutOfBoundsException e) {
-            return taskDecisions;
-        }
-
-        Integer lastDecisionDuration = taskDecisions.getDecisionDurations().getLast();
-        List<Integer> decisionDurations = Stream.concat(
-                Stream.of(taskType.getTask().getMinimumDuration()),
-                // Adding the lower bounds of each decision span, so that there is a guarantee that at least one model
-                // of the next level is actually solvable/feasible.
-                taskDecisions.getDecisionDurations().stream()
-                        .flatMap(d -> Stream.of(d, d + 1))
-                        .filter(d -> taskType.getTask().hasDuration(d) && d <= lastDecisionDuration)
-        ).distinct().toList();
-
-        // Doing this in a separate loop because decision durations can be a span of multiple durations.
-        for (Integer decisionDuration : decisionDurations) {
-            HashMap<TaskType, Integer> nextProcessedTasks = new HashMap<>(processedTasks);
-            nextProcessedTasks.put(taskType, decisionDuration);
-            DecisionTree.TaskDecisions nextLevel = createDecisionTreeRecursive(nextLevelTaskType, nextProcessedTasks, orderedTasks);
-            taskDecisions.addNextLevel(decisionDuration, nextLevel);
-        }
-
-        return taskDecisions;
-    }
 }

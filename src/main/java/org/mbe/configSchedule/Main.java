@@ -183,18 +183,6 @@ public class Main {
         PrintUncertaintyResult(summedUncertaintyResult);
 
         System.out.println(sectionDivider);
-        System.out.println("Decision tree statistics:");
-        DecisionTree decisionTree = sr.getDecisionTree();
-        if (decisionTree != null)
-            decisionTree.print();
-//        @SuppressWarnings("ArraysAsListWithZeroOrOneArgument") // We need a modifiable list
-//        List<DecisionTree.TaskDecisions> taskDecisions = Arrays.asList(decisionTree.getRoot());
-//        while (!taskDecisions.isEmpty()) {
-//            DecisionTree.TaskDecisions taskDecision = taskDecisions.removeFirst();
-//            taskDecisions.addAll(taskDecision.getNextLevels());
-//        }
-
-        System.out.println(sectionDivider);
         // TODO: Is the solving time correct? Timing around the `solver.solve(model)` call in ProblemSolver yields times about twice as big.
         System.out.printf("""
                         Time: %d ms
@@ -207,17 +195,15 @@ public class Main {
                 solveTime,
                 (int) (sr.getTime() * 1000));
 
-        if (perTaskUncertaintyResult != null && summedUncertaintyResult != null && decisionTree != null) {
+        if (perTaskUncertaintyResult != null && summedUncertaintyResult != null) {
             System.out.printf("""
                             Analyzing with setup: %d ms
                                 Per-task-analysis solver time: %d ms
                                 Summed-analysis solver time: %d ms
-                                Decision tree solver time: %d ms
                             """,
                     analysesTime,
                     (int) (perTaskUncertaintyResult.time() * 1000),
-                    (int) (summedUncertaintyResult.time() * 1000),
-                    (int) (decisionTree.time() * 1000)
+                    (int) (summedUncertaintyResult.time() * 1000)
             );
 
             WriteCSV(sr, solveMode, fileName);

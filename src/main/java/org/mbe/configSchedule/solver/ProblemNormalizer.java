@@ -11,31 +11,40 @@ import java.util.stream.IntStream;
 /**
  * A class for analyzing a given problem on its solvability with respect to the tasks' configurable durations.
  */
-public class ProblemAnalyzer {
+public class ProblemNormalizer {
 
     private final BaseModel baseModel;
-    private BaseModel normalizedModel;
+    private BaseModel normalizedModel = null;
     private final SolverReturn solverReturn;
 
-    public ProblemAnalyzer(BaseModel baseModel, SolverReturn solverReturn) {
+    public ProblemNormalizer(BaseModel baseModel, SolverReturn solverReturn) {
         this.baseModel = baseModel;
         this.solverReturn = solverReturn;
     }
 
     /**
-     * Analyzes uncertainty of the scheduling problem.
+     * Returns the normalized model or {@code null} if the normalization wasn't performed successfully yet (see {@link #oneWise()}).
+     *
+     * @return the normalized model, or {@code null}.
      */
-    public void analyzeUncertainty() {
-        if (this.baseModel.getSchedulingProblem().getDeadline() < 0
-                || this.baseModel.getTasksWithUncertainty().isEmpty()
-                || !this.solverReturn.isAtLeastFeasible()) {
+    public BaseModel getNormalizedModel() {
+        return normalizedModel;
+    }
+
+    /**
+     * Analyzes uncertainty of the scheduling problem.
+     *
+     * <p>The method returns immediately if one of the following conditions is met:
+     * <ul>
+     *     <li>The scheduling problem doesn't have a deadline.</li>
+     *     <li>The scheduling problem is not solvable.</li>
+     * </ul>
+     */
+    public void oneWise() {
+        if (this.baseModel.getSchedulingProblem().getDeadline() < 0 || !this.solverReturn.isAtLeastFeasible()) {
             return;
         }
 
-        analyzeUncertaintyPerTask();
-    }
-
-    private void analyzeUncertaintyPerTask() {
         Map<Task, List<Integer>> taskUncertainties = new HashMap<>();
         AtomicReference<Double> overallTime = new AtomicReference<>(0.0);
 
@@ -168,7 +177,6 @@ public class ProblemAnalyzer {
      *     <li>{@code Optional.of(false)} indicates a dead feature.</li>
      *     <li>{@code Optional.empty()} indicates no statement.</li>
      * </ul>
-     *
      *
      * @param taskUncertainties  the possible durations for each task.
      * @param falseOptionalTasks the false optional tasks.

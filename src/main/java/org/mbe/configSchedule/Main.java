@@ -9,7 +9,7 @@ import org.mbe.configSchedule.generator.UVLWriter;
 import org.mbe.configSchedule.parser.UVLReader;
 import org.mbe.configSchedule.solver.BaseModel;
 import org.mbe.configSchedule.solver.ConfigurationSolver;
-import org.mbe.configSchedule.solver.ProblemAnalyzer;
+import org.mbe.configSchedule.solver.ProblemNormalizer;
 import org.mbe.configSchedule.solver.ProblemSolver;
 import org.mbe.configSchedule.util.*;
 import org.xml.sax.SAXException;
@@ -163,8 +163,10 @@ public class Main {
         long solveTime = Duration.between(solveStart, Instant.now()).toMillis();
 
         Instant analysesStart = Instant.now();
-        ProblemAnalyzer problemAnalyzer = new ProblemAnalyzer(model, problemSolver.getSolverReturn());
-        problemAnalyzer.analyzeUncertainty();
+        ProblemNormalizer problemNormalizer = new ProblemNormalizer(model, problemSolver.getSolverReturn());
+        problemNormalizer.oneWise();
+        // TODO: Use the normalization result
+        BaseModel _ = problemNormalizer.getNormalizedModel();
         long analysesTime = Duration.between(analysesStart, Instant.now()).toMillis();
 
         SolverReturn sr = problemSolver.getSolverReturn();

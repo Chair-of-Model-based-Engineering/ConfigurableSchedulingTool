@@ -1,5 +1,5 @@
 features
-	test_as {featuredescription__ '10', abstract true}
+	normalizationTest {featuredescription__ '10', abstract true}
 		mandatory
 			"dl = 10"
 			P {abstract true}
@@ -35,9 +35,12 @@ features
 			M {abstract true}
 				mandatory
 					m1
-					m2
+				optional
+					m2 // false optional machine (required by false optional task po2)
+					m3 // useless, dead machine
 constraints
 	p1 => po2
+	po1 => po3 // Useless dependency since po1 is dead
 	p1 => m1
 	po1 => m2
 	po2 => m2

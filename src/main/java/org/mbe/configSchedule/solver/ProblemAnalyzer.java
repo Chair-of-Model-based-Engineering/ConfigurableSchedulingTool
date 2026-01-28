@@ -66,8 +66,32 @@ public class ProblemAnalyzer {
             }
         }
 
-        if (this.solverReturn != null)
-            this.solverReturn.setPerTaskUncertainty(new SolverReturn.UncertaintyResult(null, taskUncertainty, overallTime.get()));
+        Map<Machine, Optional<Boolean>> machineStatuses = new HashMap<>();
+        for (Machine machine : this.baseModel.getSchedulingProblem().getMachines()) {
+            if (!machine.isOptional() || !machineStatusPossible(machine, false, overallTime)) {
+                machineStatuses.put(machine, Optional.of(true));
+            } else if (!machineStatusPossible(machine, true, overallTime)) {
+                machineStatuses.put(machine, Optional.of(false));
+            } else {
+                // The machine might be active or not
+                machineStatuses.put(machine, Optional.empty());
+            }
+        }
+    }
+
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
+    private boolean machineStatusPossible(Machine machine, boolean active, AtomicReference<Double> overallTime) {
+        CpModel model = this.baseModel.getModel().getClone();
+        model.getBuilder().setName("Status " + active + " possible " + machine.getName());
+
+        BoolVar activeVar = model.getBoolVarFromProtoIndex(machine.getActive().getIndex());
+        model.addEquality(activeVar, active ? model.trueLiteral() : model.falseLiteral());
+
+        CpSolver solver = new CpSolver();
+        CpSolverStatus status = solver.solve(model);
+        overallTime.updateAndGet(v -> v + solver.userTime());
+
+        return status == CpSolverStatus.OPTIMAL || status == CpSolverStatus.FEASIBLE;
     }
 
     private List<Integer> findPossibleDurationsOfTask(TaskType uncertainTask, AtomicReference<Double> overallTime) {

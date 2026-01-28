@@ -124,12 +124,6 @@ public class ProblemAnalyzer {
         List<Integer> possibleDurations = IntStream.concat(uncertainDurations, unboundDurations)
                 .sorted().distinct()
                 .filter(duration -> {
-                    // We only need to check durations `d` with duration constraints separately.
-                    // If the dependency of the duration `d` has a big duration, the model might not be solvable with `d`
-                    // despite `d` being smaller than `maximumDuration`.
-                    if (!uncertainTask.getTask().getDurationCons().containsKey(duration))
-                        return true;
-
                     CpModel durationModel = this.baseModel.getModel().getClone();
                     durationModel.getBuilder().setName("Solvable duration constraint check %s = %d".formatted(uncertainTask.getName(), duration));
 

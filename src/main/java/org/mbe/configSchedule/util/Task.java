@@ -21,7 +21,7 @@ public class Task {
      * @param optional     contains whether the task is optional.
      * @param excludeTasks contains all tasks which are excluded with this task.
      */
-    Task(Machine machine, int[] durations, String name, boolean optional, List<String> excludeTasks) {
+    public Task(Machine machine, int[] durations, String name, boolean optional, List<String> excludeTasks) {
         this.machine = machine;
         this.durations = durations;
         Arrays.sort(this.durations);

@@ -1,7 +1,6 @@
 package org.mbe.configSchedule.solver;
 
 import com.google.ortools.sat.*;
-import com.google.ortools.util.Domain;
 import org.mbe.configSchedule.util.*;
 
 import java.util.*;
@@ -15,9 +14,8 @@ import java.util.stream.IntStream;
 public class ProblemAnalyzer {
 
     private final BaseModel baseModel;
+    private BaseModel normalizedModel;
     private final SolverReturn solverReturn;
-    private Map<Task, List<Integer>> taskPossibleDurations;
-    private CpModel normalizedModel;
 
     public ProblemAnalyzer(BaseModel baseModel, SolverReturn solverReturn) {
         this.baseModel = baseModel;
@@ -35,27 +33,24 @@ public class ProblemAnalyzer {
         }
 
         analyzeUncertaintyPerTask();
-
-        buildNormalizedModel();
     }
 
     private void analyzeUncertaintyPerTask() {
-        Map<Task, List<Integer>> taskUncertainty = new HashMap<>();
+        Map<Task, List<Integer>> taskUncertainties = new HashMap<>();
         AtomicReference<Double> overallTime = new AtomicReference<>(0.0);
 
         for (TaskType uncertainTask : this.baseModel.getTasksWithUncertainty()) {
             List<Integer> possibleDurations = findPossibleDurationsOfTask(uncertainTask, overallTime);
-            taskUncertainty.put(uncertainTask.getTask(), possibleDurations);
+            taskUncertainties.put(uncertainTask.getTask(), possibleDurations);
         }
-        this.taskPossibleDurations = taskUncertainty;
 
-        List<Task> falseOptionalTasks = new ArrayList<>();
+        Set<Task> falseOptionalTasks = new HashSet<>();
         for (TaskType optionalTask : this.baseModel.getOptionalTasks()) {
             CpModel falseOptionalModel = this.baseModel.getModel().getClone();
             falseOptionalModel.getBuilder().setName("False optional " + optionalTask.getName());
 
             BoolVar activeVar = falseOptionalModel.getBoolVarFromProtoIndex(optionalTask.getActive().getIndex());
-            falseOptionalModel.addEquality(activeVar, 0);
+            falseOptionalModel.addEquality(activeVar, falseOptionalModel.falseLiteral());
 
             CpSolver solver = new CpSolver();
             CpSolverStatus status = solver.solve(falseOptionalModel);
@@ -77,6 +72,8 @@ public class ProblemAnalyzer {
                 machineStatuses.put(machine, Optional.empty());
             }
         }
+
+        this.normalizedModel = buildNormalizedModel(taskUncertainties, falseOptionalTasks, machineStatuses);
     }
 
     @SuppressWarnings("BooleanMethodIsAlwaysInverted")
@@ -100,7 +97,7 @@ public class ProblemAnalyzer {
 
         // Force the task to be active. This only has an effect if the task is optional.
         BoolVar activeVar = maximumDurationModel.getBoolVarFromProtoIndex(uncertainTask.getActive().getIndex());
-        maximumDurationModel.addEquality(activeVar, 1);
+        maximumDurationModel.addEquality(activeVar, maximumDurationModel.trueLiteral());
 
         LinearExpr durationExpr = uncertainTask.getInterval().getSizeExpr();
         maximumDurationModel.maximize(durationExpr);
@@ -140,7 +137,7 @@ public class ProblemAnalyzer {
                     durationModel.addEquality(domain, duration);
 
                     BoolVar activeVar_ = durationModel.getBoolVarFromProtoIndex(uncertainTask.getActive().getIndex());
-                    durationModel.addEquality(activeVar_, 1);
+                    durationModel.addEquality(activeVar_, durationModel.trueLiteral());
 
                     // Not maximizing anything in the durationModel because we only care if it is solvable in any way.
                     CpSolverStatus status_ = solver.solve(durationModel);
@@ -156,19 +153,119 @@ public class ProblemAnalyzer {
         return possibleDurations;
     }
 
-    private void buildNormalizedModel() {
-        this.normalizedModel = this.baseModel.getModel().getClone();
-        this.normalizedModel.getBuilder().setName("Normalized model");
-        for (TaskType taskType : this.baseModel.getTasksWithUncertainty()) {
-            IntVar domain = this.normalizedModel.getIntVarFromProtoIndex(taskType.getIntervalDomainIndex());
+    /**
+     * Build a normalized {@link BaseModel} from a newly built {@link SchedulingProblem}.
+     *
+     * <p>The new, underlying {@code SchedulingProblem} is copied from the old {@code SchedulingProblem} to prevent
+     * changes in a task of one to affect the other's tasks.
+     *
+     * <p>The normalization steps include:
+     * <ul>
+     *     <li>Setting false optional machines to be mandatory.</li>
+     *     <li>Removing dead machines.</li>
+     *     <li>Dead tasks (i.e. tasks with no possible durations) are removed from the scheduling problem.</li>
+     *     <li>False optional tasks are set to be mandatory.</li>
+     *     <li>The tasks' durations are restricted to possible ones. This includes removing unbound durations.</li>
+     * </ul>
+     *
+     * <p>The machine status map indicates the core/dead status of a machine in the scheduling problem:
+     * <ul>
+     *     <li>{@code Optional.of(true)} indicates a core/mandatory feature.</li>
+     *     <li>{@code Optional.of(false)} indicates a dead feature.</li>
+     *     <li>{@code Optional.empty()} indicates no statement.</li>
+     * </ul>
+     *
+     *
+     * @param taskUncertainties  the possible durations for each task.
+     * @param falseOptionalTasks the false optional tasks.
+     * @param machineStatus      the status of the machines.
+     * @return a {@link BaseModel} on the basis of a newly built {@link SchedulingProblem}.
+     */
+    private BaseModel buildNormalizedModel(
+            Map<Task, List<Integer>> taskUncertainties, Set<Task> falseOptionalTasks, Map<Machine, Optional<Boolean>> machineStatus
+    ) {
+        // Tasks without any possible durations are dead.
+        // This can only occur for tasks that are safe to delete since there would otherwise not be
+        // a feasible solution to the scheduling problem at all.
+        // NOTE: Storing strings to simplify dealing with stringy exclusion constraints later
+        Set<String> deadTasks = taskUncertainties.entrySet().stream()
+                .filter(e -> e.getValue().isEmpty())
+                .map(Map.Entry::getKey)
+                .map(Task::getName)
+                .collect(Collectors.toSet());
 
-            // `addAllDomain` below only allows a correctly "formatted" array of longs as argument.
-            // For more details refer to the documentation of the method.
-            // Furthermore, `Domain.fromValues` expects a `long[]` but `addAllDomain` expects `Iterable<Long>`.
-            long[] possibleDurations = this.taskPossibleDurations.get(taskType.getTask()).stream().mapToLong(Long::valueOf).toArray();
-            List<Long> newDomain = Arrays.stream(Domain.fromValues(possibleDurations).flattenedIntervals()).boxed().toList();
-            domain.getBuilder().clearDomain().addAllDomain(newDomain);
-        }
+        Map<Machine, Machine> machines = buildNormalizedMachines(machineStatus);
+        Map<Task, Task> tasks = buildNormalizedTasks(taskUncertainties, falseOptionalTasks, deadTasks, machines);
+        Map<Task, List<Task>> precedenceOrder = buildNormalizedPrecedenceOrder(deadTasks, tasks);
+
+        return new BaseModel(new SchedulingProblem(
+                this.baseModel.getSchedulingProblem().getName() + "_normalized",
+                new ArrayList<>(tasks.values()),
+                precedenceOrder,
+                new ArrayList<>(machines.values()),
+                this.baseModel.getSchedulingProblem().getDeadline()
+        ));
     }
 
+    private Map<Task, List<Task>> buildNormalizedPrecedenceOrder(Set<String> deadTasks, Map<Task, Task> tasks) {
+        Map<Task, List<Task>> precedenceOrder = new HashMap<>();
+        for (Map.Entry<Task, List<Task>> entry : this.baseModel.getSchedulingProblem().getPrecedenceOrder().entrySet()) {
+            if (deadTasks.contains(entry.getKey().getName())) {
+                // A non-existent task doesn't depend on anything
+                continue;
+            }
+
+            Task newDependent = tasks.get(entry.getKey());
+            List<Task> newDependencies = entry.getValue().stream()
+                    .filter(t -> !deadTasks.contains(t.getName()))
+                    .map(tasks::get)
+                    .toList();
+
+            precedenceOrder.put(newDependent, newDependencies);
+        }
+        return precedenceOrder;
+    }
+
+    private Map<Task, Task> buildNormalizedTasks(Map<Task, List<Integer>> taskUncertainties, Set<Task> falseOptionalTasks, Set<String> deadTasks, Map<Machine, Machine> machines) {
+        Map<Task, Task> tasks = new HashMap<>();
+        for (Task task : this.baseModel.getSchedulingProblem().getTasks()) {
+            if (deadTasks.contains(task.getName())) {
+                // We can remove dead tasks from the normalized model.
+                continue;
+            }
+
+            boolean isOptional = !falseOptionalTasks.contains(task) && task.isOptional();
+            int[] durations = task.hasUncertainDurations()
+                    ? taskUncertainties.get(task).stream().mapToInt(Integer::intValue).toArray()
+                    : task.getDurations();
+            List<String> excludeConstraints = task.getExcludeTasks().stream()
+                    .filter(deadTasks::contains)
+                    .toList();
+
+            Task newTask = new Task(
+                    machines.get(task.getMachine()),
+                    durations,
+                    task.getName(),
+                    isOptional,
+                    excludeConstraints
+            );
+            tasks.put(task, newTask);
+        }
+        return tasks;
+    }
+
+    private Map<Machine, Machine> buildNormalizedMachines(Map<Machine, Optional<Boolean>> machineStatus) {
+        Map<Machine, Machine> machines = new HashMap<>();
+        for (Machine machine : this.baseModel.getSchedulingProblem().getMachines()) {
+            Optional<Boolean> status = machineStatus.get(machine);
+
+            if (status.isEmpty()) {
+                machines.put(machine, new Machine(machine.getName(), machine.isOptional()));
+            } else if (status.get()) {
+                machines.put(machine, new Machine(machine.getName(), false));
+            }
+            // Otherwise: status.get() == false -> machine is dead and doesn't need to be added
+        }
+        return machines;
+    }
 }

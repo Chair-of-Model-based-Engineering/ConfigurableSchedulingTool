@@ -6,8 +6,7 @@ features
 				mandatory
 					p1
 						mandatory
-							"dp1 = 3"
-
+							"dp1 >= 3"
 				optional
 					po1 // dead feature
 						alternative

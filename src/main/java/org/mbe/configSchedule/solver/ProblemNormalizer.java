@@ -39,10 +39,12 @@ public class ProblemNormalizer {
      *     <li>The scheduling problem doesn't have a deadline.</li>
      *     <li>The scheduling problem is not solvable.</li>
      * </ul>
+     *
+     * @return the cumulative time of all solver calls
      */
-    public void oneWise() {
+    public double oneWise() {
         if (this.baseModel.getSchedulingProblem().getDeadline() < 0 || !this.solverReturn.isAtLeastFeasible()) {
-            return;
+            return -1;
         }
 
         Map<Task, List<Integer>> taskUncertainties = new HashMap<>();
@@ -63,6 +65,7 @@ public class ProblemNormalizer {
 
             CpSolver solver = new CpSolver();
             CpSolverStatus status = solver.solve(falseOptionalModel);
+            // TODO: userTime or wallTime?
             overallTime.updateAndGet(v -> v + solver.userTime());
 
             if (status != CpSolverStatus.OPTIMAL && status != CpSolverStatus.FEASIBLE) {
@@ -83,6 +86,7 @@ public class ProblemNormalizer {
         }
 
         this.normalizedModel = buildNormalizedModel(taskUncertainties, falseOptionalTasks, machineStatuses);
+        return overallTime.get();
     }
 
     @SuppressWarnings("BooleanMethodIsAlwaysInverted")

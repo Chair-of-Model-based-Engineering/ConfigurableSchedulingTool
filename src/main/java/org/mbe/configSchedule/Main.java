@@ -162,12 +162,12 @@ public class Main {
         }
         long solveTime = Duration.between(solveStart, Instant.now()).toMillis();
 
-        Instant analysesStart = Instant.now();
+        Instant oneWiseStart = Instant.now();
         ProblemNormalizer problemNormalizer = new ProblemNormalizer(model, problemSolver.getSolverReturn());
-        problemNormalizer.oneWise();
-        // TODO: Use the normalization result
-        BaseModel _ = problemNormalizer.getNormalizedModel();
-        long analysesTime = Duration.between(analysesStart, Instant.now()).toMillis();
+        double oneWiseSolverTime = problemNormalizer.oneWise();
+        BaseModel oneWiseNormalized = problemNormalizer.getNormalizedModel();
+        new UVLWriter().writeToFile(oneWiseNormalized.getSchedulingProblem());
+        long oneWiseTime = Duration.between(oneWiseStart, Instant.now()).toMillis();
 
         SolverReturn sr = problemSolver.getSolverReturn();
 
@@ -186,23 +186,18 @@ public class Main {
                         Reading: %d ms
                         Solving with model setup: %d ms
                             Solver time: %d ms
+                        One-wise normalization: %d ms
+                            Cumulative solver time: %d ms
                         """,
-                readTime + solveTime + analysesTime,
+                readTime + solveTime + oneWiseTime,
                 readTime,
                 solveTime,
-                (int) (sr.getTime() * 1000));
+                (int) (sr.getTime() * 1000),
+                oneWiseTime,
+                (int) (oneWiseSolverTime * 1000)
+        );
 
-        if (perTaskUncertaintyResult != null) {
-            System.out.printf("""
-                            Analyzing with setup: %d ms
-                                Solver time: %d ms
-                            """,
-                    analysesTime,
-                    (int) (perTaskUncertaintyResult.time() * 1000)
-            );
-
-            WriteCSV(sr, solveMode, fileName);
-        }
+        WriteCSV(sr, solveMode, fileName);
     }
 
     /**

@@ -14,8 +14,10 @@ import java.util.stream.IntStream;
 public class ProblemNormalizer {
 
     private final BaseModel baseModel;
-    private BaseModel normalizedModel = null;
     private final SolverReturn solverReturn;
+
+    private BaseModel oneWiseNormalized = null;
+    private BaseModel twoWiseNormalized = null;
 
     public ProblemNormalizer(BaseModel baseModel, SolverReturn solverReturn) {
         this.baseModel = baseModel;
@@ -27,8 +29,22 @@ public class ProblemNormalizer {
      *
      * @return the normalized model, or {@code null}.
      */
-    public BaseModel getNormalizedModel() {
-        return normalizedModel;
+    public BaseModel getOneWiseNormalizedModel() {
+        return oneWiseNormalized;
+    }
+
+    /**
+     * Execute all normalizations in the correct order.
+     *
+     * @return an array of each normalization's solver times.
+     * @see #oneWise() the first executed normalization.
+     * @see #twoWise() the second executed normalization.
+     */
+    public double[] normalizeEverything() {
+        return new double[] {
+                oneWise(),
+                twoWise()
+        };
     }
 
     /**
@@ -85,8 +101,23 @@ public class ProblemNormalizer {
             }
         }
 
-        this.normalizedModel = buildNormalizedModel(taskUncertainties, falseOptionalTasks, machineStatuses);
+        this.oneWiseNormalized = buildNormalizedModel(taskUncertainties, falseOptionalTasks, machineStatuses);
         return overallTime.get();
+    }
+
+    /**
+     *
+     * @return
+     */
+    public double twoWise() {
+        if (this.oneWiseNormalized == null)
+            return -1;
+
+        double solverTime = 0;
+
+        // TODO: Iterate any valid combination of two features and check for satisfiability with respect to SP
+
+        return solverTime;
     }
 
     @SuppressWarnings("BooleanMethodIsAlwaysInverted")

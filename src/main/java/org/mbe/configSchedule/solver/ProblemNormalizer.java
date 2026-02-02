@@ -48,7 +48,7 @@ public class ProblemNormalizer {
     }
 
     /**
-     * Analyzes uncertainty of the scheduling problem.
+     * Normalizes the scheduling problem one-wise.
      *
      * <p>The method returns immediately if one of the following conditions is met:
      * <ul>
@@ -56,7 +56,7 @@ public class ProblemNormalizer {
      *     <li>The scheduling problem is not solvable.</li>
      * </ul>
      *
-     * @return the cumulative time of all solver calls
+     * @return the cumulative time of all solver calls.
      */
     public double oneWise() {
         if (this.baseModel.getSchedulingProblem().getDeadline() < 0 || !this.solverReturn.isAtLeastFeasible()) {
@@ -106,18 +106,131 @@ public class ProblemNormalizer {
     }
 
     /**
+     * Normalizes the scheduling problem two-wise.
      *
-     * @return
+     * <p>The problem has to have been normalized one-wise beforehand.
+     *
+     * @see #oneWise()
+     * @return the cumulative time of all solver calls.
      */
     public double twoWise() {
         if (this.oneWiseNormalized == null)
             return -1;
 
-        double solverTime = 0;
+        boolean[][] schemas = {
+                new boolean[] {false, false},
+                new boolean[] {false, true},
+                new boolean[] {true, false},
+                new boolean[] {true, true}
+        };
 
-        // TODO: Iterate any valid combination of two features and check for satisfiability with respect to SP
+        double solverTime = 0;
+        List<SchedulingProblem.ExclusionConstraint> excludes = new ArrayList<>();
+        for (SpElement[] pair : generateValidPairs()) {
+            SpElement left = pair[0];
+            SpElement right = pair[1];
+
+            for (boolean[] schema : schemas) {
+                boolean left_value = schema[0];
+                boolean right_value = schema[1];
+
+                CpModel model = this.oneWiseNormalized.getModel().getClone();
+                model.getBuilder().setName(String.format(
+                        "two wise %s=%b %s=%b",
+                        left.getName(), left_value,
+                        right.getName(), right_value
+                ));
+
+                setState(left, left_value, model);
+                setState(right, right_value, model);
+
+                // TODO: Check whether this does what it is supposed to do
+                CpSolver solver = new CpSolver();
+                CpSolverStatus status = solver.solve(model);
+                solverTime += solver.userTime();
+
+                if (status == CpSolverStatus.INFEASIBLE) {
+                    excludes.add(new SchedulingProblem.ExclusionConstraint(left, left_value, right, right_value));
+                }
+            }
+        }
+
+        // TODO: Build two-wise normalized model -> possibly extend buildNormalizedModel()
 
         return solverTime;
+    }
+
+    private List<SpElement[]> generateValidPairs() {
+        List<SpElement> optionalSpElements = new ArrayList<>();
+        for (Machine machine : this.oneWiseNormalized.getSchedulingProblem().getMachines()) {
+            if (machine.isOptional())
+                optionalSpElements.add(machine);
+        }
+        for (Task task : this.oneWiseNormalized.getSchedulingProblem().getTasks()) {
+            if (task.isOptional())
+                optionalSpElements.add(task);
+
+            // If a task has only one possible duration, then that would already be covered by the parent task feature.
+            if (task.hasUncertainDurations()) {
+                // We don't have to consider unbound durations since we work with a one-wise normalized model here.
+                for (int duration : task.getDurations()) {
+                    optionalSpElements.add(new SpElement.TaskDuration(task, duration));
+                }
+            }
+        }
+
+        List<SpElement[]> pairs = new ArrayList<>();
+        for (int i = 0; i < optionalSpElements.size(); i++) {
+            for (int j = i + 1; j < optionalSpElements.size(); j++) {
+                SpElement left = optionalSpElements.get(i);
+                SpElement right = optionalSpElements.get(j);
+
+                boolean taskDurationsOfSameTask = left instanceof SpElement.TaskDuration l && right instanceof SpElement.TaskDuration r
+                        && l.getTask().equals(r.getTask());
+                boolean taskDurationOfTask1 = left instanceof SpElement.TaskDuration l && right instanceof Task r
+                        && l.getTask().equals(r);
+                boolean taskDurationOfTask2 = left instanceof Task l && right instanceof SpElement.TaskDuration r
+                        && l.equals(r.getTask());
+                if (taskDurationsOfSameTask || taskDurationOfTask1 || taskDurationOfTask2) {
+                    // These combinations would not pose valid selections
+                    continue;
+                }
+
+                pairs.add(new SpElement[] {left, right});
+            }
+        }
+
+        return pairs;
+    }
+
+    private void setState(SpElement element, boolean state, CpModel model) {
+        Literal modelState = state ? model.trueLiteral() : model.falseLiteral();
+
+        // TODO: This should probably rather be realized with an abstract method SpElement.setActive()
+        //       but this doesn't work currently with TaskDuration and Task not knowing the corresponding TaskType
+        switch (element) {
+            case SpElement.TaskDuration td -> {
+                TaskType taskType = this.oneWiseNormalized.getAllTaskTypes().get(td.getTask());
+                BoolVar activeVar = model.getBoolVarFromProtoIndex(taskType.getActive().getIndex());
+                IntVar durationVar = model.getIntVarFromProtoIndex(taskType.getIntervalDomainIndex());
+                if (state) {
+                    model.addEquality(durationVar, td.getDuration());
+                    model.addEquality(activeVar, modelState);
+                } else {
+                    model.addDifferent(durationVar, td.getDuration());
+                }
+            }
+            case Task task -> {
+                TaskType taskType = this.oneWiseNormalized.getAllTaskTypes().get(task);
+                BoolVar activeVar = model.getBoolVarFromProtoIndex(taskType.getActive().getIndex());
+                model.addEquality(activeVar, modelState);
+            }
+            case Machine machine -> {
+                model.addEquality(machine.getActive(), modelState);
+            }
+            default ->
+                    throw new IllegalStateException("Unexpected actual type for SpElement for element: " + element.getName());
+        }
     }
 
     @SuppressWarnings("BooleanMethodIsAlwaysInverted")

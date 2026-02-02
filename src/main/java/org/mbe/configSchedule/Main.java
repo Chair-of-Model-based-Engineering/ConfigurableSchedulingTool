@@ -164,7 +164,9 @@ public class Main {
 
         Instant oneWiseStart = Instant.now();
         ProblemNormalizer problemNormalizer = new ProblemNormalizer(model, problemSolver.getSolverReturn());
+        // TODO: Replace with normalizeEverything
         double oneWiseSolverTime = problemNormalizer.oneWise();
+        double twoWiseSolverTime = problemNormalizer.twoWise();
         BaseModel oneWiseNormalized = problemNormalizer.getOneWiseNormalizedModel();
         new UVLWriter().writeToFile(oneWiseNormalized.getSchedulingProblem());
         long oneWiseTime = Duration.between(oneWiseStart, Instant.now()).toMillis();

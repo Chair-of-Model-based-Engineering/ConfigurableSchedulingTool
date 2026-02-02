@@ -4,7 +4,7 @@ import com.google.ortools.sat.BoolVar;
 
 import java.io.Serializable;
 
-public class Machine implements Serializable {
+public class Machine extends SpElement {
     private String name;
     private boolean optional;
     private BoolVar active;
@@ -74,5 +74,10 @@ public class Machine implements Serializable {
      */
     public void setActive(BoolVar active) {
         this.active = active;
+    }
+
+    @Override
+    public String toString() {
+        return this.name;
     }
 }

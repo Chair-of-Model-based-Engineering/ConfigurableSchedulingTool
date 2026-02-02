@@ -294,6 +294,11 @@ public class Main {
                     taskDurationConsString
             );
         }
+
+        System.out.println();
+        for (SchedulingProblem.ExclusionConstraint exclusionConstraint : sp.getExclusionConstraints()) {
+            System.out.println(exclusionConstraint.toString());
+        }
     }
 
     /**

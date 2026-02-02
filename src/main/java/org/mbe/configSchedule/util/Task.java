@@ -2,7 +2,7 @@ package org.mbe.configSchedule.util;
 
 import java.util.*;
 
-public class Task {
+public class Task extends SpElement {
     private Machine machine;
     private int[] durations = new int[0];
     @SuppressWarnings("OptionalUsedAsFieldOrParameterType")

@@ -41,8 +41,11 @@ public class UVLWriter {
         uvlString.append("\t\tmandatory").append(System.lineSeparator());
         uvlString.append("\t\t\t\"dl = ").append(sp.getDeadline()).append("\"").append(System.lineSeparator());
 
-        List<String>[] cons = parseTasks(sp, uvlString);
+        List<String> cons = parseTasks(sp, uvlString);
         parseMachines(sp.getMachines(), uvlString);
+        cons.addAll(sp.getExclusionConstraints().stream().map(
+                c -> '\t' + c.toString() + System.lineSeparator()
+        ).toList());
         parseConstraints(cons, uvlString);
 
         return uvlString.toString();
@@ -55,7 +58,7 @@ public class UVLWriter {
      * @param uvlString The UVL-string to be appended
      * @return Returns constraints for task order, excluding tasks, durations and machine
      */
-    protected List<String>[] parseTasks(SchedulingProblem sp, StringBuilder uvlString) {
+    protected List<String> parseTasks(SchedulingProblem sp, StringBuilder uvlString) {
         uvlString.append("\t\t\tP {abstract true}").append(System.lineSeparator());
 
         List<Task> mandatoryTasks = new ArrayList<>();
@@ -134,12 +137,11 @@ public class UVLWriter {
         }
 
 
-        @SuppressWarnings("unchecked")
-        List<String>[] cons = new List[4];
-        cons[0] = taskOrderCons;
-        cons[1] = excludeCons;
-        cons[2] = durationCons;
-        cons[3] = machineCons;
+        List<String> cons = new ArrayList<>();
+        cons.addAll(taskOrderCons);
+        cons.addAll(excludeCons);
+        cons.addAll(durationCons);
+        cons.addAll(machineCons);
 
         return cons;
     }
@@ -195,12 +197,10 @@ public class UVLWriter {
      * @param cons      List of constraints
      * @param uvlString The UVL-String to be appended
      */
-    protected void parseConstraints(List<String>[] cons, StringBuilder uvlString) {
+    protected void parseConstraints(List<String> cons, StringBuilder uvlString) {
         uvlString.append("constraints").append(System.lineSeparator());
-        for (List<String> conType : cons) {
-            for (String con : conType) {
-                uvlString.append(con);
-            }
+        for (String con : cons) {
+            uvlString.append(con);
         }
     }
 }

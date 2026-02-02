@@ -41,6 +41,8 @@ public class MSPGenerator extends SPGenerator {
                 mandatoryTasksWithVarDuration, durationConstraints, maxDurationRequires
         );
 
+        // TODO: Check if generation of exclusion constraints is necessary
+
         tasks.addAll(optionalTasks);
         tasks.addAll(alternativeTaskGroups.stream().flatMap(Arrays::stream).distinct().toList());
 

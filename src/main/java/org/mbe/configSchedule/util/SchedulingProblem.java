@@ -4,28 +4,66 @@ import de.vill.model.FeatureModel;
 import org.mbe.configSchedule.parser.UVLReader;
 
 import java.util.*;
+import javax.annotation.Nonnull;
 
-@SuppressWarnings("ClassCanBeRecord")
 public class SchedulingProblem {
+    /**
+     * A class representing an exclusion constraint inside a {@link SchedulingProblem}.
+     *
+     * <p>The constraint represents the Boolean formula {@code !(A && B)} with {@code A = aPolarity ? a : !a}.
+     *
+     * @param a         The first element in the constraint.
+     * @param aPolarity The polarization of {@code a}.
+     * @param b         The second element in the constraint.
+     * @param bPolarity The polarization of {@code b}.
+     */
+    public record ExclusionConstraint(SpElement a, boolean aPolarity, SpElement b, boolean bPolarity) {
+        @Override
+        @Nonnull
+        public String toString() {
+            return String.format("!(%s%s & %s%s)",
+                    this.aPolarity ? "" : "!", this.a.getName(),
+                    this.bPolarity ? "" : "!", this.b.getName()
+            );
+        }
+    }
+
     private final String name;
+    private final List<Machine> machines;
     private final Collection<Task> tasks;
     private final Map<Task, List<Task>> precedenceOrder;
-    private final List<Machine> machines;
+    private final Set<ExclusionConstraint> exclusionConstraints;
     private final int deadline;
 
     /**
      * Creates new object of type SchedulingProblem.
      *
-     * @param name     the name/identifier of the problem.
-     * @param machines a {@link List} of {@link Machine Machines}.
-     * @param deadline deadline of the scheduling problem.
+     * @param name            the name/identifier of the problem.
+     * @param tasks           the tasks contained in the problem.
+     * @param precedenceOrder the precedence order between tasks.
+     * @param machines        a {@link List} of {@link Machine Machines}.
+     * @param deadline        deadline of the scheduling problem.
      */
     public SchedulingProblem(String name, Collection<Task> tasks, Map<Task, List<Task>> precedenceOrder, List<Machine> machines, int deadline) {
+        this(name, tasks, precedenceOrder, machines, deadline, Set.of());
+    }
+
+    /**
+     * Creates new object of type SchedulingProblem.
+     *
+     * @param name            the name/identifier of the problem.
+     * @param tasks           the tasks contained in the problem.
+     * @param precedenceOrder the precedence order between tasks.
+     * @param machines        a {@link List} of {@link Machine Machines}.
+     * @param deadline        deadline of the scheduling problem.
+     */
+    public SchedulingProblem(String name, Collection<Task> tasks, Map<Task, List<Task>> precedenceOrder, List<Machine> machines, int deadline, Set<ExclusionConstraint> exclusionConstraints) {
         this.name = name;
         this.tasks = tasks;
         this.precedenceOrder = precedenceOrder;
         this.machines = machines;
         this.deadline = deadline;
+        this.exclusionConstraints = exclusionConstraints;
     }
 
     /**
@@ -94,5 +132,12 @@ public class SchedulingProblem {
      */
     public Collection<Task> getTasks() {
         return tasks;
+    }
+
+    /**
+     * {@return all exclude edges}
+     */
+    public Set<ExclusionConstraint> getExclusionConstraints() {
+        return exclusionConstraints;
     }
 }

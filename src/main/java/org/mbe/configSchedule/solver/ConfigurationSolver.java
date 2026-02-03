@@ -11,10 +11,7 @@ import java.io.File;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 
 public class ConfigurationSolver {
@@ -94,7 +91,6 @@ public class ConfigurationSolver {
 
         ConfigurationReader cReader = new ConfigurationReader();
         if (directoryFiles != null) {
-
             int iteration = 1;
             Double bestResultTime = Double.POSITIVE_INFINITY;
             SolverReturn bestResult = new SolverReturn();
@@ -102,8 +98,10 @@ public class ConfigurationSolver {
             long sumTimeSolve = 0;
             int bestIteration = -1;
             Set<ScheduleStructure> amountStructures = new HashSet<>();
+            Map<ScheduleStructure, Set<Integer>> coverage = new HashMap<>();
 
-            for (File file : directoryFiles) {
+            List<File> sortedFiles = sortFilesPerProblemSize(directoryFiles, cReader, modelPath); //Task amount sorted by small to big
+            for (File file : sortedFiles) {
                 String filePath = file.getPath();
 
                 Instant readStart = Instant.now();
@@ -137,8 +135,25 @@ public class ConfigurationSolver {
                 sumTimeSolve += solveTime;
             }
 
-            System.out.println(amountStructures);
-            System.out.println(amountStructures.size());
+            for(ScheduleStructure structure : amountStructures)
+            {
+                for(File file : directoryFiles)
+                {
+                    String filePath = file.getPath();
+                    SchedulingProblem sp = cReader.ReadConfig(filePath, modelPath);
+                    ProblemSolver problemSolver = new ProblemSolver(new BaseModel(sp));
+                    if(problemSolver.isStructureFeasible(structure))
+                    {
+                        coverage.computeIfAbsent(structure, files -> new HashSet<>()).add(Integer.parseInt(file.getName().replaceFirst("\\.[^.]+$", ""))); //removing the 0 at the start and .xml at the end for index
+                    }
+                }
+            }
+
+            coverage.forEach((structure, file) -> {
+                System.out.println("Files: " + file);
+                System.out.println(structure + "Amount: " + file.size());
+            });
+
             if (bestIteration != -1) {
                 ConfigurationSolverReturn csr = new ConfigurationSolverReturn(true, bestResult, sumTimeRead, sumTimeSolve, sumTimeRead + sumTimeSolve, bestIteration, iteration);
                 return csr;
@@ -148,5 +163,32 @@ public class ConfigurationSolver {
             }
         }
         return null;
+    }
+
+    /**
+     * Sorts the given File Array from small to big according to the amount of tasks in the SchedulingProblem
+     *
+     * @param directoryFiles The file-array of all configurations
+     * @param modelPath  The file-path to the model-file
+     * @return A List with the sorted files
+     * @throws Exception                  if any Error occurs.
+     */
+    private static List<File> sortFilesPerProblemSize(File[] directoryFiles, ConfigurationReader cReader, String modelPath) {
+        List<File> sortedFiles = Arrays.asList(directoryFiles);
+        sortedFiles.sort((file1,file2) ->
+        {
+            try
+            {
+                SchedulingProblem problem1 = cReader.ReadConfig(file1.getPath(), modelPath);
+                SchedulingProblem problem2 = cReader.ReadConfig(file2.getPath(), modelPath);
+                return Integer.compare(problem1.getTasks().size(), problem2.getTasks().size());
+            }
+            catch(Exception exception)
+            {
+                exception.printStackTrace();
+                return 0;
+            }
+        });
+        return sortedFiles;
     }
 }

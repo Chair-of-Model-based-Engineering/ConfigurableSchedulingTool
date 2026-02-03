@@ -4,6 +4,7 @@ import com.google.ortools.sat.*;
 import org.mbe.configSchedule.util.*;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class ProblemSolver {
 
@@ -92,16 +93,13 @@ public class ProblemSolver {
         for(ScheduleStructure structure : structureSet)
         {
             CpModel clone = makespanModel.getClone();
-            addStructureConstrains(clone,structure);
+            addStructureConstraints(clone,structure);
             CpSolverStatus status = solver.solve(clone); //check with extra constrains from previous configurations
             if (status == CpSolverStatus.OPTIMAL || status == CpSolverStatus.FEASIBLE)
             {
                 Schedule schedule = createSchedule(this.baseModel, solver);
-                if(structure.equals(new ScheduleStructure(schedule)))
-                {
-                    this.result = new SolverReturn(solver.userTime(), status, schedule, structure);
-                    return;
-                }
+                this.result = new SolverReturn(solver.userTime(), status, schedule, structure);
+                return;
             }
         }
         //No existing valid structures
@@ -111,40 +109,52 @@ public class ProblemSolver {
         this.result = new SolverReturn(solver.userTime(), status, schedule, newStructure);
     }
 
-    private void addStructureConstrains(CpModel model, ScheduleStructure structure)
+    /**
+     * Adds the current structure to the model.
+     *
+     * @param model the model of the configuration
+     * @param structure the structure which is added
+     *
+     */
+    private void addStructureConstraints(CpModel model, ScheduleStructure structure)
     {
-        for(Machine machine : structure.getMachines())
+        Map<String,TaskType> taskByType = this.baseModel.getAllTaskTypes().values().stream().collect(Collectors.toMap(task -> task.getTask().getName(),type -> type));
+
+        for (TaskType type : baseModel.getAllTaskTypes().values())
         {
+            boolean inStructure = structure.getMachines().stream().anyMatch(machine -> structure.getTaskOrder(machine).stream().anyMatch(task -> task.getName().equals(type.getTask().getName())));
+            model.addEquality(type.getActive(), inStructure ? 1 : 0);
+        }
+
+        for (Machine machine : structure.getMachines()) {
             List<Task> orderedTasks = structure.getTaskOrder(machine);
 
-            for(int i = 0; i < orderedTasks.size() - 1; i++)
-            {
-                Task firstTask = orderedTasks.get(i);
-                Task secondTask = orderedTasks.get(i + 1);
+            for (int i = 0; i < orderedTasks.size() - 1; i++) {
+                TaskType firstType = taskByType.get(orderedTasks.get(i).getName());
+                TaskType secondType = taskByType.get(orderedTasks.get(i + 1).getName());
 
-                TaskType firstType = null;
-                TaskType secondType = null;
-
-                for (TaskType type : this.baseModel.getAllTaskTypes().values()) {
-                    if (type.getName().equals(firstTask.getName())) {
-                        firstType = type;
-                    }
-                    if (type.getName().equals(secondTask.getName())) {
-                        secondType = type;
-                    }
-                }
-
-                if(firstType == null || secondType == null)
+                if (firstType == null || secondType == null)
                 {
-                    // TODO: One of the getName()-calls definitely throws a NullPointerException before this one can be thrown
-                    throw new NullPointerException("TaskType is null for either/both: " + firstType.getName() + "or/and " + secondType.getName());
+                    continue;
                 }
 
-                IntVar endFirst = firstType.getEnd();
-                IntVar secondStart = secondType.getStart();
-
-                model.addGreaterOrEqual(secondStart,endFirst);
+                model.addGreaterOrEqual(secondType.getStart(), firstType.getEnd());
             }
         }
+    }
+
+    /**
+     * Adds the current structure to the model to check if its added still leads to a valid schedule.
+     *
+     * @param structure the structure for which to check if it covers the configuration/model
+     *
+     */
+    public boolean isStructureFeasible(ScheduleStructure structure)
+    {
+        CpSolver solver = new CpSolver();
+        CpModel clone = this.baseModel.getModel().getClone();
+        addStructureConstraints(clone,structure);
+        CpSolverStatus status = solver.solve(clone);
+        return status == CpSolverStatus.OPTIMAL || status == CpSolverStatus.FEASIBLE;
     }
 }

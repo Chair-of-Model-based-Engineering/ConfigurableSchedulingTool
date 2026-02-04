@@ -67,6 +67,17 @@ public class SchedulingProblem {
     }
 
     /**
+     * Copies a given {@code SchedulingProblem} with additional exclusion constraints.
+     *
+     * @param sp                   the scheduling problem to copy.
+     * @param exclusionConstraints the additional exclusion constraints.
+     * @see ExclusionConstraint
+     */
+    public SchedulingProblem(SchedulingProblem sp, Set<ExclusionConstraint> exclusionConstraints) {
+        this(sp.name, sp.tasks, sp.precedenceOrder, sp.machines, sp.deadline, exclusionConstraints);
+    }
+
+    /**
      * Factory method for creating a SchedulingProblem from a {@link FeatureModel}.
      *
      * @param featureModel the feature model to parse.

@@ -125,7 +125,7 @@ public class ProblemNormalizer {
         };
 
         double solverTime = 0;
-        List<SchedulingProblem.ExclusionConstraint> excludes = new ArrayList<>();
+        Set<SchedulingProblem.ExclusionConstraint> excludes = new HashSet<>();
         for (SpElement[] pair : generateValidPairs()) {
             SpElement left = pair[0];
             SpElement right = pair[1];
@@ -144,7 +144,6 @@ public class ProblemNormalizer {
                 setState(left, left_value, model);
                 setState(right, right_value, model);
 
-                // TODO: Check whether this does what it is supposed to do
                 CpSolver solver = new CpSolver();
                 CpSolverStatus status = solver.solve(model);
                 solverTime += solver.userTime();
@@ -155,7 +154,8 @@ public class ProblemNormalizer {
             }
         }
 
-        // TODO: Build two-wise normalized model -> possibly extend buildNormalizedModel()
+        SchedulingProblem sp = new SchedulingProblem(this.oneWiseNormalized.getSchedulingProblem(), excludes);
+        this.twoWiseNormalized = new BaseModel(sp);
 
         return solverTime;
     }

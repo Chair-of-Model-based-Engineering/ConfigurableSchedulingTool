@@ -25,6 +25,7 @@ public class BaseModel {
 
     /**
      * Initialize the class by building the CSP for the given scheduling problem.
+     *
      * @param sp the scheduling problem.
      */
     public BaseModel(SchedulingProblem sp) {
@@ -76,6 +77,8 @@ public class BaseModel {
         buildExcludeConstraints(excludingTasks, nameToTaskType);
         buildOptionalMachines(optionalMachineTaskActives);
 
+        buildBooleanConstraints(sp);
+
         buildValidityConstraints(sp, machineToIntervals);
 
         // TODO: Is this even needed still?
@@ -105,6 +108,52 @@ public class BaseModel {
 
         if (sp.getDeadline() >= 0)
             model.addLessOrEqual(this.makespanVar, sp.getDeadline());
+    }
+
+    // Suppressing the warning per offending line causes weird formatting issues
+    // since the comment has to be between the else and the if which indents the if weirdly.
+    @SuppressWarnings("ConstantValue")
+    private void buildBooleanConstraints(SchedulingProblem sp) {
+        for (SchedulingProblem.ExclusionConstraint exclusionConstraint : sp.getExclusionConstraints()) {
+            BoolVar leftActiveVar = getActiveVar(exclusionConstraint.a());
+            boolean leftValue = exclusionConstraint.aPolarity();
+            BoolVar rightActiveVar = getActiveVar(exclusionConstraint.b());
+            boolean rightValue = exclusionConstraint.bPolarity();
+
+            // CP-SAT only allows "flat" Boolean formulas so we have to reformulate the exclusion constraints.
+            if (leftValue && rightValue) {
+                // !(a & b) = !a | !b
+                model.addBoolOr(new Literal[] {leftActiveVar.not(), rightActiveVar.not()});
+            } else if (leftValue && !rightValue) {
+                // !(a & !b) = !a | b = a -> b
+                model.addImplication(leftActiveVar, rightActiveVar);
+            } else if (!leftValue && rightValue) {
+                // !(!a & b) = a | !b = b -> a
+                model.addImplication(rightActiveVar, leftActiveVar);
+            } else if (!leftValue && !rightValue) {
+                // !(!a & !b) = a | b
+                model.addBoolOr(new Literal[] {leftActiveVar, rightActiveVar});
+            }
+        }
+    }
+
+    private BoolVar getActiveVar(SpElement element) {
+        BoolVar activeVar;
+        switch (element) {
+            case Machine machine -> activeVar = machine.getActive();
+            case Task task -> activeVar = this.allTaskTypes.get(task).getActive();
+            case SpElement.TaskDuration taskDuration -> {
+                activeVar = model.newBoolVar(taskDuration.getName());
+
+                // activeVar = (taskDuration.getTask().getDuration() == taskDuration.getDuration())
+                LinearExpr sizeExpr = this.allTaskTypes.get(taskDuration.getTask()).getInterval().getSizeExpr();
+                model.addEquality(sizeExpr, taskDuration.getDuration()).onlyEnforceIf(activeVar);
+                model.addDifferent(sizeExpr, taskDuration.getDuration()).onlyEnforceIf(activeVar.not());
+            }
+            default ->
+                    throw new IllegalStateException("Unexpected actual type for SpElement for element: " + element.getName());
+        }
+        return activeVar;
     }
 
     private void buildValidityConstraints(SchedulingProblem sp, Map<Machine, List<IntervalVar>> machineToIntervals) {

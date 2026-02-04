@@ -13,18 +13,38 @@ import java.util.List;
 import java.util.Map;
 
 public class UVLWriter {
-    public void writeToFile(SchedulingProblem sp) throws IOException {
+    /**
+     * Write a scheduling problem to a file.
+     *
+     * <p>The file is written to the configured {@code problempath} appended with the given {@code name}.
+     * The {@code name} may be a relative path.
+     *
+     * @param sp   the scheduling problem to write.
+     * @param name the name of the output file relative to the configured {@code problempath}.
+     * @throws IOException if there are problems writing the file
+     */
+    public void writeToFile(SchedulingProblem sp, String name) throws IOException {
         String problemUVL = parseToUVL(sp);
 
         PathPreferences prefs = new PathPreferences();
         Path path = Path.of(prefs.getProblemSavePath());
+        Path filepath = path.resolve(name);
 
-        if (!Files.exists(path)) {
-            Files.createDirectories(path);
+        if (!Files.exists(filepath.getParent())) {
+            Files.createDirectories(filepath.getParent());
         }
 
-        Path filepath = path.resolve(sp.getName() + ".uvl");
         Files.writeString(filepath, problemUVL);
+    }
+
+    /**
+     * Write a scheduling problem to a file with the scheduling problem's name.
+     *
+     * @param sp the scheduling problem to write.
+     * @see #writeToFile(SchedulingProblem, String)
+     */
+    public void writeToFile(SchedulingProblem sp) throws IOException {
+        writeToFile(sp, sp.getName() + ".uvl");
     }
 
 

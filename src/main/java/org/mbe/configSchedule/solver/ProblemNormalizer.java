@@ -25,12 +25,21 @@ public class ProblemNormalizer {
     }
 
     /**
-     * Returns the normalized model or {@code null} if the normalization wasn't performed successfully yet (see {@link #oneWise()}).
+     * Returns the one-wise normalized model, or {@code null} if the normalization wasn't performed successfully yet (see {@link #oneWise()}).
      *
-     * @return the normalized model, or {@code null}.
+     * @return the one-wise normalized model, or {@code null}.
      */
     public BaseModel getOneWiseNormalizedModel() {
         return oneWiseNormalized;
+    }
+
+    /**
+     * Returns the two-normalized model, or {@code null} if the normalization wasn't performed successfully yet (see {@link #oneWise()}).
+     *
+     * @return the two-normalized model, or {@code null}.
+     */
+    public BaseModel getTwoWiseNormalized() {
+        return twoWiseNormalized;
     }
 
     /**

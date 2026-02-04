@@ -162,24 +162,28 @@ public class Main {
         }
         long solveTime = Duration.between(solveStart, Instant.now()).toMillis();
 
-        Instant oneWiseStart = Instant.now();
-        ProblemNormalizer problemNormalizer = new ProblemNormalizer(model, problemSolver.getSolverReturn());
-        // TODO: Replace with normalizeEverything
-        double oneWiseSolverTime = problemNormalizer.oneWise();
-        double twoWiseSolverTime = problemNormalizer.twoWise();
-        BaseModel oneWiseNormalized = problemNormalizer.getOneWiseNormalizedModel();
-        new UVLWriter().writeToFile(oneWiseNormalized.getSchedulingProblem());
-        long oneWiseTime = Duration.between(oneWiseStart, Instant.now()).toMillis();
-
         SolverReturn sr = problemSolver.getSolverReturn();
 
         System.out.println(sectionDivider);
         PrintSolution(sr);
 
+        ProblemNormalizer problemNormalizer = new ProblemNormalizer(model, sr);
+
+        Instant oneWiseStart = Instant.now();
+        double oneWiseSolverTime = problemNormalizer.oneWise();
+        long oneWiseTime = Duration.between(oneWiseStart, Instant.now()).toMillis();
+
+        Instant twoWiseStart = Instant.now();
+        double twoWiseSolverTime = problemNormalizer.twoWise();
+        long twoWiseTime = Duration.between(twoWiseStart, Instant.now()).toMillis();
+
+        UVLWriter uvlWriter = new UVLWriter();
+        BaseModel oneWiseNormalized = problemNormalizer.getOneWiseNormalizedModel();
+        uvlWriter.writeToFile(oneWiseNormalized.getSchedulingProblem(), String.format("one-wise-normalized/%s.uvl", oneWiseNormalized.getSchedulingProblem().getName()));
+        BaseModel twoWiseNormalized = problemNormalizer.getTwoWiseNormalized();
+        uvlWriter.writeToFile(twoWiseNormalized.getSchedulingProblem(), String.format("two-wise-normalized/%s.uvl", twoWiseNormalized.getSchedulingProblem().getName()));
+
         System.out.println(sectionDivider);
-        System.out.println("Uncertainty results:");
-        SolverReturn.UncertaintyResult perTaskUncertaintyResult = sr.getPerTaskUncertainty();
-        PrintUncertaintyResult(perTaskUncertaintyResult);
 
         System.out.println(sectionDivider);
         // TODO: Is the solving time correct? Timing around the `solver.solve(model)` call in ProblemSolver yields times about twice as big.
@@ -190,13 +194,17 @@ public class Main {
                             Solver time: %d ms
                         One-wise normalization: %d ms
                             Cumulative solver time: %d ms
+                        Two-wise normalization: %d ms
+                            Cumulative solver time: %d ms
                         """,
                 readTime + solveTime + oneWiseTime,
                 readTime,
                 solveTime,
                 (int) (sr.getTime() * 1000),
                 oneWiseTime,
-                (int) (oneWiseSolverTime * 1000)
+                (int) (oneWiseSolverTime * 1000),
+                twoWiseTime,
+                (int) (twoWiseSolverTime * 1000)
         );
 
         WriteCSV(sr, solveMode, fileName);

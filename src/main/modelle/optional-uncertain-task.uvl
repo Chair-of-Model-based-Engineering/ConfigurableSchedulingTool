@@ -1,5 +1,5 @@
 features
-	normalizationTest {featuredescription__ '10', abstract true}
+	optionalUncertainTask {abstract true}
 		mandatory
 			"dl = 10"
 			P {abstract true}
@@ -48,3 +48,9 @@ constraints
 	pa1 => m2
 	pa2 => m1
 	(pa1 & !pa2) | (!pa1 & pa2)
+
+// Two-wise normalization should additionally yield:
+// !("dp1 = 6" & pa2)
+// !("dp1 = 7" & pa2)
+// !("dp1 = 7" & !"dpo2 = 3")
+// !("dp1 = 7" & "dpo2 = 4")

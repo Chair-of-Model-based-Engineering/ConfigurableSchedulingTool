@@ -1,0 +1,25 @@
+features
+	twowise {abstract true}
+		mandatory
+			"dl = 5"
+			P {abstract true}
+				mandatory
+					p1
+						mandatory
+							"dp1 = 3"
+				// Both of these optional tasks are not dead since p1+po1=p1+po2=5
+				// But they are mutually exclusive since p1+po1+po2=7 > 5
+				optional
+					po1
+						alternative
+							"dpo2 = 2"
+					po2
+						mandatory
+							"dpo3 = 2"
+			M {abstract true}
+				mandatory
+					m1
+constraints
+	p1 => m1
+	po1 => m1
+	po2 => m1

@@ -177,13 +177,18 @@ public class Main {
         double twoWiseSolverTime = problemNormalizer.twoWise();
         long twoWiseTime = Duration.between(twoWiseStart, Instant.now()).toMillis();
 
-        UVLWriter uvlWriter = new UVLWriter();
-        BaseModel oneWiseNormalized = problemNormalizer.getOneWiseNormalizedModel();
-        uvlWriter.writeToFile(oneWiseNormalized.getSchedulingProblem(), String.format("one-wise-normalized/%s.uvl", oneWiseNormalized.getSchedulingProblem().getName()));
-        BaseModel twoWiseNormalized = problemNormalizer.getTwoWiseNormalized();
-        uvlWriter.writeToFile(twoWiseNormalized.getSchedulingProblem(), String.format("two-wise-normalized/%s.uvl", twoWiseNormalized.getSchedulingProblem().getName()));
-
         System.out.println(sectionDivider);
+        UVLWriter uvlWriter = new UVLWriter();
+
+        BaseModel oneWiseNormalized = problemNormalizer.getOneWiseNormalizedModel();
+        String oneWisePath = String.format("one-wise-normalized/%s.uvl", oneWiseNormalized.getSchedulingProblem().getName());
+        uvlWriter.writeToFile(oneWiseNormalized.getSchedulingProblem(), oneWisePath);
+        System.out.println("Wrote one-wise normalized model to: {problempath}/" + oneWisePath);
+
+        BaseModel twoWiseNormalized = problemNormalizer.getTwoWiseNormalized();
+        String twoWisePath = String.format("two-wise-normalized/%s.uvl", twoWiseNormalized.getSchedulingProblem().getName());
+        uvlWriter.writeToFile(twoWiseNormalized.getSchedulingProblem(), twoWisePath);
+        System.out.println("Wrote two-wise normalized model to: {problempath}/" + twoWisePath);
 
         System.out.println(sectionDivider);
         // TODO: Is the solving time correct? Timing around the `solver.solve(model)` call in ProblemSolver yields times about twice as big.

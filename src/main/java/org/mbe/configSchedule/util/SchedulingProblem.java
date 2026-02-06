@@ -10,21 +10,35 @@ public class SchedulingProblem {
     /**
      * A class representing an exclusion constraint inside a {@link SchedulingProblem}.
      *
-     * <p>The constraint represents the Boolean formula {@code !(A && B)} with {@code A = aPolarity ? a : !a}.
+     * <p>The constraint represents the Boolean formula {@code !(A & B & C & ... & N)} with {@code A = polarites[i] ? elements[i] : !elements[i]}.
      *
-     * @param a         The first element in the constraint.
-     * @param aPolarity The polarization of {@code a}.
-     * @param b         The second element in the constraint.
-     * @param bPolarity The polarization of {@code b}.
+     * @param elements   List of elements in the constraint.
+     * @param polarities List of the elements' polarities.
      */
-    public record ExclusionConstraint(SpElement a, boolean aPolarity, SpElement b, boolean bPolarity) {
+    public record ExclusionConstraint(SpElement[] elements, boolean[] polarities) {
+        /**
+         * Shortcut constructor for binary constraints of the form {@code !(A & B)}.
+         *
+         * @param a         The first element in the constraint.
+         * @param aPolarity The polarization of {@code a}.
+         * @param b         The second element in the constraint.
+         * @param bPolarity The polarization of {@code b}.
+         */
+        public ExclusionConstraint(SpElement a, boolean aPolarity, SpElement b, boolean bPolarity) {
+            this(new SpElement[] {a, b}, new boolean[] {aPolarity, bPolarity});
+        }
+
         @Override
         @Nonnull
         public String toString() {
-            return String.format("!(%s%s & %s%s)",
-                    this.aPolarity ? "" : "!", this.a.getName(),
-                    this.bPolarity ? "" : "!", this.b.getName()
-            );
+            String[] literals = new String[this.elements.length];
+            for (int i = 0; i < this.elements.length; i++) {
+                SpElement element = this.elements[i];
+                boolean polarity = this.polarities[i];
+                literals[i] = (polarity ? "" : "!") + element.getName();
+            }
+
+            return "!(" + String.join(" & ", literals) + ")";
         }
     }
 

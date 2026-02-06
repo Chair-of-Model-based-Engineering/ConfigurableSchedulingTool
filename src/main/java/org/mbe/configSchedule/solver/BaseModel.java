@@ -110,30 +110,21 @@ public class BaseModel {
             model.addLessOrEqual(this.makespanVar, sp.getDeadline());
     }
 
-    // Suppressing the warning per offending line causes weird formatting issues
-    // since the comment has to be between the else and the if which indents the if weirdly.
-    @SuppressWarnings("ConstantValue")
     private void buildBooleanConstraints(SchedulingProblem sp) {
         for (SchedulingProblem.ExclusionConstraint exclusionConstraint : sp.getExclusionConstraints()) {
-            BoolVar leftActiveVar = getActiveVar(exclusionConstraint.a());
-            boolean leftValue = exclusionConstraint.aPolarity();
-            BoolVar rightActiveVar = getActiveVar(exclusionConstraint.b());
-            boolean rightValue = exclusionConstraint.bPolarity();
+            SpElement[] elements = exclusionConstraint.elements();
+            Boolean[] polarities = exclusionConstraint.polarities();
 
             // CP-SAT only allows "flat" Boolean formulas so we have to reformulate the exclusion constraints.
-            if (leftValue && rightValue) {
-                // !(a & b) = !a | !b
-                model.addBoolOr(new Literal[] {leftActiveVar.not(), rightActiveVar.not()});
-            } else if (leftValue && !rightValue) {
-                // !(a & !b) = !a | b = a -> b
-                model.addImplication(leftActiveVar, rightActiveVar);
-            } else if (!leftValue && rightValue) {
-                // !(!a & b) = a | !b = b -> a
-                model.addImplication(rightActiveVar, leftActiveVar);
-            } else if (!leftValue && !rightValue) {
-                // !(!a & !b) = a | b
-                model.addBoolOr(new Literal[] {leftActiveVar, rightActiveVar});
+            // Therefore, we have to apply De-morgan to the constraints !(A & B & ... & C) to get (!A | !B | ... | !C).
+            Literal[] activeVars = new Literal[elements.length];
+            for (int i = 0; i < elements.length; i++) {
+                BoolVar activeVar = getActiveVar(elements[i]);
+                // Since we have to apply DeMorgan, we have to invert the active variable here.
+                activeVars[i] = polarities[i] ? activeVar.not() : activeVar;
             }
+
+            model.addBoolOr(activeVars);
         }
     }
 
@@ -146,7 +137,8 @@ public class BaseModel {
                 activeVar = model.newBoolVar(taskDuration.getName());
 
                 // activeVar = (taskDuration.getTask().getDuration() == taskDuration.getDuration())
-                LinearExpr sizeExpr = this.allTaskTypes.get(taskDuration.getTask()).getInterval().getSizeExpr();
+                TaskType taskType = this.allTaskTypes.get(taskDuration.getTask());
+                LinearExpr sizeExpr = taskType.getInterval().getSizeExpr();
                 model.addEquality(sizeExpr, taskDuration.getDuration()).onlyEnforceIf(activeVar);
                 model.addDifferent(sizeExpr, taskDuration.getDuration()).onlyEnforceIf(activeVar.not());
             }

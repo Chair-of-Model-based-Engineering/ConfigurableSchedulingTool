@@ -177,6 +177,10 @@ public class Main {
         double twoWiseSolverTime = problemNormalizer.twoWise();
         long twoWiseTime = Duration.between(twoWiseStart, Instant.now()).toMillis();
 
+        Instant completeStart = Instant.now();
+        double completeSolverTime = problemNormalizer.complete();
+        long completeTime = Duration.between(completeStart, Instant.now()).toMillis();
+
         System.out.println(sectionDivider);
         UVLWriter uvlWriter = new UVLWriter();
 
@@ -190,6 +194,11 @@ public class Main {
         uvlWriter.writeToFile(twoWiseNormalized.getSchedulingProblem(), twoWisePath);
         System.out.println("Wrote two-wise normalized model to: {problempath}/" + twoWisePath);
 
+        BaseModel completeNormalized = problemNormalizer.getCompleteNormalized();
+        String completePath = String.format("complete-normalized/%s.uvl", completeNormalized.getSchedulingProblem().getName());
+        uvlWriter.writeToFile(completeNormalized.getSchedulingProblem(), completePath);
+        System.out.println("Wrote two-wise normalized model to: {problempath}/" + completePath);
+
         System.out.println(sectionDivider);
         // TODO: Is the solving time correct? Timing around the `solver.solve(model)` call in ProblemSolver yields times about twice as big.
         System.out.printf("""
@@ -201,6 +210,8 @@ public class Main {
                             Cumulative solver time: %d ms
                         Two-wise normalization: %d ms
                             Cumulative solver time: %d ms
+                        Complete normalization: %d ms
+                            Cumulative solver time: %d ms
                         """,
                 readTime + solveTime + oneWiseTime,
                 readTime,
@@ -209,7 +220,9 @@ public class Main {
                 oneWiseTime,
                 (int) (oneWiseSolverTime * 1000),
                 twoWiseTime,
-                (int) (twoWiseSolverTime * 1000)
+                (int) (twoWiseSolverTime * 1000),
+                completeTime,
+                (int) (completeSolverTime * 1000)
         );
 
         WriteCSV(sr, solveMode, fileName);

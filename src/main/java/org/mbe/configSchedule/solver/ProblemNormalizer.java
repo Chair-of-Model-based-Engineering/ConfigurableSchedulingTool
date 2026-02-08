@@ -19,6 +19,7 @@ public class ProblemNormalizer {
 
     private BaseModel oneWiseNormalized = null;
     private BaseModel twoWiseNormalized = null;
+    private BaseModel completeNormalized = null;
 
     public ProblemNormalizer(BaseModel baseModel, SolverReturn solverReturn) {
         this.baseModel = baseModel;
@@ -41,6 +42,15 @@ public class ProblemNormalizer {
      */
     public BaseModel getTwoWiseNormalized() {
         return twoWiseNormalized;
+    }
+
+    /**
+     * Returns the complete-normalized model, or {@code null} if the normalization wasn't performed successfully yet (see {@link #oneWise()}).
+     *
+     * @return the complete-normalized model, or {@code null}.
+     */
+    public BaseModel getCompleteNormalized() {
+        return this.completeNormalized;
     }
 
     /**
@@ -193,6 +203,8 @@ public class ProblemNormalizer {
 
         Set<SchedulingProblem.ExclusionConstraint> excludes = new HashSet<>();
         double solverTime = complete_recursive(new HashMap<>(), optionalElements, excludes);
+
+        this.completeNormalized = new BaseModel(new SchedulingProblem(this.oneWiseNormalized.getSchedulingProblem(), excludes));
 
         return solverTime;
     }

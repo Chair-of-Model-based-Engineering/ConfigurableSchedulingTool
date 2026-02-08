@@ -15,7 +15,7 @@ public class SchedulingProblem {
      * @param elements   List of elements in the constraint.
      * @param polarities List of the elements' polarities.
      */
-    public record ExclusionConstraint(SpElement[] elements, boolean[] polarities) {
+    public record ExclusionConstraint(SpElement[] elements, Boolean[] polarities) {
         /**
          * Shortcut constructor for binary constraints of the form {@code !(A & B)}.
          *
@@ -25,7 +25,7 @@ public class SchedulingProblem {
          * @param bPolarity The polarization of {@code b}.
          */
         public ExclusionConstraint(SpElement a, boolean aPolarity, SpElement b, boolean bPolarity) {
-            this(new SpElement[] {a, b}, new boolean[] {aPolarity, bPolarity});
+            this(new SpElement[] {a, b}, new Boolean[] {aPolarity, bPolarity});
         }
 
         @Override
@@ -88,7 +88,16 @@ public class SchedulingProblem {
      * @see ExclusionConstraint
      */
     public SchedulingProblem(SchedulingProblem sp, Set<ExclusionConstraint> exclusionConstraints) {
-        this(sp.name, sp.tasks, sp.precedenceOrder, sp.machines, sp.deadline, exclusionConstraints);
+        Set<ExclusionConstraint> combinedExclusionConstraints = new HashSet<>(sp.exclusionConstraints);
+        combinedExclusionConstraints.addAll(exclusionConstraints);
+        this(
+                sp.name,
+                new ArrayList<>(sp.tasks),
+                new HashMap<>(sp.precedenceOrder),
+                new ArrayList<>(sp.machines),
+                sp.deadline,
+                combinedExclusionConstraints
+        );
     }
 
     /**

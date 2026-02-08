@@ -7,6 +7,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 /**
  * A class for analyzing a given problem on its solvability with respect to the tasks' configurable durations.
@@ -119,8 +120,8 @@ public class ProblemNormalizer {
      *
      * <p>The problem has to have been normalized one-wise beforehand.
      *
-     * @see #oneWise()
      * @return the cumulative time of all solver calls.
+     * @see #oneWise()
      */
     public double twoWise() {
         if (this.oneWiseNormalized == null)
@@ -143,6 +144,7 @@ public class ProblemNormalizer {
                 boolean left_value = schema[0];
                 boolean right_value = schema[1];
 
+                // TODO: Skip pair/schema-combinations which were already solved previously -> Caching of solved configurations
                 CpModel model = this.oneWiseNormalized.getModel().getClone();
                 model.getBuilder().setName(String.format(
                         "two wise %s=%b %s=%b",
@@ -167,6 +169,122 @@ public class ProblemNormalizer {
         this.twoWiseNormalized = new BaseModel(sp);
 
         return solverTime;
+    }
+
+    /**
+     * Normalizes the scheduling problem completely.
+     *
+     * <p>The problem has to have been normalized one-wise beforehand.
+     *
+     * @return the cumulative time of all solver calls.
+     * @see #oneWise()
+     */
+    public double complete() {
+        if (this.oneWiseNormalized == null)
+            return -1;
+
+        ArrayList<SpElement> optionalElements = Stream.concat(
+                this.oneWiseNormalized.getSchedulingProblem().getMachines().stream().filter(Machine::isOptional),
+                Stream.concat(
+                        this.oneWiseNormalized.getSchedulingProblem().getTasks().stream().filter(Task::isOptional),
+                        this.oneWiseNormalized.getSchedulingProblem().getTasks().stream().filter(Task::hasUncertainDurations)
+                )
+        ).distinct().collect(Collectors.toCollection(ArrayList::new));
+
+        Set<SchedulingProblem.ExclusionConstraint> excludes = new HashSet<>();
+        double solverTime = complete_recursive(new HashMap<>(), optionalElements, excludes);
+
+        return solverTime;
+    }
+
+    private double complete_recursive(
+            Map<SpElement, Integer> assignments, List<SpElement> optionalElements, Set<SchedulingProblem.ExclusionConstraint> excludes
+    ) {
+        if (optionalElements.isEmpty()) {
+            return complete_solve(assignments, excludes);
+        }
+
+        double solverTime = 0;
+        SpElement element = optionalElements.removeFirst();
+
+        // TODO: Skip some configurations which are already known to be unsolvable from 2-wise normalization
+
+        if (element instanceof Machine machine) {
+            Map<SpElement, Integer> trueAssignments = new HashMap<>(assignments);
+            trueAssignments.put(machine, 1);
+            solverTime += complete_recursive(trueAssignments, new ArrayList<>(optionalElements), excludes);
+
+            Map<SpElement, Integer> falseAssignments = new HashMap<>(assignments);
+            falseAssignments.put(machine, 0);
+            solverTime += complete_recursive(falseAssignments, new ArrayList<>(optionalElements), excludes);
+        } else if (element instanceof Task task) {
+            // The tasks contained in `optionalElements` might not actually optional but only have uncertain durations.
+            if (task.isOptional()) {
+                Map<SpElement, Integer> falseAssignments = new HashMap<>(assignments);
+                falseAssignments.put(task, 0);
+                solverTime += complete_recursive(falseAssignments, new ArrayList<>(optionalElements), excludes);
+            }
+
+            for (int duration : task.getDurations()) {
+                Map<SpElement, Integer> durationAssignment = new HashMap<>(assignments);
+                durationAssignment.put(task, duration);
+
+                solverTime += complete_recursive(durationAssignment, new ArrayList<>(optionalElements), excludes);
+            }
+        }
+
+        return solverTime;
+    }
+
+    private double complete_solve(Map<SpElement, Integer> assignments, Set<SchedulingProblem.ExclusionConstraint> excludes) {
+        CpModel model = this.oneWiseNormalized.getModel().getClone();
+        model.getBuilder().setName("complete normalization " + assignments);
+
+        SpElement[] elements = new SpElement[assignments.size()];
+        Boolean[] polarities = new Boolean[assignments.size()];
+        int i = 0;
+
+        for (Map.Entry<SpElement, Integer> entry : assignments.entrySet()) {
+            if (Objects.requireNonNull(entry.getKey()) instanceof Task task) {
+                TaskType taskType = this.oneWiseNormalized.getAllTaskTypes().get(task);
+                BoolVar activeVar = model.getBoolVarFromProtoIndex(taskType.getActive().getIndex());
+                if (entry.getValue() == 0) {
+                    model.addEquality(activeVar, model.falseLiteral());
+
+                    elements[i] = task;
+                    polarities[i] = false;
+                } else {
+                    //noinspection IfStatementWithIdenticalBranches
+                    if (task.hasUncertainDurations()) {
+                        IntVar durationVar = model.getIntVarFromProtoIndex(taskType.getIntervalDomainIndex());
+                        model.addEquality(durationVar, entry.getValue());
+
+                        elements[i] = new SpElement.TaskDuration(task, entry.getValue());
+                        polarities[i] = true;
+                    } else {
+                        elements[i] = task;
+                        polarities[i] = true;
+                    }
+                    model.addEquality(activeVar, model.trueLiteral());
+                }
+            } else if (entry.getKey() instanceof Machine machine) {
+                BoolVar activeVar = model.getBoolVarFromProtoIndex(machine.getActive().getIndex());
+                model.addEquality(activeVar, entry.getValue() == 1 ? model.trueLiteral() : model.falseLiteral());
+
+                elements[i] = machine;
+                polarities[i] = entry.getValue() == 1;
+            }
+
+            i++;
+        }
+
+        CpSolver solver = new CpSolver();
+        CpSolverStatus status = solver.solve(model);
+        if (status == CpSolverStatus.INFEASIBLE) {
+            excludes.add(new SchedulingProblem.ExclusionConstraint(elements, polarities));
+        }
+
+        return solver.userTime();
     }
 
     private List<SpElement[]> generateValidPairs() {

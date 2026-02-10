@@ -203,11 +203,24 @@ public class UVLWriter {
      * @param uvlString The UVL-String to be appended
      */
     protected void parseMachines(List<Machine> machines, StringBuilder uvlString) {
-        uvlString.append("\t\t\tM {abstract true}").append(System.lineSeparator());
-        uvlString.append("\t\t\t\tmandatory").append(System.lineSeparator());
-
+        StringBuilder mandatoryMachines = new StringBuilder();
+        StringBuilder optionalMachines = new StringBuilder();
         for (Machine machine : machines) {
-            uvlString.append("\t\t\t\t\t").append(machine.getName()).append(System.lineSeparator());
+            String machineString = "\t\t\t\t\t%s%n".formatted(machine.getName());
+            if (machine.isOptional())
+                optionalMachines.append(machineString);
+            else
+                mandatoryMachines.append(machineString);
+        }
+
+        uvlString.append("\t\t\tM {abstract true}").append(System.lineSeparator());
+        if (!mandatoryMachines.isEmpty()) {
+            uvlString.append("\t\t\t\tmandatory").append(System.lineSeparator());
+            uvlString.append(mandatoryMachines);
+        }
+        if (!optionalMachines.isEmpty()) {
+            uvlString.append("\t\t\t\toptional").append(System.lineSeparator());
+            uvlString.append(optionalMachines);
         }
     }
 

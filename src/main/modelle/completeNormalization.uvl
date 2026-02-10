@@ -1,0 +1,28 @@
+features
+	completeNormalization {abstract true}
+		mandatory
+			"dl = 11"
+			P {abstract true}
+				mandatory
+					p1
+						mandatory
+							"dp1 = 3"
+							"dp1 = 4"
+					p2
+						mandatory
+							"dp1 = 3"
+							"dp1 = 4"
+					p3
+						mandatory
+							"dp1 = 3"
+							"dp1 = 4"
+			M {abstract true}
+				mandatory
+					m1
+constraints
+	p1 => m1
+	p2 => m1
+	p3 => m1
+
+// Complete normalization (or even 3-wise normalization already) should additionally yield:
+// !("dp3 = 4" & "dp2 = 4" & "dp1 = 4")

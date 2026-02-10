@@ -237,11 +237,20 @@ public class ProblemNormalizer {
                 solverTime += complete_recursive(falseAssignments, new ArrayList<>(optionalElements), excludes);
             }
 
-            for (int duration : task.getDurations()) {
-                Map<SpElement, Integer> durationAssignment = new HashMap<>(assignments);
-                durationAssignment.put(task, duration);
+            boolean excluded = assignments.keySet().stream()
+                    .filter(t -> task.getExcludeTasks().contains(t.getName()))
+                    // No instanceof check necessary since only Tasks pass previous check
+                    .map(t -> (Task) t)
+                    .anyMatch(t -> assignments.get(t) != 0);
 
-                solverTime += complete_recursive(durationAssignment, new ArrayList<>(optionalElements), excludes);
+            // When the task is excluded, we only allow the false assignment above but no true assignment
+            if (!excluded) {
+                for (int duration : task.getDurations()) {
+                    Map<SpElement, Integer> durationAssignment = new HashMap<>(assignments);
+                    durationAssignment.put(task, duration);
+
+                    solverTime += complete_recursive(durationAssignment, new ArrayList<>(optionalElements), excludes);
+                }
             }
         }
 

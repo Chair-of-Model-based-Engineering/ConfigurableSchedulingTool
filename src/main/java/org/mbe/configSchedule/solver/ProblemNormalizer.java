@@ -537,7 +537,7 @@ public class ProblemNormalizer {
                     ? taskUncertainties.get(task).stream().mapToInt(Integer::intValue).toArray()
                     : task.getDurations();
             List<String> excludeConstraints = task.getExcludeTasks().stream()
-                    .filter(deadTasks::contains)
+                    .filter(t -> !deadTasks.contains(t))
                     .toList();
 
             Task newTask = new Task(

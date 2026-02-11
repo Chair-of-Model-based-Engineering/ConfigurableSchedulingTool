@@ -105,6 +105,13 @@ public class Main {
                     System.err.println("Incorrect amount or type of arguments.");
                 }
             }
+            case "normalize" -> {
+                if (args.length != 2 || !args[1].endsWith(".uvl")) {
+                    System.err.println("Need a file ending with '.uvl' as second argument.");
+                    break;
+                }
+                normalize(args[1]);
+            }
             case "solutionpath" -> {
                 prefs.setSolutionSavePath(args[1]);
                 System.out.printf("Path for saving solutions problems set to %s", args[1]);
@@ -167,38 +174,6 @@ public class Main {
         System.out.println(sectionDivider);
         PrintSolution(sr);
 
-        ProblemNormalizer problemNormalizer = new ProblemNormalizer(model, sr);
-
-        Instant oneWiseStart = Instant.now();
-        double oneWiseSolverTime = problemNormalizer.oneWise();
-        long oneWiseTime = Duration.between(oneWiseStart, Instant.now()).toMillis();
-
-        Instant twoWiseStart = Instant.now();
-        double twoWiseSolverTime = problemNormalizer.twoWise();
-        long twoWiseTime = Duration.between(twoWiseStart, Instant.now()).toMillis();
-
-        Instant completeStart = Instant.now();
-        double completeSolverTime = problemNormalizer.complete();
-        long completeTime = Duration.between(completeStart, Instant.now()).toMillis();
-
-        System.out.println(sectionDivider);
-        UVLWriter uvlWriter = new UVLWriter();
-
-        BaseModel oneWiseNormalized = problemNormalizer.getOneWiseNormalizedModel();
-        String oneWisePath = String.format("one-wise-normalized/%s.uvl", oneWiseNormalized.getSchedulingProblem().getName());
-        uvlWriter.writeToFile(oneWiseNormalized.getSchedulingProblem(), oneWisePath);
-        System.out.println("Wrote one-wise normalized model to: {problempath}/" + oneWisePath);
-
-        BaseModel twoWiseNormalized = problemNormalizer.getTwoWiseNormalized();
-        String twoWisePath = String.format("two-wise-normalized/%s.uvl", twoWiseNormalized.getSchedulingProblem().getName());
-        uvlWriter.writeToFile(twoWiseNormalized.getSchedulingProblem(), twoWisePath);
-        System.out.println("Wrote two-wise normalized model to: {problempath}/" + twoWisePath);
-
-        BaseModel completeNormalized = problemNormalizer.getCompleteNormalized();
-        String completePath = String.format("complete-normalized/%s.uvl", completeNormalized.getSchedulingProblem().getName());
-        uvlWriter.writeToFile(completeNormalized.getSchedulingProblem(), completePath);
-        System.out.println("Wrote two-wise normalized model to: {problempath}/" + completePath);
-
         System.out.println(sectionDivider);
         // TODO: Is the solving time correct? Timing around the `solver.solve(model)` call in ProblemSolver yields times about twice as big.
         System.out.printf("""
@@ -206,23 +181,11 @@ public class Main {
                         Reading: %d ms
                         Solving with model setup: %d ms
                             Solver time: %d ms
-                        One-wise normalization: %d ms
-                            Cumulative solver time: %d ms
-                        Two-wise normalization: %d ms
-                            Cumulative solver time: %d ms
-                        Complete normalization: %d ms
-                            Cumulative solver time: %d ms
                         """,
-                readTime + solveTime + oneWiseTime,
+                readTime + solveTime,
                 readTime,
                 solveTime,
-                (int) (sr.getTime() * 1000),
-                oneWiseTime,
-                (int) (oneWiseSolverTime * 1000),
-                twoWiseTime,
-                (int) (twoWiseSolverTime * 1000),
-                completeTime,
-                (int) (completeSolverTime * 1000)
+                (int) (sr.getTime() * 1000)
         );
 
         WriteCSV(sr, solveMode, fileName);
@@ -264,6 +227,68 @@ public class Main {
                     Read time: %d ms, Solve time: %d ms, Combined: %d ms
                     """, (csr.getSearchedConfigs() - 1), csr.getReadTime(), csr.getTimeSolve(), csr.getNeededTime());
         }
+    }
+
+    private static void normalize(String fileName) throws IOException {
+        SchedulingProblem sp = ReadProblemUVL(fileName);
+        System.out.println(sectionDivider);
+        PrintProblem(sp);
+
+        BaseModel model = new BaseModel(sp);
+        ProblemSolver problemSolver = new ProblemSolver(model);
+        problemSolver.findFeasibleSolution();
+        SolverReturn sr = problemSolver.getSolverReturn();
+
+        ProblemNormalizer problemNormalizer = new ProblemNormalizer(model, sr);
+
+        Instant oneWiseStart = Instant.now();
+        double oneWiseSolverTime = problemNormalizer.oneWise();
+        long oneWiseTime = Duration.between(oneWiseStart, Instant.now()).toMillis();
+
+        Instant twoWiseStart = Instant.now();
+        double twoWiseSolverTime = problemNormalizer.twoWise();
+        long twoWiseTime = Duration.between(twoWiseStart, Instant.now()).toMillis();
+
+        Instant completeStart = Instant.now();
+        double completeSolverTime = problemNormalizer.complete();
+        long completeTime = Duration.between(completeStart, Instant.now()).toMillis();
+
+        System.out.println(sectionDivider);
+        UVLWriter uvlWriter = new UVLWriter();
+
+        BaseModel oneWiseNormalized = problemNormalizer.getOneWiseNormalizedModel();
+        String oneWisePath = String.format("one-wise-normalized/%s.uvl", oneWiseNormalized.getSchedulingProblem().getName());
+        uvlWriter.writeToFile(oneWiseNormalized.getSchedulingProblem(), oneWisePath);
+        System.out.println("Wrote one-wise normalized model to: {problempath}/" + oneWisePath);
+
+        BaseModel twoWiseNormalized = problemNormalizer.getTwoWiseNormalized();
+        String twoWisePath = String.format("two-wise-normalized/%s.uvl", twoWiseNormalized.getSchedulingProblem().getName());
+        uvlWriter.writeToFile(twoWiseNormalized.getSchedulingProblem(), twoWisePath);
+        System.out.println("Wrote two-wise normalized model to: {problempath}/" + twoWisePath);
+
+        BaseModel completeNormalized = problemNormalizer.getCompleteNormalized();
+        String completePath = String.format("complete-normalized/%s.uvl", completeNormalized.getSchedulingProblem().getName());
+        uvlWriter.writeToFile(completeNormalized.getSchedulingProblem(), completePath);
+        System.out.println("Wrote complete normalized model to: {problempath}/" + completePath);
+
+        System.out.println(sectionDivider);
+        System.out.printf("""
+                        Time: %d ms
+                        One-wise normalization: %d ms
+                            Cumulative solver time: %d ms
+                        Two-wise normalization: %d ms
+                            Cumulative solver time: %d ms
+                        Complete normalization: %d ms
+                            Cumulative solver time: %d ms
+                        """,
+                oneWiseTime + twoWiseTime + completeTime,
+                oneWiseTime,
+                (int) (oneWiseSolverTime * 1000),
+                twoWiseTime,
+                (int) (twoWiseSolverTime * 1000),
+                completeTime,
+                (int) (completeSolverTime * 1000)
+        );
     }
 
     /**

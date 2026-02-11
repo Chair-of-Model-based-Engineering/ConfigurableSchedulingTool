@@ -63,7 +63,7 @@ public class ProblemSolver {
         } else {
             schedule = null;
         }
-        this.result = new SolverReturn(solver.userTime(), status, schedule);
+        this.result = new SolverReturn(solver.wallTime(), status, schedule);
     }
 
     public static Schedule createSchedule(BaseModel baseModel, CpSolver solver) {
@@ -99,7 +99,7 @@ public class ProblemSolver {
                 Schedule schedule = createSchedule(this.baseModel, solver);
                 if(structure.equals(new ScheduleStructure(schedule)))
                 {
-                    this.result = new SolverReturn(solver.userTime(), status, schedule, structure);
+                    this.result = new SolverReturn(solver.wallTime(), status, schedule, structure);
                     return;
                 }
             }
@@ -108,7 +108,7 @@ public class ProblemSolver {
         CpSolverStatus status = solver.solve(makespanModel);
         Schedule schedule = createSchedule(this.baseModel, solver);
         ScheduleStructure newStructure = new ScheduleStructure(schedule);
-        this.result = new SolverReturn(solver.userTime(), status, schedule, newStructure);
+        this.result = new SolverReturn(solver.wallTime(), status, schedule, newStructure);
     }
 
     private void addStructureConstrains(CpModel model, ScheduleStructure structure)

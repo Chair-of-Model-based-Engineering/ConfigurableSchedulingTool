@@ -102,7 +102,7 @@ public class ProblemNormalizer {
             CpSolver solver = new CpSolver();
             CpSolverStatus status = solver.solve(falseOptionalModel);
             // TODO: userTime or wallTime?
-            overallTime.updateAndGet(v -> v + solver.userTime());
+            overallTime.updateAndGet(v -> v + solver.wallTime());
 
             if (status != CpSolverStatus.OPTIMAL && status != CpSolverStatus.FEASIBLE) {
                 falseOptionalTasks.add(optionalTask.getTask());
@@ -167,7 +167,7 @@ public class ProblemNormalizer {
 
                 CpSolver solver = new CpSolver();
                 CpSolverStatus status = solver.solve(model);
-                solverTime += solver.userTime();
+                solverTime += solver.wallTime();
 
                 if (status == CpSolverStatus.INFEASIBLE) {
                     excludes.add(new SchedulingProblem.ExclusionConstraint(left, left_value, right, right_value));
@@ -305,7 +305,7 @@ public class ProblemNormalizer {
             excludes.add(new SchedulingProblem.ExclusionConstraint(elements, polarities));
         }
 
-        return solver.userTime();
+        return solver.wallTime();
     }
 
     private List<SpElement[]> generateValidPairs() {
@@ -391,7 +391,7 @@ public class ProblemNormalizer {
 
         CpSolver solver = new CpSolver();
         CpSolverStatus status = solver.solve(model);
-        overallTime.updateAndGet(v -> v + solver.userTime());
+        overallTime.updateAndGet(v -> v + solver.wallTime());
 
         return status == CpSolverStatus.OPTIMAL || status == CpSolverStatus.FEASIBLE;
     }
@@ -409,7 +409,7 @@ public class ProblemNormalizer {
 
         CpSolver solver = new CpSolver();
         CpSolverStatus status = solver.solve(maximumDurationModel);
-        overallTime.updateAndGet(v -> v + solver.userTime());
+        overallTime.updateAndGet(v -> v + solver.wallTime());
 
         if (status != CpSolverStatus.OPTIMAL && status != CpSolverStatus.FEASIBLE) {
             return List.of();
@@ -440,7 +440,7 @@ public class ProblemNormalizer {
 
                     // Not maximizing anything in the durationModel because we only care if it is solvable in any way.
                     CpSolverStatus status_ = solver.solve(durationModel);
-                    overallTime.updateAndGet(v -> v + solver.userTime());
+                    overallTime.updateAndGet(v -> v + solver.wallTime());
                     return status_ == CpSolverStatus.OPTIMAL || status_ == CpSolverStatus.FEASIBLE;
                 })
                 .boxed()

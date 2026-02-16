@@ -72,7 +72,7 @@ public class ConfigurationReader {
             if (selectedDurations.containsKey(task.getName()))
                 task.setDurations(new int[] {selectedDurations.get(task.getName())});
         }
-        schedulingProblem.getTasks().removeIf(task -> !selectedFeatureNames.contains(task.getName()) && task.getName().matches(".*po\\d+.*")); //remove unused optional tasks from the problem
+        schedulingProblem.getTasks().removeIf(task -> !selectedFeatureNames.contains(task.getName()) && task.isOptional() && task.getExcludeTasks().isEmpty()); //remove unused optional tasks from the problem
 
         return schedulingProblem;
     }

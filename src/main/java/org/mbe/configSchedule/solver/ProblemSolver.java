@@ -120,10 +120,13 @@ public class ProblemSolver {
     {
         Map<String,TaskType> taskByType = this.baseModel.getAllTaskTypes().values().stream().collect(Collectors.toMap(task -> task.getTask().getName(),type -> type));
 
-        for (TaskType type : baseModel.getAllTaskTypes().values())
+        if(structure.getTotalTaskCount() < this.baseModel.getAllTaskTypes().size()) //no need to force tasks if structure contains equal or more amount of tasks than the modified problem itself
         {
-            boolean inStructure = structure.getMachines().stream().anyMatch(machine -> structure.getTaskOrder(machine).stream().anyMatch(task -> task.getName().equals(type.getTask().getName())));
-            model.addEquality(type.getActive(), inStructure ? 1 : 0);
+            for (TaskType type : this.baseModel.getAllTaskTypes().values())
+            {
+                boolean inStructure = structure.getMachines().stream().anyMatch(machine -> structure.getTaskOrder(machine).stream().anyMatch(task -> task.getName().equals(type.getTask().getName())));
+                model.addEquality(type.getActive(), inStructure ? 1 : 0);
+            }
         }
 
         for (Machine machine : structure.getMachines()) {

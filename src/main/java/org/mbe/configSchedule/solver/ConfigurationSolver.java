@@ -149,10 +149,58 @@ public class ConfigurationSolver {
                 }
             }
 
+            Set<ScheduleStructure> uniqueStructures = new HashSet<>(amountStructures);
+
+            if(amountStructures.size() > 1)
+            {
+                for(ScheduleStructure structure : amountStructures)
+                {
+                    for(ScheduleStructure otherStructure : amountStructures)
+                    {
+                        if(structure == otherStructure)
+                        {
+                            continue;
+                        }
+                        if(otherStructure.containsStructure(structure) && coverage.get(otherStructure).containsAll(coverage.get(structure)))
+                        {
+                            uniqueStructures.remove(structure);
+                            break;
+                        }
+                    }
+                }
+            }
+
+            ScheduleStructure generalizedStructure = ScheduleStructure.generalizeStructure(uniqueStructures.stream().toList());
+
             coverage.forEach((structure, file) -> {
                 System.out.println("Files: " + file);
                 System.out.println(structure + "Amount: " + file.size());
             });
+            System.out.println("---------------Unique Structures-------------------");
+            System.out.println(uniqueStructures);
+
+            System.out.println("---------------Generalized Structure-------------------");
+            System.out.println(generalizedStructure);
+
+            Map<ScheduleStructure, Set<Integer>> finalCoverage = new HashMap<>();
+            for(File file : directoryFiles)
+            {
+                String filePath = file.getPath();
+                SchedulingProblem sp = cReader.ReadConfig(filePath, modelPath);
+                ProblemSolver problemSolver = new ProblemSolver(new BaseModel(sp));
+                if(problemSolver.isStructureFeasible(generalizedStructure))
+                {
+                    finalCoverage.computeIfAbsent(generalizedStructure, files -> new HashSet<>()).add(Integer.parseInt(file.getName().replaceFirst("\\.[^.]+$", ""))); //removing the 0 at the start and .xml at the end for index
+                }
+            }
+
+            finalCoverage.forEach((structure, file) -> {
+                System.out.println("Files: " + file);
+                System.out.println(structure + "Amount: " + file.size());
+                System.out.println();
+            });
+
+
 
             if (bestIteration != -1) {
                 ConfigurationSolverReturn csr = new ConfigurationSolverReturn(true, bestResult, sumTimeRead, sumTimeSolve, sumTimeRead + sumTimeSolve, bestIteration, iteration);

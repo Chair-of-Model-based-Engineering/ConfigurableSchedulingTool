@@ -57,7 +57,8 @@ public class UVLWriter {
     protected String parseToUVL(SchedulingProblem sp) {
         StringBuilder uvlString = new StringBuilder();
         uvlString.append("features").append(System.lineSeparator());
-        uvlString.append("\t").append(sp.getName()).append(" {abstract true}").append(System.lineSeparator());
+        String nonSpaceName = sp.getName().contains(" ") ? '"' + sp.getName() + '"' : sp.getName();
+        uvlString.append("\t").append(nonSpaceName).append(" {abstract true}").append(System.lineSeparator());
         uvlString.append("\t\tmandatory").append(System.lineSeparator());
         uvlString.append("\t\t\t\"dl = ").append(sp.getDeadline()).append("\"").append(System.lineSeparator());
 

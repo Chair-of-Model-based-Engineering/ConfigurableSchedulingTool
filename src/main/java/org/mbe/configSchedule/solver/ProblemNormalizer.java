@@ -93,19 +93,37 @@ public class ProblemNormalizer {
 
         Set<Task> falseOptionalTasks = new HashSet<>();
         for (TaskType optionalTask : this.baseModel.getOptionalTasks()) {
+            CpSolverStatus status;
+            BoolVar activeVar;
+
             CpModel falseOptionalModel = this.baseModel.getModel().getClone();
             falseOptionalModel.getBuilder().setName("False optional " + optionalTask.getName());
-
-            BoolVar activeVar = falseOptionalModel.getBoolVarFromProtoIndex(optionalTask.getActive().getIndex());
+            activeVar = falseOptionalModel.getBoolVarFromProtoIndex(optionalTask.getActive().getIndex());
             falseOptionalModel.addEquality(activeVar, falseOptionalModel.falseLiteral());
 
             CpSolver solver = new CpSolver();
-            CpSolverStatus status = solver.solve(falseOptionalModel);
+            status = solver.solve(falseOptionalModel);
             // TODO: userTime or wallTime?
             overallTime.updateAndGet(v -> v + solver.wallTime());
 
             if (status != CpSolverStatus.OPTIMAL && status != CpSolverStatus.FEASIBLE) {
                 falseOptionalTasks.add(optionalTask.getTask());
+            }
+
+
+            CpModel deadModel = this.baseModel.getModel().getClone();
+            deadModel.getBuilder().setName("Dead " + optionalTask.getName());
+            activeVar = deadModel.getBoolVarFromProtoIndex(optionalTask.getActive().getIndex());
+            deadModel.addEquality(activeVar, deadModel.trueLiteral());
+
+            CpSolver deadSolver = new CpSolver();
+            status = deadSolver.solve(deadModel);
+            overallTime.updateAndGet(v -> v + deadSolver.wallTime());
+
+            if (status != CpSolverStatus.OPTIMAL && status != CpSolverStatus.FEASIBLE) {
+                // Dead tasks are tasks with no possible durations, so we convey that information to the
+                // model builder below like this:
+                taskUncertainties.put(optionalTask.getTask(), List.of());
             }
         }
 

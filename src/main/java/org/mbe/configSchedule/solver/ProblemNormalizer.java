@@ -557,13 +557,22 @@ public class ProblemNormalizer {
             List<String> excludeConstraints = task.getExcludeTasks().stream()
                     .filter(t -> !deadTasks.contains(t))
                     .toList();
+            Map<Integer, List<Task>> durationConstraints = new HashMap<>(task.getDurationCons());
+            durationConstraints.entrySet().removeIf(entry -> {
+                for (int duration : durations) {
+                    if (duration == entry.getKey())
+                        return false;
+                }
+                return true;
+            });
 
             Task newTask = new Task(
                     machines.get(task.getMachine()),
                     durations,
                     task.getName(),
                     isOptional,
-                    excludeConstraints
+                    excludeConstraints,
+                    durationConstraints
             );
             tasks.put(task, newTask);
         }

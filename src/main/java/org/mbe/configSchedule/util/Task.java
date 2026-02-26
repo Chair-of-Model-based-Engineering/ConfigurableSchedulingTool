@@ -21,40 +21,14 @@ public class Task extends SpElement {
      * @param optional     contains whether the task is optional.
      * @param excludeTasks contains all tasks which are excluded with this task.
      */
-    public Task(Machine machine, int[] durations, String name, boolean optional, List<String> excludeTasks) {
+    public Task(Machine machine, int[] durations, String name, boolean optional, List<String> excludeTasks, Map<Integer, List<Task>> durationCons) {
         this.machine = machine;
         this.durations = durations;
         Arrays.sort(this.durations);
         this.name = name;
         this.optional = optional;
         this.excludeTasks = excludeTasks;
-    }
-
-    /**
-     * Creates a new task.
-     *
-     * @param machine          the machine on which this task has to be executed.
-     * @param durations        all possible durations of the task.
-     * @param unboundDurations the lower bound of the unbound durations
-     * @param name             the name of the task.
-     * @param optional         whether the task is optional.
-     * @param excludeTasks     all tasks which are excluded with this task.
-     */
-    Task(Machine machine, int[] durations, int unboundDurations, String name, boolean optional, List<String> excludeTasks) {
-        this(machine, durations, name, optional, excludeTasks);
-        this.unboundDurations = Optional.of(unboundDurations);
-    }
-
-    /**
-     * Creates a new task.
-     *
-     * @param machine   contains on which machine this task is executed.
-     * @param durations contains all possible durations of the task.
-     * @param name      contains the name of the task.
-     * @param optional  contains wether the task is optional.
-     */
-    Task(Machine machine, int[] durations, String name, boolean optional) {
-        this(machine, durations, name, optional, new ArrayList<>());
+        this.durationCons = durationCons;
     }
 
     /**

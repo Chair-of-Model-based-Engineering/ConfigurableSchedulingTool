@@ -72,27 +72,23 @@ public class UVLWriter {
             } else {
                 mandatoryTasks.add(task);
             }
+
+            for (Map.Entry<Integer, List<Task>> taskDurationCon : task.getDurationCons().entrySet()) {
+                List<Task> requiredTasks = taskDurationCon.getValue();
+                for (Task requiredTask : requiredTasks) {
+                    durationCons.add("\t\"d%s = %d\" => %s%n".formatted(task.getName(), taskDurationCon.getKey(), requiredTask.getName()));
+                }
+            }
+
+            for (Task dependency : sp.getPrecedenceOrder().getOrDefault(task, new ArrayList<>())) {
+                taskOrderCons.add("\t%s => %s%n".formatted(task.getName(), dependency.getName()));
+            }
         }
 
         if (!mandatoryTasks.isEmpty())
             uvlString.append("\t\t\t\tmandatory").append(System.lineSeparator());
         for (Task task : mandatoryTasks) {
             parseTask(task, uvlString, machineCons);
-
-            for (Task dependency : sp.getPrecedenceOrder().getOrDefault(task, new ArrayList<>())) {
-                taskOrderCons.add("\t%s => %s%n".formatted(task.getName(), dependency.getName()));
-            }
-
-            // Task-duration-constraints
-            if (!task.getDurationCons().isEmpty()) {
-                for (Map.Entry<Integer, List<Task>> taskDurationCon : task.getDurationCons().entrySet()) {
-                    List<Task> requiredTasks = taskDurationCon.getValue();
-                    for (Task requiredTask : requiredTasks) {
-                        durationCons.add("\t\"d%s = %d\" => %s%n".formatted(task.getName(), taskDurationCon.getKey(), requiredTask.getName()));
-                    }
-                }
-            }
-
         }
 
         List<String> excludeTasksAlreadyHandled = new ArrayList<>();

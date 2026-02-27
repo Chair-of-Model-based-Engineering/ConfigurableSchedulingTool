@@ -326,6 +326,9 @@ public class ProblemNormalizer {
         return solver.wallTime();
     }
 
+    /**
+     * TODO: This should actually only generate valid pairs. Currently, there are a lot of invalid pairs that get generated
+     */
     private List<SpElement[]> generateValidPairs() {
         List<SpElement> optionalSpElements = new ArrayList<>();
         for (Machine machine : this.oneWiseNormalized.getSchedulingProblem().getMachines()) {
@@ -351,13 +354,31 @@ public class ProblemNormalizer {
                 SpElement left = optionalSpElements.get(i);
                 SpElement right = optionalSpElements.get(j);
 
+                // TODO: This should probably be implemented by creating a feature model from the scheduling problem
+                //       and then finding valid pairs of features. That way, we wouldn't have to reimplement rules here.
+
                 boolean taskDurationsOfSameTask = left instanceof SpElement.TaskDuration l && right instanceof SpElement.TaskDuration r
                         && l.getTask().equals(r.getTask());
                 boolean taskDurationOfTask1 = left instanceof SpElement.TaskDuration l && right instanceof Task r
                         && l.getTask().equals(r);
                 boolean taskDurationOfTask2 = left instanceof Task l && right instanceof SpElement.TaskDuration r
                         && l.equals(r.getTask());
-                if (taskDurationsOfSameTask || taskDurationOfTask1 || taskDurationOfTask2) {
+                boolean excludedTasks = left instanceof Task l && right instanceof Task r && l.getExcludeTasks().contains(r.getName());
+                boolean excludedTasksDur1 = left instanceof SpElement.TaskDuration l && right instanceof Task r
+                        && l.getTask().getExcludeTasks().contains(r.getName());
+                boolean excludedTasksDur2 = left instanceof Task l && right instanceof SpElement.TaskDuration r
+                        && l.getExcludeTasks().contains(r.getTask().getName());
+                boolean excludedTasksDur3 = left instanceof SpElement.TaskDuration l && right instanceof SpElement.TaskDuration r
+                        && l.getTask().getExcludeTasks().contains(r.getTask().getName());
+                boolean taskRequiresMachine1 = left instanceof Machine l && right instanceof Task r && r.getMachine() == l;
+                boolean taskRequiresMachine2 = left instanceof Task l && right instanceof Machine r && l.getMachine() == r;
+                boolean taskRequiresMachine3 = left instanceof Machine l && right instanceof SpElement.TaskDuration r && r.getTask().getMachine() == l;
+                boolean taskRequiresMachine4 = left instanceof SpElement.TaskDuration l && right instanceof Machine r && l.getTask().getMachine() == r;
+                // TODO: Add more combinations that would not make sense: dependencies, ...
+                // TODO: Don't evaluate everything beforehand and take advantage of the short-circuit ||
+                if (taskDurationsOfSameTask || taskDurationOfTask1 || taskDurationOfTask2
+                        || excludedTasks || excludedTasksDur1 || excludedTasksDur2 || excludedTasksDur3
+                        || taskRequiresMachine1 || taskRequiresMachine2 || taskRequiresMachine3 || taskRequiresMachine4) {
                     // These combinations would not pose valid selections
                     continue;
                 }

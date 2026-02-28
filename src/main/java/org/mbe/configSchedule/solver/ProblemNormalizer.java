@@ -5,6 +5,7 @@ import org.mbe.configSchedule.util.*;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -202,27 +203,29 @@ public class ProblemNormalizer {
     /**
      * Normalizes the scheduling problem completely.
      *
-     * <p>The problem has to have been normalized one-wise beforehand.
+     * <p>The problem has to have been normalized two-wise beforehand.
      *
      * @return the cumulative time of all solver calls.
-     * @see #oneWise()
+     * @see #twoWise()
      */
     public double complete() {
-        if (this.oneWiseNormalized == null)
+        // TODO: Determine highest known normalization (but at least one-wise) and work on its basis
+        if (this.twoWiseNormalized == null)
             return -1;
 
+        SchedulingProblem sp = this.twoWiseNormalized.getSchedulingProblem();
         ArrayList<SpElement> optionalElements = Stream.concat(
-                this.oneWiseNormalized.getSchedulingProblem().getMachines().stream().filter(Machine::isOptional),
+                sp.getMachines().stream().filter(Machine::isOptional),
                 Stream.concat(
-                        this.oneWiseNormalized.getSchedulingProblem().getTasks().stream().filter(Task::isOptional),
-                        this.oneWiseNormalized.getSchedulingProblem().getTasks().stream().filter(Task::hasUncertainDurations)
+                        sp.getTasks().stream().filter(Task::isOptional),
+                        sp.getTasks().stream().filter(Task::hasUncertainDurations)
                 )
         ).distinct().collect(Collectors.toCollection(ArrayList::new));
 
         Set<SchedulingProblem.ExclusionConstraint> excludes = new HashSet<>();
         double solverTime = complete_recursive(new HashMap<>(), optionalElements, excludes);
 
-        this.completeNormalized = new BaseModel(new SchedulingProblem(this.oneWiseNormalized.getSchedulingProblem(), excludes));
+        this.completeNormalized = new BaseModel(new SchedulingProblem(sp, excludes));
 
         return solverTime;
     }
@@ -230,14 +233,16 @@ public class ProblemNormalizer {
     private double complete_recursive(
             Map<SpElement, Integer> assignments, List<SpElement> optionalElements, Set<SchedulingProblem.ExclusionConstraint> excludes
     ) {
+        if (!assignments.isEmpty() && isAssignmentExcludedByPreviousNormalization(assignments)) {
+            return 0;
+        }
+
         if (optionalElements.isEmpty()) {
             return complete_solve(assignments, excludes);
         }
 
         double solverTime = 0;
         SpElement element = optionalElements.removeFirst();
-
-        // TODO: Skip some configurations which are already known to be unsolvable from 2-wise normalization
 
         if (element instanceof Machine machine) {
             Map<SpElement, Integer> trueAssignments = new HashMap<>(assignments);
@@ -275,8 +280,37 @@ public class ProblemNormalizer {
         return solverTime;
     }
 
+    private boolean isAssignmentExcludedByPreviousNormalization(Map<SpElement, Integer> assignments) {
+        for (SchedulingProblem.ExclusionConstraint exclusionConstraint : this.twoWiseNormalized.getSchedulingProblem().getExclusionConstraints()) {
+            boolean matches = true;
+
+            for (int i = 0; i < exclusionConstraint.size(); i++) {
+                SpElement element = exclusionConstraint.elements()[i];
+                Boolean polarity = exclusionConstraint.polarities()[i];
+
+                boolean samePolarities = (assignments.getOrDefault(element, 0) == 0 && !polarity)
+                        || (assignments.getOrDefault(element, 0) != 0 && polarity);
+                boolean taskDurationMatching = element instanceof SpElement.TaskDuration td
+                        && (polarity == (assignments.getOrDefault(td.getTask(), 0) == td.getDuration()));
+
+                // TaskDurations are never contained in the assignments map. So when the current element
+                // is not in the assignment, it might still be a matching TaskDuration.
+                if ((!assignments.containsKey(element) || !samePolarities)
+                        && (assignments.containsKey(element) || !taskDurationMatching)) {
+                    matches = false;
+                    break;
+                }
+            }
+            if (matches) {
+                // The assignment matches the entire current exclusionConstraint.
+                return true;
+            }
+        }
+        return false;
+    }
+
     private double complete_solve(Map<SpElement, Integer> assignments, Set<SchedulingProblem.ExclusionConstraint> excludes) {
-        CpModel model = this.oneWiseNormalized.getModel().getClone();
+        CpModel model = this.twoWiseNormalized.getModel().getClone();
         model.getBuilder().setName("complete normalization " + assignments);
 
         SpElement[] elements = new SpElement[assignments.size()];
@@ -285,7 +319,7 @@ public class ProblemNormalizer {
 
         for (Map.Entry<SpElement, Integer> entry : assignments.entrySet()) {
             if (Objects.requireNonNull(entry.getKey()) instanceof Task task) {
-                TaskType taskType = this.oneWiseNormalized.getAllTaskTypes().get(task);
+                TaskType taskType = this.twoWiseNormalized.getAllTaskTypes().get(task);
                 BoolVar activeVar = model.getBoolVarFromProtoIndex(taskType.getActive().getIndex());
                 if (entry.getValue() == 0) {
                     model.addEquality(activeVar, model.falseLiteral());
@@ -327,7 +361,8 @@ public class ProblemNormalizer {
     }
 
     /**
-     * TODO: This should actually only generate valid pairs. Currently, there are a lot of invalid pairs that get generated
+     * TODO: This should actually only generate valid pairs.
+     *       Currently, there are a lot of invalid pairs that get generated because feature-model conditions aren't held up.
      */
     private List<SpElement[]> generateValidPairs() {
         List<SpElement> optionalSpElements = new ArrayList<>();

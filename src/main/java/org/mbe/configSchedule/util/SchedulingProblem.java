@@ -12,6 +12,8 @@ public class SchedulingProblem {
      *
      * <p>The constraint represents the Boolean formula {@code !(A & B & C & ... & N)} with {@code A = polarites[i] ? elements[i] : !elements[i]}.
      *
+     * <p>It should hold that {@code elements.length == polarities.length} but it is not verified.
+     *
      * @param elements   List of elements in the constraint.
      * @param polarities List of the elements' polarities.
      */
@@ -26,6 +28,10 @@ public class SchedulingProblem {
          */
         public ExclusionConstraint(SpElement a, boolean aPolarity, SpElement b, boolean bPolarity) {
             this(new SpElement[] {a, b}, new Boolean[] {aPolarity, bPolarity});
+        }
+
+        public int size() {
+            return elements.length;
         }
 
         @Override

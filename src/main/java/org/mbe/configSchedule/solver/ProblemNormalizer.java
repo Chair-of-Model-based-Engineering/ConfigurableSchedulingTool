@@ -15,6 +15,11 @@ import java.util.stream.Stream;
  */
 public class ProblemNormalizer {
 
+    @FunctionalInterface
+    private interface NullPredicate {
+        boolean test();
+    }
+
     private final BaseModel baseModel;
     private final SolverReturn solverReturn;
 
@@ -288,15 +293,16 @@ public class ProblemNormalizer {
                 SpElement element = exclusionConstraint.elements()[i];
                 Boolean polarity = exclusionConstraint.polarities()[i];
 
-                boolean samePolarities = (assignments.getOrDefault(element, 0) == 0 && !polarity)
+                NullPredicate samePolarities = () -> (assignments.getOrDefault(element, 0) == 0 && !polarity)
                         || (assignments.getOrDefault(element, 0) != 0 && polarity);
-                boolean taskDurationMatching = element instanceof SpElement.TaskDuration td
+                NullPredicate taskDurationMatching = () -> element instanceof SpElement.TaskDuration td
                         && (polarity == (assignments.getOrDefault(td.getTask(), 0) == td.getDuration()));
 
                 // TaskDurations are never contained in the assignments map. So when the current element
                 // is not in the assignment, it might still be a matching TaskDuration.
-                if ((!assignments.containsKey(element) || !samePolarities)
-                        && (assignments.containsKey(element) || !taskDurationMatching)) {
+                boolean elementContained = assignments.containsKey(element);
+                if ((!elementContained || !samePolarities.test())
+                        && (elementContained || !taskDurationMatching.test())) {
                     matches = false;
                     break;
                 }
@@ -392,28 +398,28 @@ public class ProblemNormalizer {
                 // TODO: This should probably be implemented by creating a feature model from the scheduling problem
                 //       and then finding valid pairs of features. That way, we wouldn't have to reimplement rules here.
 
-                boolean taskDurationsOfSameTask = left instanceof SpElement.TaskDuration l && right instanceof SpElement.TaskDuration r
+                NullPredicate taskDurationsOfSameTask = () -> left instanceof SpElement.TaskDuration l && right instanceof SpElement.TaskDuration r
                         && l.getTask().equals(r.getTask());
-                boolean taskDurationOfTask1 = left instanceof SpElement.TaskDuration l && right instanceof Task r
+                NullPredicate taskDurationOfTask1 = () -> left instanceof SpElement.TaskDuration l && right instanceof Task r
                         && l.getTask().equals(r);
-                boolean taskDurationOfTask2 = left instanceof Task l && right instanceof SpElement.TaskDuration r
+                NullPredicate taskDurationOfTask2 = () -> left instanceof Task l && right instanceof SpElement.TaskDuration r
                         && l.equals(r.getTask());
-                boolean excludedTasks = left instanceof Task l && right instanceof Task r && l.getExcludeTasks().contains(r.getName());
-                boolean excludedTasksDur1 = left instanceof SpElement.TaskDuration l && right instanceof Task r
+                NullPredicate excludedTasks = () -> left instanceof Task l && right instanceof Task r && l.getExcludeTasks().contains(r.getName());
+                NullPredicate excludedTasksDur1 = () -> left instanceof SpElement.TaskDuration l && right instanceof Task r
                         && l.getTask().getExcludeTasks().contains(r.getName());
-                boolean excludedTasksDur2 = left instanceof Task l && right instanceof SpElement.TaskDuration r
+                NullPredicate excludedTasksDur2 = () -> left instanceof Task l && right instanceof SpElement.TaskDuration r
                         && l.getExcludeTasks().contains(r.getTask().getName());
-                boolean excludedTasksDur3 = left instanceof SpElement.TaskDuration l && right instanceof SpElement.TaskDuration r
+                NullPredicate excludedTasksDur3 = () -> left instanceof SpElement.TaskDuration l && right instanceof SpElement.TaskDuration r
                         && l.getTask().getExcludeTasks().contains(r.getTask().getName());
-                boolean taskRequiresMachine1 = left instanceof Machine l && right instanceof Task r && r.getMachine() == l;
-                boolean taskRequiresMachine2 = left instanceof Task l && right instanceof Machine r && l.getMachine() == r;
-                boolean taskRequiresMachine3 = left instanceof Machine l && right instanceof SpElement.TaskDuration r && r.getTask().getMachine() == l;
-                boolean taskRequiresMachine4 = left instanceof SpElement.TaskDuration l && right instanceof Machine r && l.getTask().getMachine() == r;
+                NullPredicate taskRequiresMachine1 = () -> left instanceof Machine l && right instanceof Task r && r.getMachine() == l;
+                NullPredicate taskRequiresMachine2 = () -> left instanceof Task l && right instanceof Machine r && l.getMachine() == r;
+                NullPredicate taskRequiresMachine3 = () -> left instanceof Machine l && right instanceof SpElement.TaskDuration r && r.getTask().getMachine() == l;
+                NullPredicate taskRequiresMachine4 = () -> left instanceof SpElement.TaskDuration l && right instanceof Machine r && l.getTask().getMachine() == r;
                 // TODO: Add more combinations that would not make sense: dependencies, ...
-                // TODO: Don't evaluate everything beforehand and take advantage of the short-circuit ||
-                if (taskDurationsOfSameTask || taskDurationOfTask1 || taskDurationOfTask2
-                        || excludedTasks || excludedTasksDur1 || excludedTasksDur2 || excludedTasksDur3
-                        || taskRequiresMachine1 || taskRequiresMachine2 || taskRequiresMachine3 || taskRequiresMachine4) {
+                if (taskDurationsOfSameTask.test() || taskDurationOfTask1.test() || taskDurationOfTask2.test()
+                        || excludedTasksDur1.test() || excludedTasksDur2.test() || excludedTasksDur3.test()
+                        || taskRequiresMachine1.test() || taskRequiresMachine2.test() || taskRequiresMachine3.test()
+                        || taskRequiresMachine4.test() || excludedTasks.test()) {
                     // These combinations would not pose valid selections
                     continue;
                 }

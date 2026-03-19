@@ -5,7 +5,6 @@ import org.mbe.configSchedule.util.*;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -293,10 +292,13 @@ public class ProblemNormalizer {
                 SpElement element = exclusionConstraint.elements()[i];
                 Boolean polarity = exclusionConstraint.polarities()[i];
 
+                // The `samePolarities` predicate works for both tasks and machines but not task durations because
+                // task durations aren't directly contained in the assignments map.
                 NullPredicate samePolarities = () -> (assignments.getOrDefault(element, 0) == 0 && !polarity)
                         || (assignments.getOrDefault(element, 0) != 0 && polarity);
                 NullPredicate taskDurationMatching = () -> element instanceof SpElement.TaskDuration td
-                        && (polarity == (assignments.getOrDefault(td.getTask(), 0) == td.getDuration()));
+                        && assignments.containsKey(td.getTask())
+                        && (polarity == (assignments.get(td.getTask()) == td.getDuration()));
 
                 // TaskDurations are never contained in the assignments map. So when the current element
                 // is not in the assignment, it might still be a matching TaskDuration.

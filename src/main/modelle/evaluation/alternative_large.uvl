@@ -1,0 +1,157 @@
+features
+	alternative_large {abstract true}
+		mandatory
+			"dl = 25"
+			P {abstract true}
+				mandatory
+					p1
+						alternative
+							"dp1 = 3"
+							"dp1 = 4"
+							"dp1 = 5"
+					p2
+						mandatory
+							"dp2 = 4"
+					p3
+						mandatory
+							"dp3 = 11"
+					p4
+						alternative
+							"dp4 = 4"
+							"dp4 = 5"
+					p5
+						alternative
+							"dp5 = 3"
+							"dp5 = 4"
+				optional
+					po1
+						alternative
+							"dpo1 = 5"
+							"dpo1 = 6"
+					po2
+						alternative
+							"dpo2 = 4"
+							"dpo2 = 5"
+							"dpo2 = 6"
+					pa1
+						alternative
+							"dpa1 = 5"
+							"dpa1 = 6"
+					pa2
+						alternative
+							"dpa2 = 3"
+							"dpa2 = 5"
+							"dpa2 = 6"
+					pa3
+						mandatory
+							"dpa3 = 4"
+					pa4
+						alternative
+							"dpa4 = 5"
+							"dpa4 = 6"
+					pa5
+						alternative
+							"dpa5 = 5"
+							"dpa5 = 6"
+					pa6
+						alternative
+							"dpa6 = 3"
+							"dpa6 = 5"
+					pa7
+						mandatory
+							"dpa7 = 5"
+					pa8
+						mandatory
+							"dpa8 = 5"
+					pa9
+						mandatory
+							"dpa9 = 3"
+					pa10
+						alternative
+							"dpa10 = 4"
+							"dpa10 = 6"
+					pa11
+						alternative
+							"dpa11 = 3"
+							"dpa11 = 5"
+					pa12
+						alternative
+							"dpa12 = 4"
+							"dpa12 = 6"
+					pa13
+						mandatory
+							"dpa13 = 3"
+					pa14
+						mandatory
+							"dpa14 = 3"
+					pa15
+						alternative
+							"dpa15 = 5"
+							"dpa15 = 6"
+					pa16
+						alternative
+							"dpa16 = 4"
+							"dpa16 = 6"
+					pa17
+						alternative
+							"dpa17 = 4"
+							"dpa17 = 6"
+					pa18
+						mandatory
+							"dpa18 = 5"
+					pa19
+						alternative
+							"dpa19 = 3"
+							"dpa19 = 4"
+							"dpa19 = 5"
+					pa20
+						alternative
+							"dpa20 = 4"
+							"dpa20 = 6"
+			M {abstract true}
+				mandatory
+					m1
+					m2
+					m3
+constraints
+	p5 => p4
+	(pa2 & !pa1) | (!pa2 & pa1)
+	(pa4 & !pa3) | (!pa4 & pa3)
+	(pa6 & !pa5) | (!pa6 & pa5)
+	(pa8 & !pa7) | (!pa8 & pa7)
+	(pa10 & !pa9) | (!pa10 & pa9)
+	(pa12 & !pa11) | (!pa12 & pa11)
+	(pa14 & !pa13) | (!pa14 & pa13)
+	(pa16 & !pa15) | (!pa16 & pa15)
+	(pa18 & !pa17) | (!pa18 & pa17)
+	(pa20 & !pa19) | (!pa20 & pa19)
+	"dp1 = 3" => pa20
+	"dp4 = 4" => pa16
+	"dp5 = 3" => pa2
+	p1 => m1
+	p2 => m2
+	p3 => m3
+	p4 => m2
+	p5 => m3
+	po1 => m2
+	po2 => m1
+	pa1 => m1
+	pa2 => m3
+	pa3 => m1
+	pa4 => m3
+	pa5 => m3
+	pa6 => m3
+	pa7 => m3
+	pa8 => m2
+	pa9 => m3
+	pa10 => m3
+	pa11 => m1
+	pa12 => m3
+	pa13 => m1
+	pa14 => m2
+	pa15 => m1
+	pa16 => m3
+	pa17 => m3
+	pa18 => m3
+	pa19 => m3
+	pa20 => m2

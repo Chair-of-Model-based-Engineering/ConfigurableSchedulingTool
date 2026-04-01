@@ -1,0 +1,124 @@
+features
+	mandatory_medium {abstract true}
+		mandatory
+			"dl = 35"
+			P {abstract true}
+				mandatory
+					p1
+						mandatory
+							"dp1 = 6"
+					p2
+						alternative
+							"dp2 = 4"
+							"dp2 = 5"
+					p3
+						alternative
+							"dp3 = 11"
+							"dp3 >= 11"
+					p4
+						alternative
+							"dp4 = 9"
+							"dp4 >= 9"
+					p5
+						mandatory
+							"dp5 = 5"
+					p6
+						alternative
+							"dp6 = 3"
+							"dp6 = 5"
+					p7
+						mandatory
+							"dp7 = 5"
+					p8
+						mandatory
+							"dp8 = 4"
+					p9
+						alternative
+							"dp9 = 5"
+							"dp9 = 6"
+					p10
+						alternative
+							"dp10 = 4"
+							"dp10 = 5"
+							"dp10 = 6"
+					p11
+						alternative
+							"dp11 = 3"
+							"dp11 = 5"
+					p12
+						alternative
+							"dp12 = 3"
+							"dp12 = 4"
+							"dp12 = 5"
+					p13
+						alternative
+							"dp13 = 3"
+							"dp13 = 6"
+					p14
+						mandatory
+							"dp14 = 6"
+					p15
+						mandatory
+							"dp15 = 4"
+				optional
+					po1
+						mandatory
+							"dpo1 = 6"
+					po2
+						mandatory
+							"dpo2 = 5"
+					pa1
+						mandatory
+							"dpa1 = 3"
+					pa2
+						mandatory
+							"dpa2 = 4"
+			M {abstract true}
+				mandatory
+					m1
+					m2
+					m3
+constraints
+	p4 => p2
+	p5 => p4
+	p5 => p2
+	p5 => p2
+	p6 => p3
+	p6 => p4
+	p7 => p2
+	p7 => p2
+	p8 => p7
+	p8 => p2
+	p8 => p1
+	p9 => p6
+	p9 => p8
+	p9 => p3
+	p11 => p2
+	p11 => p3
+	p11 => p4
+	p14 => p11
+	(pa2 & !pa1) | (!pa2 & pa1)
+	"dp2 = 5" => po1
+	"dp6 = 3" => po1
+	"dp9 = 5" => po1
+	"dp10 = 5" => pa1
+	"dp11 = 3" => po1
+	p1 => m1
+	p2 => m3
+	p3 => m3
+	p4 => m1
+	p5 => m2
+	p6 => m1
+	p7 => m2
+	p8 => m3
+	p9 => m1
+	p10 => m2
+	p11 => m1
+	p12 => m1
+	p13 => m3
+	p14 => m3
+	p15 => m2
+	po1 => m1
+	po2 => m2
+	pa1 => m3
+	pa2 => m3

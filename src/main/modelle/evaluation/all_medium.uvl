@@ -1,0 +1,84 @@
+features
+	all_medium2 {abstract true}
+		mandatory
+			"dl = 30"
+			P {abstract true}
+				mandatory
+					p1
+						alternative
+							"dp1 = 9"
+							"dp1 = 11"
+					p2
+						alternative
+							"dp2 = 10"
+							"dp2 >= 11"
+					p3
+						mandatory
+							"dp3 = 5"
+					p4
+						alternative
+							"dp4 = 4"
+							"dp4 = 6"
+					p5
+						alternative
+							"dp5 = 3"
+							"dp5 = 5"
+							"dp5 = 6"
+					p6
+						mandatory
+							"dp6 = 4"
+					p7
+						mandatory
+							"dp7 = 3"
+				optional
+					po1
+						mandatory
+							"dpo1 = 3"
+					po2
+						alternative
+							"dpo2 = 3"
+							"dpo2 = 5"
+							"dpo2 = 6"
+					po3
+						alternative
+							"dpo3 = 5"
+							"dpo3 = 6"
+					pa1
+						mandatory
+							"dpa1 = 4"
+					pa2
+						alternative
+							"dpa2 = 3"
+							"dpa2 = 4"
+							"dpa2 = 5"
+					pa3
+						mandatory
+							"dpa3 = 5"
+			M {abstract true}
+				mandatory
+					m1
+					m2
+					m3
+constraints
+	p4 => p1
+	p4 => p3
+	p5 => p2
+	p7 => p5
+	p7 => p3
+	(pa2 & !pa3 & !pa1) | (!pa2 & pa3 & !pa1) | (!pa2 & !pa3 & pa1)
+	"dp1 = 11" => pa2
+	"dp4 = 6" => po3
+	"dp5 = 5" => pa3
+	p1 => m3
+	p2 => m2
+	p3 => m2
+	p4 => m1
+	p5 => m3
+	p6 => m3
+	p7 => m3
+	po1 => m1
+	po2 => m3
+	po3 => m3
+	pa1 => m2
+	pa2 => m3
+	pa3 => m1

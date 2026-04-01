@@ -1,0 +1,85 @@
+features
+	mandatory_small {abstract true}
+		mandatory
+			"dl = 25"
+			P {abstract true}
+				mandatory
+					p1
+						mandatory
+							"dp1 = 9"
+					p2
+						mandatory
+							"dp2 = 8"
+					p3
+						alternative
+							"dp3 = 3"
+							"dp3 = 4"
+							"dp3 = 5"
+					p4
+						mandatory
+							"dp4 = 6"
+					p5
+						mandatory
+							"dp5 = 5"
+					p6
+						alternative
+							"dp6 = 3"
+							"dp6 = 6"
+					p7
+						alternative
+							"dp7 = 3"
+							"dp7 = 5"
+					p8
+						mandatory
+							"dp8 = 4"
+					p9
+						alternative
+							"dp9 = 3"
+							"dp9 = 5"
+					p10
+						mandatory
+							"dp10 = 4"
+				optional
+					po1
+						alternative
+							"dpo1 = 3"
+							"dpo1 = 5"
+					po2
+						mandatory
+							"dpo2 = 6"
+					pa1
+						mandatory
+							"dpa1 = 4"
+					pa2
+						mandatory
+							"dpa2 = 4"
+			M {abstract true}
+				mandatory
+					m1
+					m2
+					m3
+constraints
+	p3 => p1
+	p4 => p2
+	p5 => p2
+	p5 => p2
+	p7 => p2
+	p8 => p6
+	(pa2 & !pa1) | (!pa2 & pa1)
+	"dp3 = 5" => po2
+	"dp6 = 6" => pa1
+	"dp7 = 5" => pa1
+	p1 => m1
+	p2 => m2
+	p3 => m3
+	p4 => m2
+	p5 => m1
+	p6 => m2
+	p7 => m3
+	p8 => m3
+	p9 => m1
+	p10 => m3
+	po1 => m3
+	po2 => m3
+	pa1 => m1
+	pa2 => m1

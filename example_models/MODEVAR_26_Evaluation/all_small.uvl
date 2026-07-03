@@ -1,0 +1,57 @@
+features
+	all_small {abstract true}
+		mandatory
+			"dl = 25"
+			P {abstract true}
+				mandatory
+					p1
+						mandatory
+							"dp1 = 11"
+					p2
+						alternative
+							"dp2 = 8"
+							"dp2 = 10"
+					p3
+						mandatory
+							"dp3 = 5"
+					p4
+						mandatory
+							"dp4 = 5"
+					p5
+						mandatory
+							"dp5 = 5"
+				optional
+					po1
+						alternative
+							"dpo1 = 3"
+							"dpo1 = 6"
+					po2
+						alternative
+							"dpo2 = 4"
+							"dpo2 = 6"
+					pa1
+						mandatory
+							"dpa1 = 5"
+					pa2
+						alternative
+							"dpa2 = 3"
+							"dpa2 = 4"
+							"dpa2 = 5"
+			M {abstract true}
+				mandatory
+					m1
+					m2
+					m3
+constraints
+	p5 => p4
+	(pa2 & !pa1) | (!pa2 & pa1)
+	"dp2 = 10" => po2
+	p1 => m2
+	p2 => m3
+	p3 => m3
+	p4 => m2
+	p5 => m3
+	po1 => m1
+	po2 => m3
+	pa1 => m2
+	pa2 => m3

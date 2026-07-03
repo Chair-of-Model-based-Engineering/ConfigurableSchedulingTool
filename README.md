@@ -62,6 +62,6 @@ solve [o|f] <problemFilePath> <configsFolderPath>
 ```
 ### Normalizing Problems
 For Normalization the tool only requires a problem file path. At this file location three folders will be created (oneWise Normalization, twoWise Normalization, full Normalization) containing the respective normalized models.
-´´´
+```
 normalize <problemFilePath>
-´´´
+```

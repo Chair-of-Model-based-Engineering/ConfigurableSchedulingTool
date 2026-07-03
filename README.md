@@ -10,9 +10,11 @@ mvn clean install package
 ```
 The Jar will be located in the folder `target`.
 
-# How to repeat the evaluation of the VaMoS'25 paper
+# How to repeat the evaluations
 
-The folder `example_models/VaMoS_25_Evaluation` holds all feature models used in the evaluation for the VaMoS'25 paper with the title "Modeling and Analysis of Configurable Job-Shop Scheduling Problems". All models are provided as uvl-files and can be used to reproduce the family-based analysis. The separate configuration files to reproduce the instance-based analysis are not included due to their large size. To repeat the evaluation of the instance-based approach, the configuration files have to be generated using [FeatureIDE](https://featureide.github.io/).
+The folder `example_models/xxx` holds all feature models used in the evaluation for the respective papers. All models are provided as uvl-files and can be used to reproduce the family-based analysis. 
+
+For repeating an instance-based analysis the configuration files have to be generated using [FeatureIDE](https://featureide.github.io/).
 
 # Usage
 In a terminal, navigate to the `target`-folder. A Jar can be run with the command
